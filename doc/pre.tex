@@ -1,0 +1,293 @@
+\documentclass[12pt,letterpaper,notitlepage]{article}
+\usepackage[breaklinks=true]{hyperref}
+\usepackage{ucs}
+\usepackage[utf8x]{inputenc}
+\usepackage{graphicx}
+\usepackage[top=2cm, bottom=2cm, left=2.3cm, right=2.3cm]{geometry}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\usepackage{fancyvrb}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\VerbatimFootnotes
+\pagestyle{fancy}
+\def\bra#1{\mathinner{\langle{#1}|}}
+\def\ket#1{\mathinner{|{#1}\rangle}}
+\newcommand{\braket}[2]{\langle #1|#2\rangle}
+\def\Bra#1{\left<#1\right|}
+\def\Ket#1{\left|#1\right>}
+\newcommand{\Braket}[2]{\left< #1\middle|#2\right>}
+\newcommand{\vectornorm}[1]{\left|\left|#1\right|\right|}
+\usepackage[breaklinks=true]{hyperref}
+%\setcounter{secnumdepth}{0}
+
+\newcommand{\lipl}{Lipl}
+\newcommand{\op}{Operator}
+\newcommand{\optype}{type}
+
+\author{Samuel Lee}
+\title{\lipl}
+
+\lstdefinelanguage{ebnf}{
+    morestring=[b]" % b means back-slash escaped
+    , morestring=[b]'
+    , morecomment=[n]{(*}{*)}
+}
+\lstset{frame={leftline,topline,bottomline,rightline}
+    , language=ebnf
+    , float=h
+    , commentstyle=\textit
+    %, stringstyle=\textbf
+    , showstringspaces=false
+    , basicstyle=\small
+    , showspaces=false
+    , showtabs=false}
+
+
+\lfoot[Lee]{Lee}
+
+\begin{document}
+
+\maketitle
+
+\section{Intro}
+
+This is a preliminary writing about \lipl.
+
+\section{Syntax}
+
+\subsection{EBNF}
+\label{S:ebnf}
+
+Syntax is described using
+\href{http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form}{EBNF}.
+
+\subsubsection{Predefined Nonterminals}
+
+Some nonterminals are predefined for convenience.
+
+\begin{lstlisting}[
+    label=L:bnf:predef
+    , caption=Predefined Nonterminals
+]{}
+char         = (* Any Unicode character *) ;
+digit        = '0' | '1' | '2' | ... | '9' ; (* [0-9] *)
+space        = ' ' | '\t' | '\n' | ... ; (* whitespace *)
+special-char = '\\' | '+' | '-' | '.' | ... ; (* special characters *)
+letter       = - ( digit | space | special-char ) ;
+               (* Any Unicode character that is
+                  not a digit, a whitespace, nor a special character.
+                  Example: [a-zA-Z] in ASCII. *)
+alphanum     = letter | digit ;
+name-char    = alphanum | '_' | '-'
+comment      = ';;' , { ? char except \n ? } , '\n'
+\end{lstlisting}
+
+\emph{name-char} is a valid character for \emph{name}.
+Note that
+$\emph{alphanum} \cup \emph{special-char} = \emph{char} - \emph{space}$.
+
+\emph{comment} is a single line comment. Anything after \verb!;;! until
+the end of the line is considered comment.
+
+\subsubsection{Major Nonterminals}
+
+\begin{lstlisting}[
+    label=L:bnf:name
+    , caption=Name
+]{}
+name         = ( letter | '_' ) , { name-char } ;
+               (* _abc023  apples Abc-345 *)
+special-name = special-char , { ( name-char | special-char ) } ;
+\end{lstlisting}
+
+\emph{name} is an identifier. It can start with
+a \emph{letter} or the underscore. Examples include: \verb!a!,
+\verb!abc!, \verb!_abc!, \verb!_--!, \verb!all-names! \ldots{}
+
+\emph{special-name} is also an identifier.
+But it starts with a \emph{special-char}, non-\emph{letter}-nor-\emph{space}.
+
+\begin{lstlisting}[
+    label=L:bnf:number
+    , caption=Number
+]{}
+nat     = digit , { digit } ;
+integer = [ '-' ] , nat ;
+float   = integer , '.' , nat ;
+number  = integer | float ;
+\end{lstlisting}
+\emph{nat} is natural number including \verb!0!. Examples of \emph{nat}
+are: \verb!000!, \verb!11!, \verb!2353!, \ldots{}
+
+\emph{integer} includes signed integer. Examples of \emph{integer} are:
+\verb!324!, \verb!-234!, \verb!45346!, \verb!-0000! \ldots{}
+
+\emph{float} is floating point number with decimal point.
+Examples of \emph{float} are: \verb!-24.3!, \verb!00.023!, \ldots{}
+
+\emph{number} can be either \emph{integer} or \emph{float}.
+
+\begin{lstlisting}[
+    label=L:bnf:string
+    , caption=String
+]{}
+string = '"' , { ? char with escaped '"' ? } , '"' ;
+\end{lstlisting}
+\emph{string} is a group of \emph{char}s surrounded by
+\verb!"!. Any occurrence of \verb!"! inside of surrounding
+\verb!"!'s should be escaped using \verb!\!. Examples:
+\verb!"ab c"!, \verb%" a \"b c 0 !$#24 s"%, \ldots{}
+
+\begin{lstlisting}[
+    label=L:bnf:token
+    , caption=Token
+]{}
+token = name | special-name | number | string | list
+\end{lstlisting}
+\emph{token} is a meaningful entity in \lipl. It can be a \emph{name},
+a \emph{number}, a \emph{string}, or a \emph{list}.
+
+\begin{lstlisting}[
+    label=L:bnf:list
+    , caption=List
+]{}
+list = '[' , [ space ],  ']'
+       | '[' , [ space ] ,  token , { space, token } , [ space ] ']'
+\end{lstlisting}
+\emph{list} is \emph{space} delimited sequence of \emph{token}s.
+It can be empty.
+And, \emph{space}s after \verb![! and before \verb!]! are optional.
+Examples: \verb![]!, \verb![a b c ]!, \verb![ 1 3 ab-c ]!
+, \verb![a b [  "a" + b]  ]!
+
+\begin{lstlisting}[
+    label=L:bnf:program
+    , caption=Program
+]{}
+program = [ space ] , token , { space ,  token } , [ space ]
+\end{lstlisting}
+\emph{program} is a \emph{list} without surrounding \verb![]!'s.
+
+\subsection{Where is Parsing?}
+
+EBNF (Section \ref{S:ebnf}) for \lipl\ only defines lexical grammar.
+So, if a parser would be written only according to the grammar given in
+Section \ref{S:ebnf}, it would just be an elaborate lexer that
+transforms stream of characters into stream (or list) of \emph{tokens}.
+
+Actual building of abstract syntax tree, parsing, in \lipl\
+will be done by evaluation of \op s (Section \ref{S:ops}).
+
+\subsection{\op s}
+\label{S:ops}
+
+Some \emph{token}s, mostly \emph{special-name}s, are \op s.
+They are evaluated during compilation to build AST.
+
+\begin{lstlisting}[
+    label=L:ops
+    , caption=Operators
+]{}
+=   :: [name token symbol-table(token)]
+fun :: [list function]
+::  :: [token list type-table(token)]
+\end{lstlisting}
+\verb!::! is used to specify type of \op s.
+For example, \emph{=} has type of \emph{[name token symbol-table(token)]}.
+In other words, \emph{=} takes a \emph{name} and a \emph{token},
+then returns \emph{symbol-table(token)}.
+\emph{symbol-table(token)} means that the value is \emph{token},
+but it has side effect because \emph{symbol-table} has been updated to
+include new mapping.
+Similarly, \emph{fun} takes a \emph{list} and returns a \emph{function}.
+And, \emph{::} takes a \emph{token} and a \emph{list},
+then returns \emph{type-table(token)}, a \emph{token} with
+\emph{type-table} updated.
+
+These \op s are very much similar to \emph{function}s:
+they eat (consume) stuff around them and poop (return) a value
+(\emph{symbol-table} and \emph{type-table} can be thought of as
+invisible values that represent state of current compilation).
+
+From now on, \op\ will be used to denote those functions that
+operate during compilation to build AST. And function will refer to
+actual function that computes (transforms) values during runtime.
+
+\subsubsection{Examples}
+\label{S:ops:examples}
+
+\begin{lstlisting}[
+    label=L:ops:examples
+    , caption=Operator Eaxamples
+]{}
+a = [1 :: integer]                  ;; a has value 1.
+= b 2                               ;; b's type is inferred.
+c = :: 3 float                      ;; c has value 3.0.
+f1 [fun [[a + b]]] =                ;; f1 has value 3 (= 1 + 2).
+f2 = fun [a b c [a - b - c]]        ;; f2 is a function that takes params.
+\end{lstlisting}
+\verb!a = [1 :: integer]! is \emph{name, special-name, list} after
+lexing. Since \emph{special-name}, \verb!=!, takes a \emph{name}
+and a \emph{token}, it consumes the \emph{name}, \verb!a!, and
+the \emph{list}, \verb![1 :: integer]!.
+
+Before \verb!=! can bind the \emph{list} to \verb!a!,
+the \emph{list} is evaluated (\emph{list} is evaluated during
+compilation always? Maybe evaluation is a wrong terminology).
+
+\verb![1 :: integer]! is \emph{integer, special-name, name}.
+Since \verb!::! assigns its first parameter a type given by its second
+parameter, \emph{integer} \verb!1! gets type \emph{integer}
+(Maybe it should be \verb![1 :: Integer]! : type names start with capital?).
+
+Now, \verb!::! returns the first parameter, \verb!1!, with updated
+\emph{type-table}, and \verb![1 :: integer]! has value \verb!1!.
+
+\verb!=! then binds \verb!1! to \verb!a!. \emph{symbol-table}
+is updated to reflect the bind: \verb!a! is now \verb!1! in current scope.
+
+Similarly, \verb!2! is bound to \verb!b!.
+\op s first peek their left to get parameters they need.
+Then, they start peeking their right.
+So, for \verb!= b 2!, \verb!=! gets its two parameters, \verb!b! and \verb!2!,
+from its right, because \verb!=! doesn't have anything to its left.
+
+When the compiler reaches \verb!c =!, \verb!=! already has 1 parameter
+to its left. So, it needs one more parameter.
+It peeks on right, and finds \verb!::!, which is also an \op .
+\op\ follows eager evaluation??
+\verb!::! is called. Since left to \verb!::! is \verb!=!, which is
+waiting for second parameter, \verb!::! has to peek its right, finding
+\verb!3! and \verb!float!. So, it returns \verb!3! with \emph{type-table}
+updated (\emph{type-table} for \verb!3! is updated??).
+\verb!3!, which is now \verb!float!, is bound to \verb!c!.
+
+\verb!f1 [fun [[a + b]]]!, at this point, the compiler has
+\emph{name, list}. So, the \emph{list} is evaluated.
+
+\verb!fun! has nothing on its left. So, it takes \verb![[a + b]]!.
+The way \verb!fun! makes a \emph{list} into a \emph{function} is that
+it considers all elements, except the last one, as \emph{name}s.
+Then, the last element of the \emph{list} is considered to be
+the function body (expression) written in terms of the \emph{name}s
+appeared before.
+
+Since \verb![[a + b]]! is a single element \emph{list} whose
+element is a \emph{list}, the element is evaluated.
+\verb!fun! creates a new scope in the \emph{list}.
+However, no new \emph{name}s are declared (the \emph{list} was a singleton).
+So, parent scope's \verb!a! and \verb!b! are used.
+\verb![a + b]! is \verb![1 + 2]! because \verb!a = 1! and \verb!b = 2!
+in the parent scope.
+
+In the end, \verb!f1! is just \verb!3! because a function that takes
+no parameter is just a constant.
+
+\verb!f2! becomes a real function that takes 3 parameters, \verb!a!
+, \verb!b!, \verb!c!,  and computes \verb!a - b - c!.
+
+\end{document}
