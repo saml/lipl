@@ -12,6 +12,7 @@
 \usepackage{amsfonts}
 \usepackage{amsmath}
 \usepackage{graphicx}
+%\usepackage{qtree} %http://www.essex.ac.uk/linguistics/clmt/latex4ling/trees/qtree/
 \VerbatimFootnotes
 \pagestyle{fancy}
 \def\bra#1{\mathinner{\langle{#1}|}}
@@ -35,6 +36,7 @@
     morestring=[b]" % b means back-slash escaped
     , morestring=[b]'
     , morecomment=[n]{(*}{*)}
+    , morecomment=[l]{;;}
 }
 \lstset{frame={leftline,topline,bottomline,rightline}
     , language=ebnf
@@ -293,6 +295,43 @@ The return value of \verb!f2! is specified to be \verb!float!.
 Actual type of \verb!f2! would be \verb![number number number float]!
 , a function that takes 3 \emph{number}s and returns a \emph{float}.
 
+%\Tree [.prog name special-name special-name list]
+\begin{lstlisting}[
+    label=L:bnf:ast
+    , caption={Sideway Syntax Tree for\
+               \emph{f2 = fun [a b c [a - b - c] :: float]} after Lexing}
+]{}
+prog
+    name: f2
+    special-name: =                  ;; meta-function
+    name: fun                        ;; meta-function
+    list
+        name: a
+        name: b
+        name: c
+        list
+            name: a
+            special-name: -
+            name: b
+            special-name: -
+            name: c
+        special-name: ::             ;; meta-function
+        name: float
+\end{lstlisting}
+
+\begin{lstlisting}[
+    caption={Sideway Syntax Tree for Listing \ref{L:bnf:ast}\
+             after Applying Meta-functions}
+]{}
+prog
+    bind: =
+        name: f2
+        function
+            params: a b c
+            body: a - b - c
+                body.type: float
+\end{lstlisting}
+
 Note that a normal function, such as \verb!-!, takes its parameter
 similar to the way meta-function takes its parameter:
 normal function also peeks its left first to get parameters.
@@ -341,5 +380,72 @@ can certainly be used to build AST.
 However, doing so will create so many rules in EBNF.
 (give a better argument why meta-function is better??)
 
+\section{Example}
+
+\begin{lstlisting}
+1 [fun [1 2]]
+==> 2
+\end{lstlisting}
+
+\verb![fun [1 2]]! is a function that takes \verb!1! and returns \verb!2!.
+So, \verb!1 [fun [1 2]]! is a function call to such function with parameter
+\verb!1!. Hence, the above expression evaluates to \verb!2!.
+
+\begin{lstlisting}
+[fun [1 a [a + 2]]] 2 1
+==> Error
+\end{lstlisting}
+
+Above expression is erroneous because \verb![fun [1 a [a + 2]]]! expects
+\verb!1! as its first parameter. But, \verb!2! is passed to it.
+
+\begin{lstlisting}
+a = 100
+fun [a >fun [x [x - a]]] 2 3
+==> 1
+\end{lstlisting}
+
+Although \verb!a! is bound to \verb!100!, \verb![]! creates a new scope.
+So, \verb!a! inside \emph{list} shadows \verb!a! outside.
+
+\verb!fun [a >fun [x [x - a]]]! takes a \emph{number}, \verb!a!,
+and returns a function that takes another \emph{number}, \verb!x!,
+and subtracts \verb!a! from \verb!x!.
+
+\verb!>! in front of \verb!fun! forces \verb!fun! to peek its parameter
+from right. If \verb!>! were omitted,
+\verb!fun [a fun [ ...]]!, the second \verb!fun! would take \verb!a!
+as its first parameter.
+(Maybe not?? because the second \verb!fun! is evaluated as a parameter
+to the first \verb!fun!).
+
+\begin{lstlisting}
+MyType = type [
+    A [a b]
+    B [Int]
+    C [length a == 3]
+]
+\end{lstlisting}
+
+\verb!type! meta-function takes a \emph{list} of constructors.
+\verb!MyType! can be constructed using
+\verb!A! (takes a list of two things), \verb!B! (takes an Int),
+or \verb!C! (takes a list whose length is 3).
+
+In Haskell, data constructors start with Capital letter.
+And they can be pattern matched.
+Function calls can't be pattern matched.
+
+\begin{lstlisting}[
+    language=haskell]{}
+data A a = A a | B a Int
+funcA a = a
+funcB a b = a + b
+
+newFunc (A a) = a          -- valid
+-- newFunc' (funcB a b) = b   -- not valid
+\end{lstlisting}
+
+So, probably \lipl\ should force data constructors to start with capital letter??
 
 \end{document}
