@@ -25,7 +25,7 @@
 %\setcounter{secnumdepth}{0}
 
 \newcommand{\lipl}{Lipl}
-\newcommand{\op}{Operator}
+\newcommand{\op}{meta-function}
 \newcommand{\optype}{type}
 
 \author{Samuel Lee}
@@ -81,14 +81,14 @@ letter       = - ( digit | space | special-char ) ;
                (* Any Unicode character that is
                   not a digit, a whitespace, nor a special character.
                   Example: [a-zA-Z] in ASCII. *)
-alphanum     = letter | digit ;
-name-char    = alphanum | '_' | '-'
+alpha-num    = letter | digit ;
+name-char    = alpha-num | '_' | '-'
 comment      = ';;' , { ? char except \n ? } , '\n'
 \end{lstlisting}
 
 \emph{name-char} is a valid character for \emph{name}.
 Note that
-$\emph{alphanum} \cup \emph{special-char} = \emph{char} - \emph{space}$.
+$\emph{alpha-num} \cup \emph{special-char} = \emph{char} - \emph{space}$.
 
 \emph{comment} is a single line comment. Anything after \verb!;;! until
 the end of the line is considered comment.
@@ -158,7 +158,7 @@ a \emph{number}, a \emph{string}, or a \emph{list}.
 list = '[' , [ space ],  ']'
        | '[' , [ space ] ,  token , { space, token } , [ space ] ']'
 \end{lstlisting}
-\emph{list} is \emph{space} delimited sequence of \emph{token}s.
+\emph{list} is a \emph{space} delimited sequence of \emph{token}s.
 It can be empty.
 And, \emph{space}s after \verb![! and before \verb!]! are optional.
 Examples: \verb![]!, \verb![a b c ]!, \verb![ 1 3 ab-c ]!
@@ -189,8 +189,8 @@ Some \emph{token}s, mostly \emph{special-name}s, are \op s.
 They are evaluated during compilation to build AST.
 
 \begin{lstlisting}[
-    label=L:ops
-    , caption=Operators
+    label=L:meta-func
+    , caption=Meta-functions
 ]{}
 =   :: [name token symbol-table(token)]
 fun :: [list function]
@@ -221,14 +221,14 @@ actual function that computes (transforms) values during runtime.
 \label{S:ops:examples}
 
 \begin{lstlisting}[
-    label=L:ops:examples
-    , caption=Operator Eaxamples
+    label=L:meta-func:examples
+    , caption=Meta-function Eaxamples
 ]{}
-a = [1 :: integer]                  ;; a has value 1.
-= b 2                               ;; b's type is inferred.
-c = :: 3 float                      ;; c has value 3.0.
-f1 [fun [[a + b]]] =                ;; f1 has value 3 (= 1 + 2).
-f2 = fun [a b c [a - b - c]]        ;; f2 is a function that takes params.
+a = [1 :: integer]                    ;; a has value 1.
+= b 2                                 ;; b's type is inferred.
+c = :: 3 float                        ;; c has value 3.0.
+f1 [fun [[a + b]]] =                  ;; f1 has value 3 (= 1 + 2).
+f2 = fun [a b c [a - b - c] :: float] ;; f2 is a function.
 \end{lstlisting}
 \verb!a = [1 :: integer]! is \emph{name, special-name, list} after
 lexing. Since \emph{special-name}, \verb!=!, takes a \emph{name}
@@ -244,13 +244,13 @@ Since \verb!::! assigns its first parameter a type given by its second
 parameter, \emph{integer} \verb!1! gets type \emph{integer}
 (Maybe it should be \verb![1 :: Integer]! : type names start with capital?).
 
-Now, \verb!::! returns the first parameter, \verb!1!, with updated
-\emph{type-table}, and \verb![1 :: integer]! has value \verb!1!.
+Now, \verb!::! has updated
+\emph{type-table} (maybe not??), and \verb![1 :: integer]! has value \verb!1!.
 
 \verb!=! then binds \verb!1! to \verb!a!. \emph{symbol-table}
 is updated to reflect the bind: \verb!a! is now \verb!1! in current scope.
 
-Similarly, \verb!2! is bound to \verb!b!.
+Similarly, \verb!= b 2! binds !\verb!2! to \verb!b!.
 \op s first peek their left to get parameters they need.
 Then, they start peeking their right.
 So, for \verb!= b 2!, \verb!=! gets its two parameters, \verb!b! and \verb!2!,
@@ -259,11 +259,11 @@ from its right, because \verb!=! doesn't have anything to its left.
 When the compiler reaches \verb!c =!, \verb!=! already has 1 parameter
 to its left. So, it needs one more parameter.
 It peeks on right, and finds \verb!::!, which is also an \op .
-\op\ follows eager evaluation??
-\verb!::! is called. Since left to \verb!::! is \verb!=!, which is
-waiting for second parameter, \verb!::! has to peek its right, finding
-\verb!3! and \verb!float!. So, it returns \verb!3! with \emph{type-table}
-updated (\emph{type-table} for \verb!3! is updated??).
+(\op\ follows eager evaluation??)
+So, \verb!::! is called. Since left to \verb!::! is \verb!=!, which is
+waiting for the second parameter, \verb!::! has to peek its right, finding
+\verb!3! and \verb!float!. So, \verb!::! returns \verb!3!
+with updated \emph{type-table} (maybe \emph{type-table} is not needed??).
 \verb!3!, which is now \verb!float!, is bound to \verb!c!.
 
 \verb!f1 [fun [[a + b]]]!, at this point, the compiler has
@@ -277,8 +277,8 @@ the function body (expression) written in terms of the \emph{name}s
 appeared before.
 
 Since \verb![[a + b]]! is a single element \emph{list} whose
-element is a \emph{list}, the element is evaluated.
-\verb!fun! creates a new scope in the \emph{list}.
+element is a \emph{list}, the element is the function body.
+\verb!fun! creates a new scope for the \emph{list} it took as parameter.
 However, no new \emph{name}s are declared (the \emph{list} was a singleton).
 So, parent scope's \verb!a! and \verb!b! are used.
 \verb![a + b]! is \verb![1 + 2]! because \verb!a = 1! and \verb!b = 2!
@@ -289,5 +289,57 @@ no parameter is just a constant.
 
 \verb!f2! becomes a real function that takes 3 parameters, \verb!a!
 , \verb!b!, \verb!c!,  and computes \verb!a - b - c!.
+The return value of \verb!f2! is specified to be \verb!float!.
+Actual type of \verb!f2! would be \verb![number number number float]!
+, a function that takes 3 \emph{number}s and returns a \emph{float}.
+
+Note that a normal function, such as \verb!-!, takes its parameter
+similar to the way meta-function takes its parameter:
+normal function also peeks its left first to get parameters.
+When there's nothing left, it peeks its right.
+
+For example, the function body of \verb!f2!, \verb!a - b - c!,
+has two calls to normal function, \verb!-!. First call to \verb!-!
+takes \verb!a! and \verb!b! as its parameter.
+Then the second call to \verb!-! subtracts \verb!c! from
+the return value of \verb!a - b!.
+
+\begin{lstlisting}[
+    caption=Possible Definition of -
+]{}
+- = fun [a :: number :: b float [subtract a b] integer :: ]
+\end{lstlisting}
+\verb!-! could be defined as above.
+After evaluating meta-functions, \verb!=!, \verb!fun!, and \verb!::!,
+we are left with \verb!-!, a function that takes a \emph{number}
+and a \emph{float},
+then returns an \emph{integer} (\verb!subtract! is assumed to be
+a built-in function that subtracts second parameter from the first).
+
+\subsubsection{Why Meta-functions?}
+\label{S:why-meta-func}
+
+It can be argued that extending EBNF (Section \ref{S:ebnf})
+eliminates need for meta-functions.
+
+For example,
+
+\begin{lstlisting}[
+    label=L:ebnf:meta-func
+    , caption=EBNF that Replaces Meta-functions
+]{}
+assignment = '=' , name , token
+            | name , '=' , token
+            | name , token , '=' ;
+function   = 'fun' , list | list , 'fun' ;
+type-decl  = '::' , token , type-spec
+            | token , '::' , type-spec
+            | token , type-spec , '::' ;
+\end{lstlisting}
+
+can certainly be used to build AST.
+However, doing so will create so many rules in EBNF.
+(give a better argument why meta-function is better??)
+
 
 \end{document}
