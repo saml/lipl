@@ -19,6 +19,19 @@ prompt p = do
     hFlush stdout
     getLine
 
+{-
+getEditableLine :: String -> IO String
+getEditableLine acc = do
+    c <- getChar
+    if c == '\n'
+        then
+            return $ acc ++ [c]
+        else
+            if c == '\b'
+                then
+                    getEditableLine
+-}
+
 eval :: String -> String
 eval input = case P.parse expr "lipl" input of
     Left err -> show err
@@ -28,6 +41,7 @@ data LiplVal = Name String
     | List [LiplVal]
     | Integer Integer
     | Operator String
+    | Expr [LiplVal]
     deriving Show
 
 expr :: P.Parser LiplVal
@@ -54,15 +68,29 @@ rparen = P.spaces >> P.char ')'
 parseList :: P.Parser LiplVal
 parseList = do
     lparen
-    val <- P.sepEndBy parseExpr P.spaces
+    val <- P.sepEndBy parseToken mustSpaces
     rparen
     return $ List val
 
+parseToken :: P.Parser LiplVal
+parseToken = parseName <|> parseList <|> parseInteger <|> parseOperator
+
 parseExpr :: P.Parser LiplVal
-parseExpr = parseName <|> parseList <|> parseInteger <|> parseOperator
+parseExpr = do
+    val <- P.sepEndBy parseToken mustSpaces
+    P.eof
+    return $ Expr val
 
 parseInteger :: P.Parser LiplVal
 parseInteger = do
     val <- P.many1 P.digit
     return $ Integer (read val)
 
+mustSpaces :: P.Parser ()
+mustSpaces = P.skipMany1 P.space
+
+test = do
+    c <- getChar
+    putStr $ " " ++ [c]
+    hFlush stdout
+    test
