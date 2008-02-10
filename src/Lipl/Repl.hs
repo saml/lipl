@@ -147,7 +147,7 @@ toPostfix prev rest
 
 
 foo = "+ 1 (1 + (2 3 -)) - 4"
-bar = toStr (toPostfix S.empty (S.fromList (toList (eval' "+ 1 (1 + (2 3 -)) - 4"))))
+bar = (toPostfix S.empty (S.fromList (toList (eval' "+ 1 (1 + (2 3 -)) - 4"))))
 
 test = do
     putStrLn $ eval "+ 1 (1 + (2 3 -)) - 4"
