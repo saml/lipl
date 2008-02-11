@@ -301,9 +301,19 @@ ul.auto-toc {
 <li><a class="reference internal" href="#introduction" id="id2">1&nbsp;&nbsp;&nbsp;Introduction</a></li>
 <li><a class="reference internal" href="#syntax" id="id3">2&nbsp;&nbsp;&nbsp;Syntax</a><ul class="auto-toc">
 <li><a class="reference internal" href="#ebnf" id="id4">2.1&nbsp;&nbsp;&nbsp;EBNF</a></li>
-<li><a class="reference internal" href="#atom" id="id5">2.2&nbsp;&nbsp;&nbsp;Atom</a></li>
+<li><a class="reference internal" href="#atom" id="id5">2.2&nbsp;&nbsp;&nbsp;Atom</a><ul class="auto-toc">
+<li><a class="reference internal" href="#number" id="id6">2.2.1&nbsp;&nbsp;&nbsp;Number</a></li>
+<li><a class="reference internal" href="#string" id="id7">2.2.2&nbsp;&nbsp;&nbsp;String</a></li>
+<li><a class="reference internal" href="#symbol" id="id8">2.2.3&nbsp;&nbsp;&nbsp;Symbol</a><ul class="auto-toc">
+<li><a class="reference internal" href="#identifier" id="id9">2.2.3.1&nbsp;&nbsp;&nbsp;Identifier</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li><a class="reference internal" href="#expression" id="id10">2.3&nbsp;&nbsp;&nbsp;Expression</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#examples" id="id11">3&nbsp;&nbsp;&nbsp;Examples</a></li>
 </ul>
 </div>
 <div class="section" id="introduction">
@@ -320,60 +330,81 @@ letter = (* alphabetic character *)
 digit = '0' | '1' | (* ... *) '9'
 space = ' ' | '\t' (* ... white space character *)
 spaces = space { space }
+ws = [ spaces ]
 nat = digit { digit }
 integer = [ ( '-' | '+' ) ] nat
 float = [ ( '-' | '+' ) ] nat '.' nat
 
 name = letter { ( letter | digit | '_' | '-' ) }
+ident = name { '.' name }
 number = integer | float
 string = '&quot;' (? characters with escaped '&quot;' ?) '&quot;'
-operator = '+' | '-' | ...
-atom = name | number | string | operator
-list = '(' tokens ')'
+symbol = ident | '+' | '-' | ...
+list = '[' ws ']'
+     | '[' ws expr { ws ',' ws expr } ws ']'
+atom = number | string | symbol
 token = atom | list
 tokens = [ token ] { spaces token }
 expr = tokens
+     | '(' ws tokens ws ')'
 </pre>
 </div>
 <div class="section" id="atom">
 <h2><a class="toc-backref" href="#id5">2.2&nbsp;&nbsp;&nbsp;Atom</a></h2>
-<pre class="literal-block">
-Atoms are literals. They evaluate to themselves.
-
-(= fact (fun (n)
-    (if (&lt; n 1) 1 (* n (self (- n 1))))))
-
-fact = (fun n (if (n &lt; 1)
-                  1
-                  (self (n - 1))))
-
-fun fact ((a :: (Int String Foo Bar)) (b :: Int)) (
-fun fact (a:(Int String Foo Bar) b:Int) (body)
-
-fun fun-name (arg-list) (body)
-
-fun fact [a :: Int String Foo Bar, b :: Int] (a + b)
-
-
-fact n | n &lt; 1 = 1
-fact n = n * (fact (n - 1))
-
-fib 0 = 0
-fib 1 = 1
-fib n = fib n + fib (n - 1)
-
-def fib (n &lt;= 1) = n
-def fib n = fib n + fib (n - 1)
-
-[_n.type = Int ; if (_n &lt; 2) n (self _n + self (_n - 1))] 4
-[(a :: Int) (b :: Int); if (a &lt; 2) b ((self (a - 1) b) + 2)] 4 1
-=&gt; (self 3 1) + 2
-=&gt; ((self 2 1) + 2) + 2
-=&gt; (((self 1 1) + 2) + 2) + 2
-=&gt; ((1 + 2) + 2) + 2
-=&gt; 7
-</pre>
+<p>An atom evaluates to itself, except for bound atoms.</p>
+<div class="section" id="number">
+<h3><a class="toc-backref" href="#id6">2.2.1&nbsp;&nbsp;&nbsp;Number</a></h3>
+<p>A number can be an integer: 1, +2, -32532, -00342, ...
+Or, a floating point number: +000.234, -23.43, 0.0023402, ...</p>
 </div>
+<div class="section" id="string">
+<h3><a class="toc-backref" href="#id7">2.2.2&nbsp;&nbsp;&nbsp;String</a></h3>
+<p>String is a sequence of characters enclosed inside <tt class="docutils literal"><span class="pre">&quot;</span></tt>.
+To use <tt class="docutils literal"><span class="pre">&quot;</span></tt> inside a string, escape it using <tt class="docutils literal"><span class="pre">\</span></tt>.</p>
+<p>Examples include: &quot;hi! i'm a string&quot;, &quot;let's escape &quot;!!&quot;, ...</p>
+</div>
+<div class="section" id="symbol">
+<h3><a class="toc-backref" href="#id8">2.2.3&nbsp;&nbsp;&nbsp;Symbol</a></h3>
+<p>A symbol can be bound. If it's bound, it evaluates to the bound value.
+Otherwise, a symbol evaluates to itself.</p>
+<div class="section" id="identifier">
+<h4><a class="toc-backref" href="#id9">2.2.3.1&nbsp;&nbsp;&nbsp;Identifier</a></h4>
+<p>An identifier starts with an alphabetic character.
+It can then include digits, <tt class="docutils literal"><span class="pre">-</span></tt>, and <tt class="docutils literal"><span class="pre">_</span></tt>.</p>
+<p>Identifier can be nested using <tt class="docutils literal"><span class="pre">.</span></tt>.
+For example, <tt class="docutils literal"><span class="pre">name.first</span></tt> refers to attribute <tt class="docutils literal"><span class="pre">first</span></tt>
+of identifier <tt class="docutils literal"><span class="pre">name</span></tt>.</p>
+</div>
+</div>
+</div>
+<div class="section" id="expression">
+<h2><a class="toc-backref" href="#id10">2.3&nbsp;&nbsp;&nbsp;Expression</a></h2>
+<p>An expression is a sequence of whitespace delimited tokens.</p>
+</div>
+</div>
+<div class="section" id="examples">
+<h1><a class="toc-backref" href="#id11">3&nbsp;&nbsp;&nbsp;Examples</a></h1>
+<p>declaration:</p>
+<pre class="literal-block">
+= name value
+</pre>
+<p>lambda abstraction:</p>
+<pre class="literal-block">
+fun arg-list body
+</pre>
+<p>function call:</p>
+<pre class="literal-block">
+fun-name arg1 arg2 ...
+</pre>
+<p>list:</p>
+<pre class="literal-block">
+[expr1, expr2, ...]
+</pre>
+<p>expression:</p>
+<pre class="literal-block">
+symbol1 symbol2 ...
+| ( symbol1 symbol2 ... )
+</pre>
 </div>
 </div>
 </body>

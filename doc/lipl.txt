@@ -28,58 +28,91 @@ Below is informal EBNF_
     digit = '0' | '1' | (* ... *) '9'
     space = ' ' | '\t' (* ... white space character *)
     spaces = space { space }
+    ws = [ spaces ]
     nat = digit { digit }
     integer = [ ( '-' | '+' ) ] nat
     float = [ ( '-' | '+' ) ] nat '.' nat
 
     name = letter { ( letter | digit | '_' | '-' ) }
+    ident = name { '.' name }
     number = integer | float
     string = '"' (? characters with escaped '"' ?) '"'
-    operator = '+' | '-' | ...
-    atom = name | number | string | operator
-    list = '(' tokens ')'
+    symbol = ident | '+' | '-' | ...
+    list = '[' ws ']'
+         | '[' ws expr { ws ',' ws expr } ws ']'
+    atom = number | string | symbol
     token = atom | list
     tokens = [ token ] { spaces token }
     expr = tokens
+         | '(' ws tokens ws ')'
+
 
 Atom
 ----
 
-::
+An atom evaluates to itself, except for bound atoms.
 
-    Atoms are literals. They evaluate to themselves.
+Number
+~~~~~~
 
-    (= fact (fun (n)
-        (if (< n 1) 1 (* n (self (- n 1))))))
+A number can be an integer: 1, +2, -32532, -00342, ...
+Or, a floating point number: +000.234, -23.43, 0.0023402, ...
 
-    fact = (fun n (if (n < 1)
-                      1
-                      (self (n - 1))))
+String
+~~~~~~
 
-    fun fact ((a :: (Int String Foo Bar)) (b :: Int)) (
-    fun fact (a:(Int String Foo Bar) b:Int) (body)
+String is a sequence of characters enclosed inside ``"``.
+To use ``"`` inside a string, escape it using ``\``.
 
-    fun fun-name (arg-list) (body)
+Examples include: "hi! i'm a string", "let's escape \"!!", ...
 
-    fun fact [a :: Int String Foo Bar, b :: Int] (a + b)
+Symbol
+~~~~~~
+
+A symbol can be bound. If it's bound, it evaluates to the bound value.
+Otherwise, a symbol evaluates to itself.
+
+Identifier
+``````````
+
+An identifier starts with an alphabetic character.
+It can then include digits, ``-``, and ``_``.
+
+Identifier can be nested using ``.``.
+For example, ``name.first`` refers to attribute ``first``
+of identifier ``name``.
 
 
-    fact n | n < 1 = 1
-    fact n = n * (fact (n - 1))
+Expression
+----------
 
-    fib 0 = 0
-    fib 1 = 1
-    fib n = fib n + fib (n - 1)
+An expression is a sequence of whitespace delimited tokens.
 
-    def fib (n <= 1) = n
-    def fib n = fib n + fib (n - 1)
 
-    [_n.type = Int ; if (_n < 2) n (self _n + self (_n - 1))] 4
-    [(a :: Int) (b :: Int); if (a < 2) b ((self (a - 1) b) + 2)] 4 1
-    => (self 3 1) + 2
-    => ((self 2 1) + 2) + 2
-    => (((self 1 1) + 2) + 2) + 2
-    => ((1 + 2) + 2) + 2
-    => 7
+Examples
+========
+
+declaration::
+
+    = name value
+
+lambda abstraction::
+
+    fun arg-list body
+
+function call::
+
+    fun-name arg1 arg2 ...
+
+list::
+
+    [expr1, expr2, ...]
+
+expression::
+
+    symbol1 symbol2 ...
+    | ( symbol1 symbol2 ... )
+
+
 
 
