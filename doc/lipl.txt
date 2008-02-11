@@ -1,0 +1,85 @@
+====
+LIPL
+====
+
+:Author: Samuel Lee
+
+.. sectnum::
+.. contents::
+
+Introduction
+============
+
+LIPL is a functional programming language.
+
+Syntax
+======
+
+EBNF
+----
+
+Below is informal EBNF_
+
+.. _EBNF: http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+
+::
+
+    letter = (* alphabetic character *)
+    digit = '0' | '1' | (* ... *) '9'
+    space = ' ' | '\t' (* ... white space character *)
+    spaces = space { space }
+    nat = digit { digit }
+    integer = [ ( '-' | '+' ) ] nat
+    float = [ ( '-' | '+' ) ] nat '.' nat
+
+    name = letter { ( letter | digit | '_' | '-' ) }
+    number = integer | float
+    string = '"' (? characters with escaped '"' ?) '"'
+    operator = '+' | '-' | ...
+    atom = name | number | string | operator
+    list = '(' tokens ')'
+    token = atom | list
+    tokens = [ token ] { spaces token }
+    expr = tokens
+
+Atom
+----
+
+::
+
+    Atoms are literals. They evaluate to themselves.
+
+    (= fact (fun (n)
+        (if (< n 1) 1 (* n (self (- n 1))))))
+
+    fact = (fun n (if (n < 1)
+                      1
+                      (self (n - 1))))
+
+    fun fact ((a :: (Int String Foo Bar)) (b :: Int)) (
+    fun fact (a:(Int String Foo Bar) b:Int) (body)
+
+    fun fun-name (arg-list) (body)
+
+    fun fact [a :: Int String Foo Bar, b :: Int] (a + b)
+
+
+    fact n | n < 1 = 1
+    fact n = n * (fact (n - 1))
+
+    fib 0 = 0
+    fib 1 = 1
+    fib n = fib n + fib (n - 1)
+
+    def fib (n <= 1) = n
+    def fib n = fib n + fib (n - 1)
+
+    [_n.type = Int ; if (_n < 2) n (self _n + self (_n - 1))] 4
+    [(a :: Int) (b :: Int); if (a < 2) b ((self (a - 1) b) + 2)] 4 1
+    => (self 3 1) + 2
+    => ((self 2 1) + 2) + 2
+    => (((self 1 1) + 2) + 2) + 2
+    => ((1 + 2) + 2) + 2
+    => 7
+
+
