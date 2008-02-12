@@ -359,6 +359,9 @@ Fibonacci
     fib 4
     ==> 3
 
+List
+----
+
 ::
 
     data (List a) (
