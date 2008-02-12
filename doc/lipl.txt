@@ -41,10 +41,9 @@ Below is informal EBNF_
     list = '[' ws ']'
          | '[' ws expr { ws ',' ws expr } ws ']'
     atom = number | string | symbol
-    term = atom | list
+    term = atom | list | '(' ws terms ws ')'
     terms = [ term ] { spaces term }
     expr = terms '\n'
-         | '(' ws terms ws ')'
 
 
 Atom
@@ -96,22 +95,34 @@ A list is homogeneous.
 Term
 ----
 
-A term is either a list or an atom.
+A term is either a list, an atom, or a parenthesized sequence of terms
+delimited by white space.
+
+::
+
+    (a (+ 1 2)
+       b (c d))
+
+is a valid term.
+
 
 Expression
 ----------
 
 An expression is a sequence of whitespace delimited terms.
-
 An expression ends with ``'\n'``.
-Or, it can be enclosed in ``()``.
-``'\n'`` does not denote the end of current expression when the expression
-is enclosed in ``()``.
 
-``+ 1 2``, ``= a (+ 1 2)``, ... are expressions.
+::
 
-Semantics
-=========
+    = a (+ 1 2)
+
+is an expression of three terms
+
+::
+
+    (= a (+ 1 2))
+
+is an expression of one term. But, the term has three sub-terms.
 
 Function Application
 --------------------
@@ -120,15 +131,23 @@ Function Application
 ``symbol(term1, term2, ...)`` where
 ``symbol`` is a function.
 
+::
+
+    + 1 2
+    ==> 3
+
+applies ``+`` on arguments 1 and 2.
+Since the symbol ``+`` adds two numbers, ``+ 1 2`` yields 3.
+
 Function Definition
 -------------------
 
-``def symbol [arg1, arg2, ..., argN] body``
+``def symbol args body``
 creates a new function and binds it to ``symbol``.
 
 ::
 
-    def fac [n] (
+    def fac n (
         if (< n 2)
            1
            (* n (fac (- n 1)))
@@ -137,7 +156,16 @@ creates a new function and binds it to ``symbol``.
     ==> 24
 
 defines a factorial function and calls it with argument 4.
-So, it returns 24 ``(= 4!)``.
+So, it returns 24 *(= 4!)*.
+
+::
+
+    def add (a b) (+ a b)
+    add 2 3
+    ==> 5
+
+defines function ``add`` that adds two numbers
+and calls it with parameters 2 and 3.
 
 Bind
 ----
@@ -153,55 +181,196 @@ The symbol, ``=``, is a binder.
     + a b
     ==> 42
 
+binds 1 to ``a`` and 41 *(= 1 + 40)* to ``b``.
+Then calls ``+`` with 1 and 41, returning 42.
+
 Binding to the same symbol can happen only once.
+
+::
+
+    = c "hello"
+    = c "world"
+    ==> Error
+
+Since ``c`` is already bound to ``"hello"``, it cannot be bound
+again to ``"world"``.
+
+Local Scope
+-----------
+
+Let
+~~~
+
+``let env body``
+creates a new environment defined by ``env``.
+Its value is ``body``.
+
+::
+
+    = a "hello"
+    = foo 2
+    let ((= a 2)
+          (= b foo))
+         (let (= a 1) a)
+    ==> 1
+
+At toplevel, ``a`` is bound to ``"hello"``. And ``foo`` is bound to 2.
+The first ``let`` creates an environment where ``a`` is bound to 2,
+and ``b`` is bound to ``foo`` *(= 2)*.
+This second ``a`` shadows ``a`` in the toplevel.
+Then, it evaluates ``(let (= a 1) a)``.
+The value of the second ``let`` term is 1 because the new environment
+it creates binds ``a`` to 1.
+Hence, the value of the first ``let`` term is the value of the 2nd ``let``
+term, which is 1.
+
+Namespace
+~~~~~~~~~
+
+``ns name env`` creates a namespace named ``name``, which includes
+bound symbols defined in ``env``.
+
+::
+
+    ns foo ((= a 1) (= b 2))
+    + foo.a foo.b
+    ==> 3
+
+creates a namespace ``foo``. Then, adds ``a`` and ``b``,
+both only accessible through ``foo``, using ``.``.
 
 Lambda Abstraction
 ------------------
 
-``fun [arg1, arg2, ..., argN] body`` creates a nameless function.
+``fun args body`` creates a nameless function.
 
 ::
 
-    (fun [a, b] (if (< a 0) b (* a b)) 1 2
+    (fun (a b) (if (< a 0) b (* a b)) 1 2
     ==> 2
+
+creates a nameless function and applies it on arguments 1 and 2.
 
 Conditional
 -----------
 
-``if bool-term if-term else-term`` is conditional.
+If
+~~
+
+``if bool-term if-term else-term`` is conditional expression.
 When ``bool-term`` is true, ``if-term`` is evaluated.
 Otherwise, ``else-term`` is evaluated.
 
 ::
 
-    if (== 1 2) "hey" "bye"
+    if (== 1 2) "hey" (if (== 1 1)
+                          "bye"
+                          "???")
     ==> "bye"
 
+Case
+~~~~
+
+``case term ((match-1 result-1) (match-2 result-2) ...)``
+tests ``term`` against ``match-i``. When ``match-i`` matches ``term``,
+``result-i`` is returned. Otherwise, exception.
+
+::
+
+    case (1 1 42) (
+        ((1 2 3) "a")
+        ((b 1 41) b)
+        ((_ 1 c) c)
+    )
+    ==> 42
+
+tests pattern ``(1 1 42)`` against ``(1 2 3)``, ``(1 0 b)``,
+and ``(_ 1 c)`` in order.
+
+- ``(1 2 3)`` does not match ``(1 1 42)`` because of
+  the 2nd element: *2 != 1*.
+- ``(b 1 41)`` does not match ``(1 1 42)`` because of the 3rd element.
+- ``(_ 1 c)`` matches ``(1 1 42)``. ``_`` is a wildcard that
+  matches anything. 42 is bound to ``c`` and returned.
+
+
+Data Type
+---------
+
+Product Type
+~~~~~~~~~~~~
+
+``pt Constructor TypeSignature`` creates a product type
+that can be constructed using ``Constructor``.
+
+::
+
+    pt Foo (Int Float String)
+    = a (Foo 1 2.3 "hello")
+
+``Foo`` can be used to construct an object made of ``Int``
+, ``Float``, and ``String``.
+``a`` is bound to a such object.
+
+Sum Type
+~~~~~~~~
+
+``data TypeName ProductTypes`` creates a sum type of product types.
+
+::
+
+    data Person (
+        (pt Male (String String))
+        (pt Female (String String Int))
+    )
+
+creates a sum type ``Person`` that can be constructed using
+either ``Male`` or ``Female`` constructor.
+
+::
+
+    typeof f (Person String)
+    def f p (case p (
+        ((Male _ lname) (++ "Mr. " lname))
+        (_ (++ "Ms. " lname))
+    ))
+    f (Female "Jane" "Lipl" 1)
+    ==> "Ms. Lipl"
+
+``typeof f (Person String)`` declares type of ``f`` to be
+``Person -> String`` (a function that takes a Person and returns
+String).
+``f`` is defined so that when the parameter passed to it was
+``(Male ...)``, it returns ``"Mr. <last name>"``.
+Otherwise, it returns ``"Ms. <last name>"``.
 
 Examples
 ========
 
-declaration::
+Fibonacci
+---------
 
-    = name value
+::
 
-lambda abstraction::
+    typeof fib (Int Int)
+    def fib n (if (< n 2)
+                  n
+                  (+ (fib (- n 1)) (fib (- n 2))))
+    fib 4
+    ==> 3
 
-    fun arg-list body
+::
 
-function call::
+    data (List a) (
+        Empty
+        (Cons a List)
+    )
 
-    fun-name arg1 arg2 ...
-
-list::
-
-    [expr1, expr2, ...]
-
-expression::
-
-    symbol1 symbol2 ...
-    | ( symbol1 symbol2 ... )
-
-
-
+    typeof sum ((List Int) Int)
+    def sum l (case l (
+        (Empty 0)
+        ((Cons i li) (+ i (sum li)))
+    ))
+    sum (Cons 1 (Cons 2 (Cons 3 (Cons 4 Empty))))
+    ==> 10
 
