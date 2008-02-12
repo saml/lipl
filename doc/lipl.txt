@@ -2,7 +2,7 @@
 LIPL
 ====
 
-:Author: Samuel Lee
+:Author: Sam Lee
 
 .. sectnum::
 .. contents::
