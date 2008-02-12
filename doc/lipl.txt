@@ -41,16 +41,16 @@ Below is informal EBNF_
     list = '[' ws ']'
          | '[' ws expr { ws ',' ws expr } ws ']'
     atom = number | string | symbol
-    token = atom | list
-    tokens = [ token ] { spaces token }
-    expr = tokens
-         | '(' ws tokens ws ')'
+    term = atom | list
+    terms = [ term ] { spaces term }
+    expr = terms '\n'
+         | '(' ws terms ws ')'
 
 
 Atom
 ----
 
-An atom evaluates to itself, except for bound atoms.
+An atom's value is itself, except for bound atoms.
 
 Number
 ~~~~~~
@@ -69,11 +69,9 @@ Examples include: "hi! i'm a string", "let's escape \"!!", ...
 Symbol
 ~~~~~~
 
-A symbol can be bound. If it's bound, it evaluates to the bound value.
-Otherwise, a symbol evaluates to itself.
-
-Identifier
-``````````
+A symbol can be bound. If it's bound, its value is the value of what it is
+bound to.
+Otherwise, a symbol's value is itself.
 
 An identifier starts with an alphabetic character.
 It can then include digits, ``-``, and ``_``.
@@ -82,11 +80,102 @@ Identifier can be nested using ``.``.
 For example, ``name.first`` refers to attribute ``first``
 of identifier ``name``.
 
+``one``, ``twenty-three``, ``Oh001``, ``+::``, ``-->``...
+all evaluate to themselves unless they are bound to some other value.
+
+
+List
+----
+
+A list is enclosed with ``[]``. Each element in a list is separated
+by ``,``.
+A list is homogeneous.
+
+``[1,2,3]`` is a valid list, while ``[1,2,"hi"]`` is not.
+
+Term
+----
+
+A term is either a list or an atom.
 
 Expression
 ----------
 
-An expression is a sequence of whitespace delimited tokens.
+An expression is a sequence of whitespace delimited terms.
+
+An expression ends with ``'\n'``.
+Or, it can be enclosed in ``()``.
+``'\n'`` does not denote the end of current expression when the expression
+is enclosed in ``()``.
+
+``+ 1 2``, ``= a (+ 1 2)``, ... are expressions.
+
+Semantics
+=========
+
+Function Application
+--------------------
+
+``symbol term1 term2 ...`` denotes function application:
+``symbol(term1, term2, ...)`` where
+``symbol`` is a function.
+
+Function Definition
+-------------------
+
+``def symbol [arg1, arg2, ..., argN] body``
+creates a new function and binds it to ``symbol``.
+
+::
+
+    def fac [n] (
+        if (< n 2)
+           1
+           (* n (fac (- n 1)))
+    )
+    fac 4
+    ==> 24
+
+defines a factorial function and calls it with argument 4.
+So, it returns 24 ``(= 4!)``.
+
+Bind
+----
+
+The symbol, ``=``, is a binder.
+``= symbol term`` binds ``term`` to ``symbol``.
+
+::
+
+    (= a
+       1)
+    = b (+ a 40)
+    + a b
+    ==> 42
+
+Binding to the same symbol can happen only once.
+
+Lambda Abstraction
+------------------
+
+``fun [arg1, arg2, ..., argN] body`` creates a nameless function.
+
+::
+
+    (fun [a, b] (if (< a 0) b (* a b)) 1 2
+    ==> 2
+
+Conditional
+-----------
+
+``if bool-term if-term else-term`` is conditional.
+When ``bool-term`` is true, ``if-term`` is evaluated.
+Otherwise, ``else-term`` is evaluated.
+
+::
+
+    if (== 1 2) "hey" "bye"
+    ==> "bye"
 
 
 Examples

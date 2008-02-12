@@ -310,16 +310,23 @@ ul.auto-toc {
 <li><a class="reference" href="#atom" id="id5" name="id5">2.2&nbsp;&nbsp;&nbsp;Atom</a><ul class="auto-toc">
 <li><a class="reference" href="#number" id="id6" name="id6">2.2.1&nbsp;&nbsp;&nbsp;Number</a></li>
 <li><a class="reference" href="#string" id="id7" name="id7">2.2.2&nbsp;&nbsp;&nbsp;String</a></li>
-<li><a class="reference" href="#symbol" id="id8" name="id8">2.2.3&nbsp;&nbsp;&nbsp;Symbol</a><ul class="auto-toc">
-<li><a class="reference" href="#identifier" id="id9" name="id9">2.2.3.1&nbsp;&nbsp;&nbsp;Identifier</a></li>
+<li><a class="reference" href="#symbol" id="id8" name="id8">2.2.3&nbsp;&nbsp;&nbsp;Symbol</a></li>
 </ul>
 </li>
+<li><a class="reference" href="#list" id="id9" name="id9">2.3&nbsp;&nbsp;&nbsp;List</a></li>
+<li><a class="reference" href="#term" id="id10" name="id10">2.4&nbsp;&nbsp;&nbsp;Term</a></li>
+<li><a class="reference" href="#expression" id="id11" name="id11">2.5&nbsp;&nbsp;&nbsp;Expression</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#expression" id="id10" name="id10">2.3&nbsp;&nbsp;&nbsp;Expression</a></li>
+<li><a class="reference" href="#semantics" id="id12" name="id12">3&nbsp;&nbsp;&nbsp;Semantics</a><ul class="auto-toc">
+<li><a class="reference" href="#function-application" id="id13" name="id13">3.1&nbsp;&nbsp;&nbsp;Function Application</a></li>
+<li><a class="reference" href="#function-definition" id="id14" name="id14">3.2&nbsp;&nbsp;&nbsp;Function Definition</a></li>
+<li><a class="reference" href="#bind" id="id15" name="id15">3.3&nbsp;&nbsp;&nbsp;Bind</a></li>
+<li><a class="reference" href="#lambda-abstraction" id="id16" name="id16">3.4&nbsp;&nbsp;&nbsp;Lambda Abstraction</a></li>
+<li><a class="reference" href="#conditional" id="id17" name="id17">3.5&nbsp;&nbsp;&nbsp;Conditional</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#examples" id="id11" name="id11">3&nbsp;&nbsp;&nbsp;Examples</a></li>
+<li><a class="reference" href="#examples" id="id18" name="id18">4&nbsp;&nbsp;&nbsp;Examples</a></li>
 </ul>
 </div>
 <div class="section">
@@ -349,15 +356,15 @@ symbol = ident | '+' | '-' | ...
 list = '[' ws ']'
      | '[' ws expr { ws ',' ws expr } ws ']'
 atom = number | string | symbol
-token = atom | list
-tokens = [ token ] { spaces token }
-expr = tokens
-     | '(' ws tokens ws ')'
+term = atom | list
+terms = [ term ] { spaces term }
+expr = terms '\n'
+     | '(' ws terms ws ')'
 </pre>
 </div>
 <div class="section">
 <h2><a class="toc-backref" href="#id5" id="atom" name="atom">2.2&nbsp;&nbsp;&nbsp;Atom</a></h2>
-<p>An atom evaluates to itself, except for bound atoms.</p>
+<p>An atom's value is itself, except for bound atoms.</p>
 <div class="section">
 <h3><a class="toc-backref" href="#id6" id="number" name="number">2.2.1&nbsp;&nbsp;&nbsp;Number</a></h3>
 <p>A number can be an integer: 1, +2, -32532, -00342, ...
@@ -371,25 +378,97 @@ To use <tt class="docutils literal"><span class="pre">&quot;</span></tt> inside 
 </div>
 <div class="section">
 <h3><a class="toc-backref" href="#id8" id="symbol" name="symbol">2.2.3&nbsp;&nbsp;&nbsp;Symbol</a></h3>
-<p>A symbol can be bound. If it's bound, it evaluates to the bound value.
-Otherwise, a symbol evaluates to itself.</p>
-<div class="section">
-<h4><a class="toc-backref" href="#id9" id="identifier" name="identifier">2.2.3.1&nbsp;&nbsp;&nbsp;Identifier</a></h4>
+<p>A symbol can be bound. If it's bound, its value is the value of what it is
+bound to.
+Otherwise, a symbol's value is itself.</p>
 <p>An identifier starts with an alphabetic character.
 It can then include digits, <tt class="docutils literal"><span class="pre">-</span></tt>, and <tt class="docutils literal"><span class="pre">_</span></tt>.</p>
 <p>Identifier can be nested using <tt class="docutils literal"><span class="pre">.</span></tt>.
 For example, <tt class="docutils literal"><span class="pre">name.first</span></tt> refers to attribute <tt class="docutils literal"><span class="pre">first</span></tt>
 of identifier <tt class="docutils literal"><span class="pre">name</span></tt>.</p>
-</div>
-</div>
-</div>
-<div class="section">
-<h2><a class="toc-backref" href="#id10" id="expression" name="expression">2.3&nbsp;&nbsp;&nbsp;Expression</a></h2>
-<p>An expression is a sequence of whitespace delimited tokens.</p>
+<p><tt class="docutils literal"><span class="pre">one</span></tt>, <tt class="docutils literal"><span class="pre">twenty-three</span></tt>, <tt class="docutils literal"><span class="pre">Oh001</span></tt>, <tt class="docutils literal"><span class="pre">+::</span></tt>, <tt class="docutils literal"><span class="pre">--&gt;</span></tt>...
+all evaluate to themselves unless they are bound to some other value.</p>
 </div>
 </div>
 <div class="section">
-<h1><a class="toc-backref" href="#id11" id="examples" name="examples">3&nbsp;&nbsp;&nbsp;Examples</a></h1>
+<h2><a class="toc-backref" href="#id9" id="list" name="list">2.3&nbsp;&nbsp;&nbsp;List</a></h2>
+<p>A list is enclosed with <tt class="docutils literal"><span class="pre">[]</span></tt>. Each element in a list is separated
+by <tt class="docutils literal"><span class="pre">,</span></tt>.
+A list is homogeneous.</p>
+<p><tt class="docutils literal"><span class="pre">[1,2,3]</span></tt> is a valid list, while <tt class="docutils literal"><span class="pre">[1,2,&quot;hi&quot;]</span></tt> is not.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id10" id="term" name="term">2.4&nbsp;&nbsp;&nbsp;Term</a></h2>
+<p>A term is either a list or an atom.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id11" id="expression" name="expression">2.5&nbsp;&nbsp;&nbsp;Expression</a></h2>
+<p>An expression is a sequence of whitespace delimited terms.</p>
+<p>An expression ends with <tt class="docutils literal"><span class="pre">'\n'</span></tt>.
+Or, it can be enclosed in <tt class="docutils literal"><span class="pre">()</span></tt>.
+<tt class="docutils literal"><span class="pre">'\n'</span></tt> does not denote the end of current expression when the expression
+is enclosed in <tt class="docutils literal"><span class="pre">()</span></tt>.</p>
+<p><tt class="docutils literal"><span class="pre">+</span> <span class="pre">1</span> <span class="pre">2</span></tt>, <tt class="docutils literal"><span class="pre">=</span> <span class="pre">a</span> <span class="pre">(+</span> <span class="pre">1</span> <span class="pre">2)</span></tt>, ... are expressions.</p>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id12" id="semantics" name="semantics">3&nbsp;&nbsp;&nbsp;Semantics</a></h1>
+<div class="section">
+<h2><a class="toc-backref" href="#id13" id="function-application" name="function-application">3.1&nbsp;&nbsp;&nbsp;Function Application</a></h2>
+<p><tt class="docutils literal"><span class="pre">symbol</span> <span class="pre">term1</span> <span class="pre">term2</span> <span class="pre">...</span></tt> denotes function application:
+<tt class="docutils literal"><span class="pre">symbol(term1,</span> <span class="pre">term2,</span> <span class="pre">...)</span></tt> where
+<tt class="docutils literal"><span class="pre">symbol</span></tt> is a function.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id14" id="function-definition" name="function-definition">3.2&nbsp;&nbsp;&nbsp;Function Definition</a></h2>
+<p><tt class="docutils literal"><span class="pre">def</span> <span class="pre">symbol</span> <span class="pre">[arg1,</span> <span class="pre">arg2,</span> <span class="pre">...,</span> <span class="pre">argN]</span> <span class="pre">body</span></tt>
+creates a new function and binds it to <tt class="docutils literal"><span class="pre">symbol</span></tt>.</p>
+<pre class="literal-block">
+def fac [n] (
+    if (&lt; n 2)
+       1
+       (* n (fac (- n 1)))
+)
+fac 4
+==&gt; 24
+</pre>
+<p>defines a factorial function and calls it with argument 4.
+So, it returns 24 <tt class="docutils literal"><span class="pre">(=</span> <span class="pre">4!)</span></tt>.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id15" id="bind" name="bind">3.3&nbsp;&nbsp;&nbsp;Bind</a></h2>
+<p>The symbol, <tt class="docutils literal"><span class="pre">=</span></tt>, is a binder.
+<tt class="docutils literal"><span class="pre">=</span> <span class="pre">symbol</span> <span class="pre">term</span></tt> binds <tt class="docutils literal"><span class="pre">term</span></tt> to <tt class="docutils literal"><span class="pre">symbol</span></tt>.</p>
+<pre class="literal-block">
+(= a
+   1)
+= b (+ a 40)
++ a b
+==&gt; 42
+</pre>
+<p>Binding to the same symbol can happen only once.</p>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id16" id="lambda-abstraction" name="lambda-abstraction">3.4&nbsp;&nbsp;&nbsp;Lambda Abstraction</a></h2>
+<p><tt class="docutils literal"><span class="pre">fun</span> <span class="pre">[arg1,</span> <span class="pre">arg2,</span> <span class="pre">...,</span> <span class="pre">argN]</span> <span class="pre">body</span></tt> creates a nameless function.</p>
+<pre class="literal-block">
+(fun [a, b] (if (&lt; a 0) b (* a b)) 1 2
+==&gt; 2
+</pre>
+</div>
+<div class="section">
+<h2><a class="toc-backref" href="#id17" id="conditional" name="conditional">3.5&nbsp;&nbsp;&nbsp;Conditional</a></h2>
+<p><tt class="docutils literal"><span class="pre">if</span> <span class="pre">bool-term</span> <span class="pre">if-term</span> <span class="pre">else-term</span></tt> is conditional.
+When <tt class="docutils literal"><span class="pre">bool-term</span></tt> is true, <tt class="docutils literal"><span class="pre">if-term</span></tt> is evaluated.
+Otherwise, <tt class="docutils literal"><span class="pre">else-term</span></tt> is evaluated.</p>
+<pre class="literal-block">
+if (== 1 2) &quot;hey&quot; &quot;bye&quot;
+==&gt; &quot;bye&quot;
+</pre>
+</div>
+</div>
+<div class="section">
+<h1><a class="toc-backref" href="#id18" id="examples" name="examples">4&nbsp;&nbsp;&nbsp;Examples</a></h1>
 <p>declaration:</p>
 <pre class="literal-block">
 = name value
