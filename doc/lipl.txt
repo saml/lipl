@@ -25,17 +25,25 @@ Below is informal EBNF_
 ::
 
     letter = (* alphabetic character *)
-    digit = '0' | '1' | (* ... *) '9'
-    space = ' ' | '\t' (* ... white space character *)
+    digit = '0' | '1' | ... '9'
+    space = ' ' | '\t' | ...
+        (* white space character *)
     spaces = space { space }
+        (* one or more spaces (mandatory) *)
     ws = [ spaces ]
+        (* optional spaces *)
     nat = digit { digit }
+        (* natural number. allowing leading zeros *)
     integer = [ ( '-' | '+' ) ] nat
+        (* optional - or + *)
     float = [ ( '-' | '+' ) ] nat '.' nat
+        (* floating point number. . must present *)
 
-    name = letter { ( letter | digit | '_' | '-' ) }
-    ident = name { '.' name }
+    ident = letter { ( letter | digit | '_' | '-' ) }
+        (* identifier. starts with a letter. *)
     number = integer | float
+    char = "'" (? any single character ?) "'"
+        (* unicode character. ' should be escaped. *)
     string = '"' (? characters with escaped '"' ?) '"'
     symbol = ident | '+' | '-' | ...
     list = '[' ws ']'
@@ -43,7 +51,6 @@ Below is informal EBNF_
     atom = number | string | symbol
     term = atom | list | '(' ws terms ws ')'
     terms = [ term ] { spaces term }
-    expr = terms '\n'
 
 
 Atom

@@ -355,17 +355,25 @@ ul.auto-toc {
 <p>Below is informal <a class="reference" href="http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form">EBNF</a></p>
 <pre class="literal-block">
 letter = (* alphabetic character *)
-digit = '0' | '1' | (* ... *) '9'
-space = ' ' | '\t' (* ... white space character *)
+digit = '0' | '1' | ... '9'
+space = ' ' | '\t' | ...
+    (* white space character *)
 spaces = space { space }
+    (* one or more spaces (mandatory) *)
 ws = [ spaces ]
+    (* optional spaces *)
 nat = digit { digit }
+    (* natural number. allowing leading zeros *)
 integer = [ ( '-' | '+' ) ] nat
+    (* optional - or + *)
 float = [ ( '-' | '+' ) ] nat '.' nat
+    (* floating point number. . must present *)
 
-name = letter { ( letter | digit | '_' | '-' ) }
-ident = name { '.' name }
+ident = letter { ( letter | digit | '_' | '-' ) }
+    (* identifier. starts with a letter. *)
 number = integer | float
+char = &quot;'&quot; (? any single character ?) &quot;'&quot;
+    (* unicode character. ' should be escaped. *)
 string = '&quot;' (? characters with escaped '&quot;' ?) '&quot;'
 symbol = ident | '+' | '-' | ...
 list = '[' ws ']'
@@ -373,7 +381,6 @@ list = '[' ws ']'
 atom = number | string | symbol
 term = atom | list | '(' ws terms ws ')'
 terms = [ term ] { spaces term }
-expr = terms '\n'
 </pre>
 </div>
 <div class="section">
