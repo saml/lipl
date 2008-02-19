@@ -18,9 +18,22 @@ Syntax
 EBNF
 ----
 
-Below is informal EBNF_
+Informal EBNF [#ebnf]_ is used.
 
-.. _EBNF: http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+.. [#ebnf] http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+
+   - ``{e}`` : zero or more occurrence of e
+   - ``[e]`` : zero or one occurrence of e
+   - ``(e1 | e2)`` : one occurrence of e1 or e2
+   - ``(* e *)`` : e is ignored. comments.
+   - ``'e'`` or ``"e"`` : literal e
+   - ``? e ?`` : e is special sequence.
+     used here to explain difficult express terms.
+
+Predefined non-terminals
+------------------------
+
+Predefined non-terminals for convenience.
 
 ::
 
@@ -39,224 +52,237 @@ Below is informal EBNF_
     float = [ ( '-' | '+' ) ] nat '.' nat
         (* floating point number. . must present *)
 
+Lexical items
+-------------
+
+Defines what can be a token.
+
+::
+
     ident = letter { ( letter | digit | '_' | '-' ) }
         (* identifier. starts with a letter. *)
+    op = '+' | '-' | ...
+        (* predefined operators or functions *)
+    boolean = 'True' | 'False'
     number = integer | float
-    char = "'" (? any single character ?) "'"
+    char = "'" ? any single character ? "'"
         (* unicode character. ' should be escaped. *)
-    string = '"' (? characters with escaped '"' ?) '"'
-    symbol = ident | '+' | '-' | ...
-    list = '[' ws ']'
-         | '[' ws expr { ws ',' ws expr } ws ']'
-    atom = number | string | symbol
-    term = atom | list | '(' ws terms ws ')'
-    terms = [ term ] { spaces term }
+    string = '"' ? characters with escaped '"' ? '"'
+    list = '[' ']'
+         | '[' token { ',' token } ']'
+        (* comma separated tokens. enclosed by [] *)
+    token = ident | op | string | number | list | expr
+    tokens = token spaces token { spaces token }
+        (* space separated tokens *)
+    expr = '(' tokens ')'
 
+Expressions
+-----------
 
-Atom
-----
+All expressions are enclosed in ``()``.  And, tokens
+in an expression are separated by white-spaces.
+Here, white-space token delimiters are omitted.
 
-An atom's value is itself, except for bound atoms.
+::
+
+    fun-def = '(' 'def' ident ident-list token ')'
+        (* function definition *)
+    fun-app = '(' ident idents ')'
+        (* function application *)
+    ident-list = '(' idents ')'
+    idents = ident { spaces ident }
+
+    if = '(' 'if' token token token ')'
+        (* conditional *)
+    case = '(' 'case' branches ')'
+        (* multi-branch conditional *)
+    branches = '(' branch ')'
+    branch = '(' token token ')'
+
+    let = '(' 'let' pairs token ')'
+        (* creating local scope *)
+    pairs = branches
+
+Lexicon
+=======
+
+Explanation of basic building blocks of LIPL.
+
+Boolean
+-------
+
+A boolean can be either True or False.
 
 Number
-~~~~~~
+------
 
 A number can be an integer: 1, +2, -32532, -00342, ...
 Or, a floating point number: +000.234, -23.43, 0.0023402, ...
 
+A number evaluates to itself. A number cannot be bound.
+For example, 42 evaluates to 42.
+It can not have another meaning.
+
+Character
+---------
+
+A character is any unicode character enclosed in ``''``.
+For example, 'a', 'B', '2', '\'' ... are valid characters.
+
 String
-~~~~~~
+------
 
-String is a sequence of characters enclosed inside ``"``.
+A string is a sequence of characters enclosed inside ``"``.
+Characters that make up a string are not surrounded by ``''``.
+For example, "aB2'" is a valid string.
+
 To use ``"`` inside a string, escape it using ``\``.
+More examples: "hi! i'm a string", "let's escape \"!!", ...
 
-Examples include: "hi! i'm a string", "let's escape \"!!", ...
+Identifier
+----------
 
-Symbol
-~~~~~~
+An identifier starts with an alphabetic letter, and continues
+with a sequence of digits, letters, ``-``, or ``_``.
 
-A symbol can be bound. If it's bound, its value is the value of what it is
-bound to.
-Otherwise, a symbol's value is itself.
+For example, abc, abC123, apple-pie, apple_123, ... are valid
+identifiers.
 
-An identifier starts with an alphabetic character.
-It can then include digits, ``-``, and ``_``.
+An identifier is bound to some other value.
 
-Identifier can be nested using ``.``.
-For example, ``name.first`` refers to attribute ``first``
-of identifier ``name``.
+Operator
+--------
 
-``one``, ``twenty-three``, ``Oh001``, ``+::``, ``-->``...
-all evaluate to themselves unless they are bound to some other value.
-
+An operator starts with one of special characters:
+``+=_-*&^%$#@!~```.
+Otherwise, it is same as identifier, i.e., they denote some
+other values.
 
 List
 ----
 
-A list is enclosed with ``[]``. Each element in a list is separated
+A list is enclosed by ``[]``. Elements in a list are separated
 by ``,``.
+
 A list is homogeneous.
+For example, ``[1,2,3]`` is a valid list, while ``[1,2,"hi"]`` is not.
 
-``[1,2,3]`` is a valid list, while ``[1,2,"hi"]`` is not.
+Token
+-----
 
-Term
-----
+A token is either a list, a boolean, a number, a character, a string,
+an identifier, an operator, or an expression.
 
-A term is either a list, an atom, or a parenthesized sequence of terms
-delimited by white space.
+It is the smallest meaningful unit in LIPL.
 
-::
-
-    (a (+ 1 2)
-       b (c d))
-
-is a valid term.
-
+Examples include: foo, 123, "hello world!", '*', +, (+ 1 2), ...
 
 Expression
 ----------
 
-An expression is a sequence of whitespace delimited terms.
-An expression ends with ``'\n'``.
+An expression is a sequence of whitespace delimited tokens.
+Since a token can be an expression, nested expressions are allowed.
 
-::
+For example, (+ (- 1 2) 3) is a valid expression.
 
-    = a (+ 1 2)
+Structure
+=========
 
-is an expression of three terms
-
-::
-
-    (= a (+ 1 2))
-
-is an expression of one term. But, the term has three sub-terms.
+Different structures (expressions) are available.
 
 Function Application
 --------------------
 
-``symbol term1 term2 ...`` denotes function application:
-``symbol(term1, term2, ...)`` where
-``symbol`` is a function.
+When the first token in an expression is an identifier or an operator,
+the expression is function application expression.
 
-::
+``(func arg1 arg2 ... argN)`` denotes application of a function
+named ``func`` on arguments arg1 through argN.
 
-    + 1 2
+    (+ 1 2)
     ==> 3
 
-applies ``+`` on arguments 1 and 2.
-Since the symbol ``+`` adds two numbers, ``+ 1 2`` yields 3.
+applies the operator function ``+`` on arguments 1 and 2.
+Since the operator ``+`` adds two numbers, the expression yields 3.
 
 Function Definition
 -------------------
 
-``def symbol args body``
-creates a new function and binds it to ``symbol``.
+To define a function, use **def** keyword.
+
+``(def ident args body)``
+defines a new function whose arguments are args and body is body.
+And, binds the function to ident.
 
 ::
 
-    def fac n (
+    (def fac n (
         if (< n 2)
            1
            (* n (fac (- n 1)))
-    )
-    fac 4
+    ))
+    (fac 4)
     ==> 24
 
 defines a factorial function and calls it with argument 4.
 So, it returns 24 *(= 4!)*.
 
+Note that an expression can contain new lines.
+And, the line that starts with ``==>`` is the value of previous expression.
+
 ::
 
-    def add (a b) (+ a b)
-    add 2 3
+    (def add (a b) (+ a b))
+    (add 2 3)
     ==> 5
 
-defines function ``add`` that adds two numbers
+defines a function ``add`` that adds two numbers
 and calls it with parameters 2 and 3.
 
-Bind
-----
-
-The symbol, ``=``, is a binder.
-``= symbol term`` binds ``term`` to ``symbol``.
+You can define a constant using function definition syntax.
 
 ::
 
-    (= a
-       1)
-    = b (+ a 40)
-    + a b
-    ==> 42
+    (def one () 1)
+    (one)
+    ==> 1
 
-binds 1 to ``a`` and 41 *(= 1 + 40)* to ``b``.
-Then calls ``+`` with 1 and 41, returning 42.
-
-Binding to the same symbol can happen only once.
-
-::
-
-    = c "hello"
-    = c "world"
-    ==> Error
-
-Since ``c`` is already bound to ``"hello"``, it cannot be bound
-again to ``"world"``.
+Here, ``one`` is bound to a function that takes no parameter and returns 1.
+So, calling the function ``one`` yields 1.
+Note that ``()`` is used to say that the function takes no parameter.
 
 Local Scope
 -----------
 
-Let
-~~~
+A local scope can be created using **let** keyword.
 
-``let env body``
-creates a new environment defined by ``env``.
-Its value is ``body``.
+``(let ((k1 v1) (k2 v2) ... (kN vN)) body)``
+creates a new environment where ki is bound to vi.
+Then, it evaluates ``body`` in the new environment.
 
 ::
 
-    = a "hello"
-    = foo 2
-    let ((= a 2)
-          (= b foo))
-         (let (= a 1) a)
+    (def a () "hello")
+    (def foo () 2)
+    (let ((a 2)
+          (b foo))
+         (let ((a 1)) a))
     ==> 1
 
-At toplevel, ``a`` is bound to ``"hello"``. And ``foo`` is bound to 2.
-The first ``let`` creates an environment where ``a`` is bound to 2,
-and ``b`` is bound to ``foo`` *(= 2)*.
-This second ``a`` shadows ``a`` in the toplevel.
-Then, it evaluates ``(let (= a 1) a)``.
-The value of the second ``let`` term is 1 because the new environment
-it creates binds ``a`` to 1.
-Hence, the value of the first ``let`` term is the value of the 2nd ``let``
-term, which is 1.
+The top-level ``a`` is a function that takes no parameter
+and returns "hello". ``foo`` takes no parameter and returns 2.
+Then, there are 2 local scopes: one at the top-level, one nested in
+the top-level local scope.
 
-Namespace
-~~~~~~~~~
+In the top-level local scope, ``a`` and ``b`` are both 2 (``b`` is
+``foo``, which is 2).
+The value of the top-level local scope is the value of the nested
+local scope, ``a``.
+``a`` in the nested local scope, however, is 1.
+So, the value of top-level local scope is 1.
 
-``ns name env`` creates a namespace named ``name``, which includes
-bound symbols defined in ``env``.
-
-::
-
-    ns foo ((= a 1) (= b 2))
-    + foo.a foo.b
-    ==> 3
-
-creates a namespace ``foo``. Then, adds ``a`` and ``b``,
-both only accessible through ``foo``, using ``.``.
-
-Lambda Abstraction
-------------------
-
-``fun args body`` creates a nameless function.
-
-::
-
-    (fun (a b) (if (< a 0) b (* a b)) 1 2
-    ==> 2
-
-creates a nameless function and applies it on arguments 1 and 2.
+In other words, a local scope created by **let** expression
+shadows previously defined identifiers.
 
 Conditional
 -----------
@@ -264,42 +290,51 @@ Conditional
 If
 ~~
 
-``if bool-term if-term else-term`` is conditional expression.
-When ``bool-term`` is true, ``if-term`` is evaluated.
-Otherwise, ``else-term`` is evaluated.
+To create a single branch conditional, use **if** keyword.
+
+``(if bool if-case else-case)`` evaluates ``if-case`` if ``bool``
+has true value. Otherwise, it evaluates ``else-case``.
 
 ::
 
-    if (== 1 2) "hey" (if (== 1 1)
-                          "bye"
-                          "???")
+    (if (== 1 2) "hey" (if (== 1 1)
+                           "bye"
+                           "???"))
     ==> "bye"
+
+In the first if expression, ``(== 1 2)`` evaluates to false because
+``==`` is equality testing operator and 1 and 2 are not equal.
+So, instead of evaluating the string "hey", the second if expression
+is evaluated, where ``(== 1 1)`` yields true value.
+Hence, "bye" is returned.
 
 Case
 ~~~~
 
-``case term ((match-1 result-1) (match-2 result-2) ...)``
-tests ``term`` against ``match-i``. When ``match-i`` matches ``term``,
-``result-i`` is returned. Otherwise, exception.
+To use multi-branch conditional, use **case** keyword.
+
+``(case ((bool1 e1) (bool2 e2) ... (boolN eN)))``
+tests truth value of booli. As soon as it finds that booli is true,
+it evaluates the expression paired with the boolean, ei.
 
 ::
 
-    case (1 1 42) (
-        ((1 2 3) "a")
-        ((b 1 41) b)
-        ((_ 1 c) c)
-    )
-    ==> 42
+    (case (
+        ((== 1 2) "one is same as two")
+        (False "do not ever evaluate this string")
+        ((< 1 2) (case ((True "yay"))))
+        (True "will I be evaluated?")
+    ))
+    ==> "yay"
 
-tests pattern ``(1 1 42)`` against ``(1 2 3)``, ``(1 0 b)``,
-and ``(_ 1 c)`` in order.
+The above case expression tests the first boolean value returned by
+``(== 1 2)``. False is returned. So, it continues on the second
+boolean value and third.
+On the third expression, ``(< 1 2)``, True is returned.
+So, the nested case expression is evaluated. And, "yay" is returned.
 
-- ``(1 2 3)`` does not match ``(1 1 42)`` because of
-  the 2nd element: *2 != 1*.
-- ``(b 1 41)`` does not match ``(1 1 42)`` because of the 3rd element.
-- ``(_ 1 c)`` matches ``(1 1 42)``. ``_`` is a wildcard that
-  matches anything. 42 is bound to ``c`` and returned.
-
+Although the fourth boolean value is True, the case expression
+does not evaluate it because the third case was already True.
 
 Data Type
 ---------

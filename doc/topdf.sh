@@ -6,3 +6,5 @@ rst2latex.py --documentoptions=10pt,letterpaper\
              --section-numbering lipl.txt > lipl.tex
 
 bash l2p.sh lipl.tex
+
+rm lipl.tex
