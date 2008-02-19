@@ -438,6 +438,12 @@ branch = '(' token token ')'
 let = '(' 'let' pairs token ')'
     (* creating local scope *)
 pairs = branches
+
+pt = '(' 'pt' ident ident-list ')'
+    (* product type *)
+
+st = '(' 'st' ident ident-list ')'
+    (* sum type *)
 </pre>
 </div>
 </div>
@@ -630,42 +636,48 @@ does not evaluate it because the third case was already True.</p>
 <h2><a class="toc-backref" href="#id27" id="data-type" name="data-type">4.5&nbsp;&nbsp;&nbsp;Data Type</a></h2>
 <div class="section">
 <h3><a class="toc-backref" href="#id28" id="product-type" name="product-type">4.5.1&nbsp;&nbsp;&nbsp;Product Type</a></h3>
-<p><tt class="docutils literal"><span class="pre">pt</span> <span class="pre">Constructor</span> <span class="pre">TypeSignature</span></tt> creates a product type
-that can be constructed using <tt class="docutils literal"><span class="pre">Constructor</span></tt>.</p>
+<p>To create a product type, use <strong>pt</strong> keyword.</p>
+<p><tt class="docutils literal"><span class="pre">(pt</span> <span class="pre">type-ctor</span> <span class="pre">(type1</span> <span class="pre">type2</span> <span class="pre">...</span> <span class="pre">typeN))</span></tt> creates a product type
+that can be constructed with <tt class="docutils literal"><span class="pre">type-ctor</span></tt>.
+When an object of the product type is constructed,
+the object has N fields of types type1, type2, ..., typeN.</p>
+<p>For example,</p>
 <pre class="literal-block">
-pt Foo (Int Float String)
-= a (Foo 1 2.3 &quot;hello&quot;)
+(pt Name (String String))
+(Name &quot;fname&quot; &quot;lname&quot;)
+==&gt; (Name &quot;fname&quot; &quot;lname&quot;)
 </pre>
-<p><tt class="docutils literal"><span class="pre">Foo</span></tt> can be used to construct an object made of <tt class="docutils literal"><span class="pre">Int</span></tt>
-, <tt class="docutils literal"><span class="pre">Float</span></tt>, and <tt class="docutils literal"><span class="pre">String</span></tt>.
-<tt class="docutils literal"><span class="pre">a</span></tt> is bound to a such object.</p>
+<p>creates a product type whose instances include two String fields.
+Then, <tt class="docutils literal"><span class="pre">(Name</span> <span class="pre">&quot;fname&quot;</span> <span class="pre">&quot;lname&quot;)</span></tt> constructs an object with its two fields
+initialized to &quot;fname&quot; and &quot;lname&quot;.</p>
+<p>It is convention to use upper case letter for type constructors
+(like Name) and
+type names (like String).</p>
 </div>
 <div class="section">
 <h3><a class="toc-backref" href="#id29" id="sum-type" name="sum-type">4.5.2&nbsp;&nbsp;&nbsp;Sum Type</a></h3>
-<p><tt class="docutils literal"><span class="pre">data</span> <span class="pre">TypeName</span> <span class="pre">ProductTypes</span></tt> creates a sum type of product types.</p>
+<p>To create a sum type, <tt class="docutils literal"><span class="pre">st</span></tt> keyword can be used.</p>
+<p><tt class="docutils literal"><span class="pre">(st</span> <span class="pre">type-name</span> <span class="pre">(type-ctor1</span> <span class="pre">type-ctor2</span> <span class="pre">...</span> <span class="pre">type-ctorN)</span></tt>
+creates a sum type named <tt class="docutils literal"><span class="pre">type-name</span></tt>.
+An object of the type created can be instantiated using
+any one of given type constructors.</p>
 <pre class="literal-block">
-data Person (
-    (pt Male (String String))
-    (pt Female (String String Int))
-)
+(pt Male (Int String))
+(pt Female (Int String))
+(st Person (Male Female))
 </pre>
 <p>creates a sum type <tt class="docutils literal"><span class="pre">Person</span></tt> that can be constructed using
-either <tt class="docutils literal"><span class="pre">Male</span></tt> or <tt class="docutils literal"><span class="pre">Female</span></tt> constructor.</p>
+either <tt class="docutils literal"><span class="pre">Male</span></tt> or <tt class="docutils literal"><span class="pre">Female</span></tt> type constructor.
+<tt class="docutils literal"><span class="pre">Male</span></tt> or <tt class="docutils literal"><span class="pre">Female</span></tt> type constructor expects an Int and a String.</p>
 <pre class="literal-block">
-typeof f (Person String)
-def f p (case p (
-    ((Male _ lname) (++ &quot;Mr. &quot; lname))
-    (_ (++ &quot;Ms. &quot; lname))
-))
-f (Female &quot;Jane&quot; &quot;Lipl&quot; 1)
-==&gt; &quot;Ms. Lipl&quot;
+(st Animal (Male Female))
+(Male 15 &quot;Mr. T&quot;)
+==&gt; Error: type of (Male 15 &quot;Mr. T&quot;) ambiguous.
 </pre>
-<p><tt class="docutils literal"><span class="pre">typeof</span> <span class="pre">f</span> <span class="pre">(Person</span> <span class="pre">String)</span></tt> declares type of <tt class="docutils literal"><span class="pre">f</span></tt> to be
-<tt class="docutils literal"><span class="pre">Person</span> <span class="pre">-&gt;</span> <span class="pre">String</span></tt> (a function that takes a Person and returns
-String).
-<tt class="docutils literal"><span class="pre">f</span></tt> is defined so that when the parameter passed to it was
-<tt class="docutils literal"><span class="pre">(Male</span> <span class="pre">...)</span></tt>, it returns <tt class="docutils literal"><span class="pre">&quot;Mr.</span> <span class="pre">&lt;last</span> <span class="pre">name&gt;&quot;</span></tt>.
-Otherwise, it returns <tt class="docutils literal"><span class="pre">&quot;Ms.</span> <span class="pre">&lt;last</span> <span class="pre">name&gt;&quot;</span></tt>.</p>
+<p>creates another sum type <tt class="docutils literal"><span class="pre">Animal</span></tt> that can be either <tt class="docutils literal"><span class="pre">Male</span></tt> or
+<tt class="docutils literal"><span class="pre">Female</span></tt>. The Male object can be of type <tt class="docutils literal"><span class="pre">Person</span></tt> or <tt class="docutils literal"><span class="pre">Animal</span></tt>
+depending on the context it appears. Since it is ambiguous whether
+the Male object is Animal or Person, an error is thrown.</p>
 </div>
 </div>
 </div>
@@ -674,13 +686,14 @@ Otherwise, it returns <tt class="docutils literal"><span class="pre">&quot;Ms.</
 <div class="section">
 <h2><a class="toc-backref" href="#id31" id="fibonacci" name="fibonacci">5.1&nbsp;&nbsp;&nbsp;Fibonacci</a></h2>
 <pre class="literal-block">
-typeof fib (Int Int)
-def fib n (if (&lt; n 2)
-              n
-              (+ (fib (- n 1)) (fib (- n 2))))
-fib 4
+(def fib n
+    (if (&lt; n 2)
+        n
+        (+ (fib (- n 1)) (fib (- n 2)))))
+(fib 4)
 ==&gt; 3
 </pre>
+<p>defines the function <tt class="docutils literal"><span class="pre">fib</span></tt> that computes n-th Fibonacci number.</p>
 </div>
 <div class="section">
 <h2><a class="toc-backref" href="#id32" id="id3" name="id3">5.2&nbsp;&nbsp;&nbsp;List</a></h2>

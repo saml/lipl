@@ -103,6 +103,12 @@ Here, white-space token delimiters are omitted.
         (* creating local scope *)
     pairs = branches
 
+    pt = '(' 'pt' ident ident-list ')'
+        (* product type *)
+
+    st = '(' 'st' ident ident-list ')'
+        (* sum type *)
+
 Lexicon
 =======
 
@@ -342,49 +348,59 @@ Data Type
 Product Type
 ~~~~~~~~~~~~
 
-``pt Constructor TypeSignature`` creates a product type
-that can be constructed using ``Constructor``.
+To create a product type, use **pt** keyword.
+
+``(pt type-ctor (type1 type2 ... typeN))`` creates a product type
+that can be constructed with ``type-ctor``.
+When an object of the product type is constructed,
+the object has N fields of types type1, type2, ..., typeN.
+
+For example,
 
 ::
 
-    pt Foo (Int Float String)
-    = a (Foo 1 2.3 "hello")
+    (pt Name (String String))
+    (Name "fname" "lname")
+    ==> (Name "fname" "lname")
 
-``Foo`` can be used to construct an object made of ``Int``
-, ``Float``, and ``String``.
-``a`` is bound to a such object.
+creates a product type whose instances include two String fields.
+Then, ``(Name "fname" "lname")`` constructs an object with its two fields
+initialized to "fname" and "lname".
+
+It is convention to use upper case letter for type constructors
+(like Name) and
+type names (like String).
 
 Sum Type
 ~~~~~~~~
 
-``data TypeName ProductTypes`` creates a sum type of product types.
+To create a sum type, ``st`` keyword can be used.
+
+``(st type-name (type-ctor1 type-ctor2 ... type-ctorN)``
+creates a sum type named ``type-name``.
+An object of the type created can be instantiated using
+any one of given type constructors.
 
 ::
 
-    data Person (
-        (pt Male (String String))
-        (pt Female (String String Int))
-    )
+    (pt Male (Int String))
+    (pt Female (Int String))
+    (st Person (Male Female))
 
 creates a sum type ``Person`` that can be constructed using
-either ``Male`` or ``Female`` constructor.
+either ``Male`` or ``Female`` type constructor.
+``Male`` or ``Female`` type constructor expects an Int and a String.
 
 ::
 
-    typeof f (Person String)
-    def f p (case p (
-        ((Male _ lname) (++ "Mr. " lname))
-        (_ (++ "Ms. " lname))
-    ))
-    f (Female "Jane" "Lipl" 1)
-    ==> "Ms. Lipl"
+    (st Animal (Male Female))
+    (Male 15 "Mr. T")
+    ==> Error: type of (Male 15 "Mr. T") ambiguous.
 
-``typeof f (Person String)`` declares type of ``f`` to be
-``Person -> String`` (a function that takes a Person and returns
-String).
-``f`` is defined so that when the parameter passed to it was
-``(Male ...)``, it returns ``"Mr. <last name>"``.
-Otherwise, it returns ``"Ms. <last name>"``.
+creates another sum type ``Animal`` that can be either ``Male`` or
+``Female``. The Male object can be of type ``Person`` or ``Animal``
+depending on the context it appears. Since it is ambiguous whether
+the Male object is Animal or Person, an error is thrown.
 
 Examples
 ========
@@ -394,12 +410,14 @@ Fibonacci
 
 ::
 
-    typeof fib (Int Int)
-    def fib n (if (< n 2)
-                  n
-                  (+ (fib (- n 1)) (fib (- n 2))))
-    fib 4
+    (def fib n
+        (if (< n 2)
+            n
+            (+ (fib (- n 1)) (fib (- n 2)))))
+    (fib 4)
     ==> 3
+
+defines the function ``fib`` that computes n-th Fibonacci number.
 
 List
 ----
