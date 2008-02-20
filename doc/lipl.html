@@ -688,6 +688,32 @@ the Male object is Animal or Person, an error is thrown.</p>
 ==&gt; 3
 </pre>
 <p>defines the function <tt class="docutils literal"><span class="pre">fib</span></tt> that computes n-th Fibonacci number.</p>
+<pre class="literal-block">
+(def quick-sort l
+    (case (
+        ((is-empty l) l)
+        (True (let (
+                (x (car l))
+                (xs (cdr l))
+                (lesser (filter (is-less x) xs))
+                (greater (filter (is-greater x) xs))
+            )
+            (concat
+                (concat
+                    (quick-sort lesser)
+                    (list x))
+                (quick-sort greater)
+            )
+        ))))
+)
+</pre>
+<p>is a quick sort implementation that takes <tt class="docutils literal"><span class="pre">(car</span> <span class="pre">l)</span></tt>, head of the list,
+as pivot point.
+<tt class="docutils literal"><span class="pre">(filter</span> <span class="pre">(is-less</span> <span class="pre">x)</span> <span class="pre">xs)</span></tt> is a list where elements are less than x.
+<tt class="docutils literal"><span class="pre">(filter</span> <span class="pre">(is-greater</span> <span class="pre">x)</span> <span class="pre">xs)</span></tt> is a list where elements are greater than x.
+<tt class="docutils literal"><span class="pre">(list</span> <span class="pre">x)</span></tt> creates a singleton list whose only element is x.
+So, by concatenating sorted lesser, x, and sorted greater, the result list
+is sorted.</p>
 </div>
 </div>
 </body>

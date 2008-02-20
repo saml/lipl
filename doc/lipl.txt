@@ -416,3 +416,30 @@ Examples
 
 defines the function ``fib`` that computes n-th Fibonacci number.
 
+::
+
+    (def quick-sort l
+        (case (
+            ((is-empty l) l)
+            (True (let (
+                    (x (car l))
+                    (xs (cdr l))
+                    (lesser (filter (is-less x) xs))
+                    (greater (filter (is-greater x) xs))
+                )
+                (concat
+                    (concat
+                        (quick-sort lesser)
+                        (list x))
+                    (quick-sort greater)
+                )
+            ))))
+    )
+
+is a quick sort implementation that takes ``(car l)``, head of the list,
+as pivot point.
+``(filter (is-less x) xs)`` is a list where elements are less than x.
+``(filter (is-greater x) xs)`` is a list where elements are greater than x.
+``(list x)`` creates a singleton list whose only element is x.
+So, by concatenating sorted lesser, x, and sorted greater, the result list
+is sorted.
