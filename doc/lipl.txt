@@ -405,9 +405,6 @@ the Male object is Animal or Person, an error is thrown.
 Examples
 ========
 
-Fibonacci
----------
-
 ::
 
     (def fib n
@@ -418,22 +415,4 @@ Fibonacci
     ==> 3
 
 defines the function ``fib`` that computes n-th Fibonacci number.
-
-List
-----
-
-::
-
-    data (List a) (
-        Empty
-        (Cons a List)
-    )
-
-    typeof sum ((List Int) Int)
-    def sum l (case l (
-        (Empty 0)
-        ((Cons i li) (+ i (sum li)))
-    ))
-    sum (Cons 1 (Cons 2 (Cons 3 (Cons 4 Empty))))
-    ==> 10
 
