@@ -216,13 +216,13 @@ Function Definition
 
 To define a function, use **def** keyword.
 
-``(def ident args body)``
-defines a new function whose arguments are args and body is body.
+``(def ident (arg1 arg2 ... argN) body)``
+defines a new function whose arguments are ``argi``'s and body is ``body``.
 And, binds the function to ident.
 
 ::
 
-    (def fac n (
+    (def fac (n) (
         if (< n 2)
            1
            (* n (fac (- n 1)))
@@ -407,7 +407,7 @@ Examples
 
 ::
 
-    (def fib n
+    (def fib (n)
         (if (< n 2)
             n
             (+ (fib (- n 1)) (fib (- n 2)))))
@@ -418,7 +418,7 @@ defines the function ``fib`` that computes n-th Fibonacci number.
 
 ::
 
-    (def quick-sort l
+    (def quick-sort (l)
         (case (
             ((is-empty l) l)
             (True (let (
