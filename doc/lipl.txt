@@ -37,20 +37,25 @@ Predefined non-terminals for convenience.
 
 ::
 
-    letter = (* alphabetic character *)
-    digit = '0' | '1' | ... '9'
-    space = ' ' | '\t' | ...
-        (* white space character *)
-    spaces = space { space }
-        (* one or more spaces (mandatory) *)
-    ws = [ spaces ]
-        (* optional spaces *)
-    nat = digit { digit }
-        (* natural number. allowing leading zeros *)
-    integer = [ ( '-' | '+' ) ] nat
-        (* optional - or + *)
-    float = [ ( '-' | '+' ) ] nat '.' nat
-        (* floating point number. . must present *)
+    letter   = (* alphabetic character *)
+    digit    = '0' | '1' | ... '9'
+    space    = ' ' | '\t' | ...
+    (* white space character *)
+
+    spaces   = space { space }
+    (* one or more spaces (mandatory) *)
+
+    ws       = [ spaces ]
+    (* optional spaces *)
+
+    nat      = digit { digit }
+    (* natural number. allowing leading zeros *)
+
+    integer  = [ ( '-' | '+' ) ] nat
+    (* optional - or + *)
+
+    float    = [ ( '-' | '+' ) ] nat '.' nat
+    (* floating point number. . must present *)
 
 Lexical items
 -------------
@@ -59,22 +64,27 @@ Defines what can be a token.
 
 ::
 
-    ident = letter { ( letter | digit | '_' | '-' ) }
-        (* identifier. starts with a letter. *)
-    op = '+' | '-' | ...
-        (* predefined operators or functions *)
+    ident   = letter { ( letter | digit | '_' | '-' ) }
+    (* identifier. starts with a letter. *)
+
+    op      = '+' | '-' | ...
+    (* predefined operators or functions *)
+
     boolean = 'True' | 'False'
-    number = integer | float
-    char = "'" ? any single character ? "'"
-        (* unicode character. ' should be escaped. *)
-    string = '"' ? characters with escaped '"' ? '"'
-    list = '[' ']'
-         | '[' token { ',' token } ']'
-        (* comma separated tokens. enclosed by [] *)
-    token = ident | op | string | number | list | expr
-    tokens = token spaces token { spaces token }
-        (* space separated tokens *)
-    expr = '(' tokens ')'
+    number  = integer | float
+    char    = "'" ? any single character ? "'"
+    (* unicode character. ' should be escaped. *)
+
+    string  = '"' ? characters with escaped '"' ? '"'
+    list    = '[' ']'
+            | '[' token { ',' token } ']'
+    (* comma separated tokens. enclosed by [] *)
+
+    token   = ident | op | string | number | list | expr
+    tokens  = token spaces token { spaces token }
+    (* space separated tokens *)
+
+    expr    = '(' tokens ')'
 
 Expressions
 -----------
@@ -85,29 +95,34 @@ Here, white-space token delimiters are omitted.
 
 ::
 
-    fun-def = '(' 'def' ident ident-list token ')'
-        (* function definition *)
-    fun-app = '(' ident idents ')'
-        (* function application *)
+    fun-def    = '(' 'def' ident ident-list token ')'
+    (* function definition *)
+
+    fun-app    = '(' ident idents ')'
+    (* function application *)
+
     ident-list = '(' idents ')'
-    idents = ident { spaces ident }
+    idents     = ident { spaces ident }
 
-    if = '(' 'if' token token token ')'
-        (* conditional *)
-    case = '(' 'case' branches ')'
-        (* multi-branch conditional *)
-    branches = '(' branch ')'
-    branch = '(' token token ')'
+    if         = '(' 'if' token token token ')'
+    (* conditional *)
 
-    let = '(' 'let' pairs token ')'
-        (* creating local scope *)
-    pairs = branches
+    case       = '(' 'case' branches ')'
+    (* multi-branch conditional *)
 
-    pt = '(' 'pt' ident ident-list ')'
-        (* product type *)
+    branches   = '(' branch ')'
+    branch     = '(' token token ')'
 
-    st = '(' 'st' ident ident-list ')'
-        (* sum type *)
+    let        = '(' 'let' pairs token ')'
+    (* creating local scope *)
+
+    pairs      = branches
+
+    pt         = '(' 'pt' ident ident-list ')'
+    (* product type *)
+
+    st         = '(' 'st' ident ident-list ')'
+    (* sum type *)
 
 Lexicon
 =======

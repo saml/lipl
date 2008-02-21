@@ -5,6 +5,11 @@ import System.Environment (getArgs)
 import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec ((<|>))
 import Data.Char (isSpace)
+import qualified Control.Monad.Reader as M
+import qualified Control.Monad.Identity as M
+import qualified Control.Monad.Error as M
+import qualified Data.Map as Map
+import Data.Maybe
 --import qualified Data.Sequence as S
 --import Data.Sequence ((|>), (<|))
 --import qualified Data.Foldable as Foldable
@@ -37,15 +42,20 @@ trim = f . f where
 interpret :: String -> String
 interpret input = case P.parse parseExpr "lipl" input of
     Left err -> show err
-    Right val -> "==> " ++ show val
+    Right val -> "==> " ++ show (runEval Map.empty (eval val))
+
+--builtIns :: Map.Map String Val
+--builtIns = Map.fromList [("+", FunVal]
+
+-- Parser
 
 type Name = String
 data Expr = Ident Name
-    | Op Name
+--    | Op Name
     | Int Integer
-    | Funcall { name :: Name, args :: [Expr] }
-    | Fundef { name :: Name, args :: [Expr], body :: Expr }
-    | ParenExpr [Expr]
+--    | Funcall { name :: Name, args :: [Expr] }
+--    | Fundef { name :: Name, args :: [Expr], body :: Expr }
+--    | ParenExpr [Expr]
     | Expr [Expr]
     deriving (Show)
 
@@ -53,22 +63,30 @@ identChar :: P.Parser Char
 identChar = P.letter <|> P.digit <|> P.oneOf "_-"
 
 parseIdent :: P.Parser Expr
-parseIdent = do
-    first <- P.letter
-    rest <- P.many identChar
-    return $ Ident (first : rest)
+parseIdent = parseOp <|> parseName where
+    parseOp = do
+        op <- P.string "+" <|> P.string "-"
+        return $ Ident op
+    parseName = do
+        first <- P.letter
+        rest <- P.many identChar
+        return $ Ident (first : rest)
 
+{-
 parseOp :: P.Parser Expr
 parseOp = do
     val <- P.string "="
         <|> P.string "+" <|> P.string "-"
     return $ Op val
+-}
 
 parseInt :: P.Parser Expr
 parseInt = do
+    sign <- P.try (P.option "" (P.string "-"))
     val <- P.many1 P.digit
-    return $ Int (read val)
+    return $ Int (read $ sign ++ val)
 
+{-
 parseFundef :: P.Parser Expr
 parseFundef = do
     P.string "def"
@@ -79,6 +97,7 @@ parseFundef = do
     mustSpaces
     Expr (body:_) <- parseExpr
     return $ Fundef name args body
+-}
 
 lparen = P.char '(' >> P.spaces
 
@@ -89,7 +108,7 @@ parseParenExpr = do
     lparen
     val <- P.sepEndBy parseToken mustSpaces
     rparen
-    return $ ParenExpr val
+    return $ Expr val
 
 parseExpr :: P.Parser Expr
 parseExpr = do
@@ -98,14 +117,59 @@ parseExpr = do
     return $ Expr val
 
 parseToken :: P.Parser Expr
-parseToken = parseFundef
-    <|> parseParenExpr
-    <|> parseIdent
-    <|> parseInt
-    <|> parseOp
+parseToken = -- parseFundef
+    P.try parseParenExpr
+    <|> P.try parseInt
+    <|> P.try parseIdent
+--    <|> parseOp
 
 mustSpaces :: P.Parser ()
 mustSpaces = P.skipMany1 P.space
+
+-- Evaluator
+
+data Val = IntVal Integer
+    | FunVal { name :: String, arity :: Int, env :: Env, body :: Expr }
+    | NullVal
+    deriving (Show)
+
+type Env = Map.Map Name Val
+type Evaluated a = M.ReaderT Env (M.ErrorT String M.Identity) a
+
+runEval :: Env -> Evaluated a -> Either String a
+runEval env e = M.runIdentity (M.runErrorT (M.runReaderT e env))
+
+eval :: Expr -> Evaluated Val
+eval (Int i) = return $ IntVal i
+eval (Ident n) = do
+    env <- M.ask
+    case Map.lookup n env of
+        Nothing -> M.throwError ("unbound identifier: " ++ n)
+        Just val -> return val
+eval (Expr []) = return NullVal
+--eval (Expr (x:xs)) = do
+--    f <- eval x
+
+eval a = M.throwError $ "todo: " ++ show a
+
+{-
+eval expr@(Expr (f:args)) = case f of
+    Ident "+" ->
+        let
+            Int arg1 = head args
+            rest = tail args
+            Int arg2 = head rest
+            remainder = tail rest
+        in
+            IntVal (arg1 + arg2)
+    Ident "-" ->
+        let
+            Int arg1 = head args
+            Int arg2 = head (tail args)
+        in
+            IntVal (arg1 - arg2)
+    _ -> error $ "no parse for: " ++ show expr
+-}
 
 {-
 prettyPrint :: LiplVal -> String
