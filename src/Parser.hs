@@ -2,26 +2,26 @@ module Parser where
 
 import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec ((<|>))
-import Data.Char (isSpace)
+import qualified Data.Char (isSpace)
 
 parse :: String -> Either P.ParseError Expr
 parse input = P.parse parseExpr "lipl" (trim input)
 
 trim :: String -> String
 trim = f . f where
-    f = reverse . dropWhile isSpace
+    f = reverse . dropWhile Data.Char.isSpace
 
-type Name = String
-data Expr = Ident Name
---    | Op Name
+data Expr = Ident String
     | Int Integer
     | Float Double
     | Char Char
     | Str String
     | List [Expr]
---    | Funcall { name :: Name, args :: [Expr] }
---    | Fundef { name :: Name, args :: [Expr], body :: Expr }
---    | ParenExpr [Expr]
+    | Funcall { ident :: String, args :: [Expr] }
+    | Fundef { ident :: String, args :: [Expr], body :: Expr }
+    | If { pred :: Expr, ifCase :: Expr, elseCase :: Expr }
+    | Case [(Expr, Expr)]
+    | Let { env :: [(Expr, Expr)], body :: Expr }
     | Expr [Expr]
     deriving (Show)
 
@@ -37,14 +37,6 @@ parseIdent = parseOp <|> parseName where
         first <- P.letter
         rest <- P.many identChar
         return $ Ident (first : rest)
-
-{-
-parseOp :: P.Parser Expr
-parseOp = do
-    val <- P.string "="
-        <|> P.string "+" <|> P.string "-"
-    return $ Op val
--}
 
 parseInt :: P.Parser Expr
 parseInt = do
