@@ -14,6 +14,11 @@ interpret input = case Parser.parse input of
     Right val -> "==> " ++ show val
     --Right val -> "==> " ++ show (runEval Map.empty (eval val))
 
+{-
+predefined = [
+    ("+",
+-}
+
 data Val = IntVal Integer
     | FunVal { ident :: String
         , arity :: Int, env :: Env, body :: Parser.Expr }
