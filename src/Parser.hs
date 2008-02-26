@@ -1,6 +1,7 @@
 module Parser where
 
 import qualified Text.ParserCombinators.Parsec as P
+--import qualified Text.ParserCombinators.Parsec.Token as P
 import Text.ParserCombinators.Parsec ((<|>))
 import qualified Data.Char (isSpace)
 import qualified Control.Monad as M
@@ -150,6 +151,8 @@ parseStr = do
     P.char '"'
     return $ Str (concat str)
 
+--lbracket = P.symbol "[" --P.char '[' >> P.spaces
+--rbracket = P.symbol "]" --P.spaces >> P.char ']'
 lbracket = P.char '[' >> P.spaces
 rbracket = P.spaces >> P.char ']'
 
@@ -160,11 +163,12 @@ comma = do
     P.spaces
     return [c]
 
-
+-- TODO: make it parse [1 ]
 parseList :: P.Parser Expr
 parseList = do
     lbracket
-    l <- P.sepEndBy parseToken comma
+    l <- P.sepBy parseToken comma
+    P.spaces
     rbracket
     return $ List l
 
