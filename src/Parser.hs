@@ -156,19 +156,12 @@ parseStr = do
 lbracket = P.char '[' >> P.spaces
 rbracket = P.spaces >> P.char ']'
 
-comma :: P.Parser String
-comma = do
-    P.spaces
-    c <- P.char ','
-    P.spaces
-    return [c]
-
--- TODO: make it parse [1 ]
+comma = (P.spaces >> P.char ',' >> P.spaces)
+-- TODO: parse [1 ]
 parseList :: P.Parser Expr
 parseList = do
     lbracket
     l <- P.sepBy parseToken comma
-    P.spaces
     rbracket
     return $ List l
 
