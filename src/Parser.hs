@@ -5,16 +5,19 @@ import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec ((<|>))
 import qualified Data.Char (isSpace)
 import qualified Control.Monad as M
+import qualified Control.Monad.Error as M
 
 parse :: String -> Either P.ParseError Expr
-parse input = P.parse parseExpr "lipl" (trim input)
+parse input = P.parse parseTopLevel "lipl" (trim input)
 
 trim :: String -> String
 trim = f . f where
     f = reverse . dropWhile Data.Char.isSpace
 
-type Env a = [(a, E a)]
+type KeyVal a = (a, E a)
+type Env a = [KeyVal a]
 
+-- | a is for id for bound vars: String or Int...etc
 data E a = Comment String
     | Ident a
     | Int Integer
@@ -24,63 +27,38 @@ data E a = Comment String
     | Str String
     | List [E a]
 --    | Args [a]
-    | Body (E a)
-    | Def a [a] (E a) -- function name, arguments, body
-    | Appl (E a) (E a) -- function, arguments
-    | If (E a) (E a) (E a) -- predicate, if-case, else-case
+--    | Body (E a)
+    | Def { funName :: a, funArgs :: [a], funBody :: (E a) }
+    | Appl { funExpr :: (E a), argsExpr :: (E a) }
+    | If { pred :: (E a), ifCase :: (E a), elseCase :: (E a) }
     | Case [(E a, E a)] -- ??
-    | Let (Env a) (E a)
+    | Let { letEnv :: (Env a), letBody :: (E a) }
     | Expr [E a]
+    | TopLevel [E a]
     deriving (Show)
-
-
-
-{-
-instance (Show a) => Show (E a) where
-    show (Ident a) = show a
-    show (Int i) = show i
-    show (Float f) = show f
-    show (Char c) = show c
-    show (Str s) = s
-    show (List a) = show a
-    show (Abst a b) = show a ++ show b
--}
 
 type Expr = E String
 
 {-
+instance (Show a) => Show Expr where
+    show = showExpr
+
 showExpr :: Expr -> String
 showExpr (Ident a) = a
 showExpr (Int a) = show a
 showExpr (Float a) = show a
 showExpr (Char a) = show a
+showExpr (Bool a) = show a
 showExpr (Str a) = a
 showExpr (List []) = "[]"
 showExpr (List (x:xs)) = show x ++ showExpr (List xs)
-showExpr (Abst [] b) = showExpr b
-showExpr (Abst a b) = show a ++ showExpr b
-showExpr (Appl a b) = showExpr a ++ showExpr b
-showExpr (If a b c) = showExpr a ++ showExpr b ++ showExpr c
+showExpr (Def fn args b) =
+    "<function: " ++ fn ++ " " ++ showExpr (List args) ++ ">"
+showExpr (If p i e) =
+    "if " ++ showExpr p ++ " then "
+        ++ showExpr i ++ " else " ++ showExpr e
+showExpr (Let d b) = "let " ++ showExpr d ++ " in " ++ showExpr b
 -}
-
-
-
-{-
-data Expr = Ident String
-    | Int Integer
-    | Float Double
-    | Char Char
-    | Str String
-    | List [Expr]
-    | Funcall Expr Expr
-    | Fundef { ident :: String, args :: [Expr], body :: Expr }
-    | If { pred :: Expr, ifCase :: Expr, elseCase :: Expr }
-    | Case [(Expr, Expr)]
-    | Let { env :: [(Expr, Expr)], body :: Expr }
-    | Expr [Expr]
-    deriving (Show)
--}
-
 
 parseComment :: P.Parser Expr
 parseComment = do
@@ -161,7 +139,7 @@ comma = (P.spaces >> P.char ',' >> P.spaces)
 parseList :: P.Parser Expr
 parseList = do
     lbracket
-    l <- P.sepBy parseToken comma
+    l <- P.sepBy parseToken (P.try comma)
     rbracket
     return $ List l
 
@@ -178,6 +156,7 @@ parseDef = do
     where
         getIdents [] = []
         getIdents (Ident a:xs) = [a] ++ getIdents xs
+--        getIdents _ = error "Blah" -- TODO: better error handling
 
 lparen = P.char '(' >> P.spaces
 rparen = P.spaces >> P.char ')'
@@ -198,15 +177,64 @@ parseArgs = do
     return $ Args
 -}
 
+{-
 parseExpr :: P.Parser Expr
 parseExpr = do
     val <- P.sepEndBy parseToken mustSpaces
     P.eof
     return $ Expr val
+-}
+
+parseIf :: P.Parser Expr
+parseIf = do
+    P.string "if"
+    mustSpaces
+    pred <- parseToken
+    mustSpaces
+    ifCase <- parseToken
+    mustSpaces
+    elseCase <- parseToken
+    return $ If pred ifCase elseCase
+
+parseLet :: P.Parser Expr
+parseLet = do
+    P.string "let"
+    mustSpaces
+    env <- parseDict
+    mustSpaces
+    body <- parseToken
+    return $ Let env body
+
+lbrace = P.char '{' >> P.spaces
+rbrace = P.spaces >> P.char '}'
+
+parseDict :: P.Parser (Env String)
+parseDict = do
+    lbrace
+    l <- P.sepBy parseKeyVal (P.try comma)
+    rbrace
+    return l
+
+parseKeyVal :: P.Parser (KeyVal String)
+parseKeyVal = do
+    Ident key <- parseIdent
+    mustSpaces
+    P.char '='
+    mustSpaces
+    val <- parseToken
+    return (key, val)
+
+parseTopLevel :: P.Parser Expr
+parseTopLevel = do
+    exprs <- P.sepEndBy parseParenExpr mustSpaces
+    P.eof
+    return $ TopLevel exprs
 
 parseToken :: P.Parser Expr
 parseToken = -- parseFundef
     P.try parseComment
+    <|> P.try parseIf
+    <|> P.try parseLet
     <|> P.try parseDef
     <|> P.try parseList
     <|> P.try parseParenExpr
