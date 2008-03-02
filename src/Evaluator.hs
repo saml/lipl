@@ -11,17 +11,14 @@ import qualified Parser
 interpret :: String -> String
 interpret input = case Parser.parse input of
     Left err -> show err
-    Right val -> "==> " ++ show val
-    --Right val -> "==> " ++ show (runEval Map.empty (eval val))
+    --Right val -> "==> " ++ show val
+    Right val -> "==> " ++ show (runEval Map.empty (eval val))
 
-{-
-predefined = [
-    ("+",
--}
 
 data Val = IntVal Integer
     | FunVal { ident :: String
         , arity :: Int, env :: Env, body :: Parser.Expr }
+    | BoolVal Bool
     | NullVal
     deriving (Show)
 
@@ -39,11 +36,31 @@ eval (Parser.Ident n) = do
         Nothing -> M.throwError ("unbound identifier: " ++ n)
         Just val -> return val
 eval (Parser.Expr []) = return NullVal
---eval (Expr (x:xs)) = do
---    f <- eval x
-
+eval (Parser.TopLevel (x:xs)) = eval x
+eval (Parser.Expr (Parser.Ident fname : args)) =
+    funcall fname $ map eval args
 eval a = M.throwError $ "todo: " ++ show a
 
+
+funcall :: String -> [Evaluated Val] -> Evaluated Val
+funcall fname args = maybe
+    (return $ BoolVal False) ($ args) $ lookup fname primitives
+
+primitives :: [(String, [Evaluated Val] -> Evaluated Val)]
+primitives = [
+    ("+", numBinOp (+))
+    , ("-", numBinOp (-))
+    , ("*", numBinOp (*))
+{-, ("/", numBinOp (/)) -}]
+
+numBinOp :: (Integer -> Integer -> Integer) -> [Evaluated Val] -> Evaluated Val
+numBinOp op (arg1:arg2:xs) = do
+    a <- arg1
+    b <- arg2
+    return $ IntVal $ (unpackInt a `op` unpackInt b)
+
+unpackInt :: Val -> Integer
+unpackInt (IntVal i) = i
 {-
 eval expr@(Expr (f:args)) = case f of
     Ident "+" ->
