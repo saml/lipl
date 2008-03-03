@@ -16,8 +16,8 @@ exprs = [
 main :: IO ()
 main = do
     putStrLn "Testing..."
-    --interact interpret
-    tests exprs
+    interact interpret
+    --tests exprs
 
 
 tests :: [String] -> IO ()

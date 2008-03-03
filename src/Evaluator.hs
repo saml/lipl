@@ -6,22 +6,79 @@ import qualified Control.Monad.Error as M
 import qualified Data.Map as Map
 import Data.Maybe
 
-import qualified Parser
+import qualified Text.ParserCombinators.Parsec as P
+import Parser (parse, Expr (..), E (..))
 
 interpret :: String -> String
-interpret input = case Parser.parse input of
+interpret input = case parse input of
     Left err -> show err
-    --Right val -> "==> " ++ show val
-    Right val -> "==> " ++ show (runEval Map.empty (eval val))
+    Right (TopLevel es) -> "==> " ++ show (evals es)
+    --Right val -> "==> " ++ show (runEval Map.empty (eval val))
 
+data Err = ParserErr P.ParseError
+    | ArityErr Int [Expr]
+    | Default String
+
+showErr :: Err -> String
+showErr (ParserErr err) = "Parse error at " ++ show err
+showErr (ArityErr i ts) =
+    "Expecting " ++ show i ++ " arguments; found " ++ unwordsToks ts
+
+unwordsToks = unwords . map show
+
+instance Show Err where show = showErr
+
+instance M.Error Err where
+    noMsg = Default "Error occurred"
+    strMsg = Default
+
+type ThrowErr = Either Err
 
 data Val = IntVal Integer
-    | FunVal { ident :: String
-        , arity :: Int, env :: Env, body :: Parser.Expr }
+    | FloatVal Double
+--    | FunVal { ident :: String
+--        , arity :: Int, env :: Env, body :: Parser.Expr }
     | BoolVal Bool
     | NullVal
-    deriving (Show)
 
+showVal :: Val -> String
+showVal (IntVal i) = show i
+showVal (FloatVal f) = show f
+showVal (BoolVal b) = show b
+showVal NullVal = ""
+
+instance Show Val where
+    show = showVal
+
+eval :: Expr -> Val
+eval (Int i) = IntVal i
+eval (Float f) = FloatVal f
+eval (Bool b) = BoolVal b
+eval (Expr []) = NullVal
+eval (Expr (Ident fname : args)) = funcall fname $ map eval args
+evals :: [Expr] -> [Val]
+evals es = map eval es
+
+funcall :: String -> [Val] -> Val
+funcall fname args = maybe
+    (BoolVal False) ($ args) $ lookup fname primitives
+
+primitives :: [(String, [Val] -> Val)]
+primitives = [
+    ("+", numOp (+))
+    , ("-", numOp (-))
+    , ("*", numOp (*))
+    , ("/", numOp div)
+    ]
+
+numOp :: (Integer -> Integer -> Integer) -> [Val] -> Val
+numOp op (arg1:arg2:[]) = IntVal (unpackInt arg1 `op` unpackInt arg2)
+
+unpackInt :: Val -> Integer
+unpackInt (IntVal i) = i
+
+
+{-
 type Env = Map.Map String Val
 type Evaluated a = M.ReaderT Env (M.ErrorT String M.Identity) a
 
@@ -51,7 +108,7 @@ primitives = [
     ("+", numBinOp (+))
     , ("-", numBinOp (-))
     , ("*", numBinOp (*))
-{-, ("/", numBinOp (/)) -}]
+    ]
 
 numBinOp :: (Integer -> Integer -> Integer) -> [Evaluated Val] -> Evaluated Val
 numBinOp op (arg1:arg2:xs) = do
@@ -61,6 +118,8 @@ numBinOp op (arg1:arg2:xs) = do
 
 unpackInt :: Val -> Integer
 unpackInt (IntVal i) = i
+-}
+
 {-
 eval expr@(Expr (f:args)) = case f of
     Ident "+" ->

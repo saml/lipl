@@ -62,6 +62,7 @@ showExpr (Let d b) = "let " ++ showExpr d ++ " in " ++ showExpr b
 
 parseComment :: P.Parser Expr
 parseComment = do
+    P.spaces
     P.char '#'
     s <- P.many (P.noneOf "\n\r")
     return $ Comment s
@@ -79,7 +80,10 @@ identChar = P.letter <|> P.digit <|> P.oneOf "_-"
 parseIdent :: P.Parser Expr
 parseIdent = parseOp <|> parseName where
     parseOp = do
-        op <- P.string "+" <|> P.string "-"
+        op <- P.string "+"
+            <|> P.string "-"
+            <|> P.string "*"
+            <|> P.string "/"
         return $ Ident op
     parseName = do
         first <- P.letter

@@ -7,8 +7,14 @@ import Parser
 
 main :: IO ()
 main = do
-    hSetBuffering stdout LineBuffering
-    repl
+    fn <- getArgs
+    if length fn > 0
+        then do
+            runFile (fn !! 0)
+        else do
+            putStrLn "Starting REPL..."
+            hSetBuffering stdout LineBuffering
+            repl
 
 repl :: IO ()
 repl = do
@@ -25,3 +31,7 @@ prompt p = do
     hFlush stdout
     getLine
 
+runFile :: FilePath -> IO ()
+runFile fn = do
+    prog <- readFile fn
+    putStrLn $ interpret prog
