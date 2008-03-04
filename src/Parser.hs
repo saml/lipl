@@ -99,8 +99,10 @@ parseInt = do
 
 parseFloat = do
     sign <- P.string "-" <|> return ""
-    val <- nat >> P.string "." >> nat
-    return $ Float (read $ sign ++ val)
+    n <- nat
+    dot <- P.string "."
+    frac <- nat
+    return $ Float (read $ (sign ++ n ++ dot ++ frac))
 
 parseChar = do
     P.char '\''

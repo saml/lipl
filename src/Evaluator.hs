@@ -13,7 +13,7 @@ import LangData (Val(..))
 interpret :: String -> String
 interpret input = case parse input of
     Left err -> show err
-    Right val -> "==> " ++ show (eval val)
+    Right val -> show (eval val)
     --Right (TopLevel es) -> "==> " ++ show (evals es)
     --Right val -> "==> " ++ show (runEval Map.empty (eval val))
 {-
@@ -60,26 +60,38 @@ eval (Expr (Ident fname : args)) = funcall fname $ map eval args
 eval x = x
 
 funcall :: String -> [Val] -> Val
-funcall fname args = maybe
-    (Bool False) ($ args) $ lookup fname primitives
+funcall fname args = case lookup fname primitives of
+    Nothing -> Bool False
+    Just f -> f args
 
 primitives :: [(String, [Val] -> Val)]
 primitives = [
-    ("+", intBinOp "+")
-    , ("-", intBinOp "-")
-    , ("*", intBinOp "*")
-    , ("/", intBinOp "/")
+    ("+", opAdd)
+    , ("-", opSub)
+    , ("*", opMult)
+    , ("/", opDiv)
     ]
 
-intBinOps = [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("div", div)]
+opAdd [Int a, Int b] = Int (a + b)
+opAdd [Float a, Float b] = Float (a + b)
+opAdd [Int a, Float b] = Float (fromIntegral a + b)
+opAdd [Float a, Int b] = Float (a + fromIntegral b)
 
-intBinOp op (Int arg1 : Int arg2 : []) =
-    Int ((lookup op numOps) arg1 arg2)
-intBinOp op (Float arg1 : Float arg2 : []) = Float ((lookup op numOps) arg1 arg2)
+opSub [Int a, Int b] = Int (a - b)
+opSub [Float a, Float b] = Float (a - b)
+opSub [Int a, Float b] = Float (fromIntegral a - b)
+opSub [Float a, Int b] = Float (a - fromIntegral b)
 
-getFunc key funcs = case lookup key funcs of
-    Nothing -> error "Bleh"
-    Just op -> op
+opMult [Int a, Int b] = Int (a * b)
+opMult [Float a, Float b] = Float (a * b)
+opMult [Int a, Float b] = Float (fromIntegral a * b)
+opMult [Float a, Int b] = Float (a * fromIntegral b)
+
+opDiv [Int a, Int b] = Int (div a b)
+opDiv [Float a, Float b] = Float (a / b)
+opDiv [Int a, Float b] = Float (fromIntegral a / b)
+opDiv [Float a, Int b] = Float (a / fromIntegral b)
+
 
 -- [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("div", div)] :: (Num a) => [(String, a)]
 
