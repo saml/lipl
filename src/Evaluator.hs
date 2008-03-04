@@ -9,6 +9,7 @@ import Data.Maybe
 import qualified Text.ParserCombinators.Parsec as P
 import Parser (parse)
 import LangData (Val(..))
+import qualified StdLib as Std
 
 interpret :: String -> String
 interpret input = case parse input of
@@ -60,38 +61,9 @@ eval (Expr (Ident fname : args)) = funcall fname $ map eval args
 eval x = x
 
 funcall :: String -> [Val] -> Val
-funcall fname args = case lookup fname primitives of
+funcall fname args = case lookup fname Std.primitives of
     Nothing -> Bool False
     Just f -> f args
-
-primitives :: [(String, [Val] -> Val)]
-primitives = [
-    ("+", opAdd)
-    , ("-", opSub)
-    , ("*", opMult)
-    , ("/", opDiv)
-    ]
-
-opAdd [Int a, Int b] = Int (a + b)
-opAdd [Float a, Float b] = Float (a + b)
-opAdd [Int a, Float b] = Float (fromIntegral a + b)
-opAdd [Float a, Int b] = Float (a + fromIntegral b)
-
-opSub [Int a, Int b] = Int (a - b)
-opSub [Float a, Float b] = Float (a - b)
-opSub [Int a, Float b] = Float (fromIntegral a - b)
-opSub [Float a, Int b] = Float (a - fromIntegral b)
-
-opMult [Int a, Int b] = Int (a * b)
-opMult [Float a, Float b] = Float (a * b)
-opMult [Int a, Float b] = Float (fromIntegral a * b)
-opMult [Float a, Int b] = Float (a * fromIntegral b)
-
-opDiv [Int a, Int b] = Int (div a b)
-opDiv [Float a, Float b] = Float (a / b)
-opDiv [Int a, Float b] = Float (fromIntegral a / b)
-opDiv [Float a, Int b] = Float (a / fromIntegral b)
-
 
 -- [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("div", div)] :: (Num a) => [(String, a)]
 
