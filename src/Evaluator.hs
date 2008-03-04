@@ -7,14 +7,16 @@ import qualified Data.Map as Map
 import Data.Maybe
 
 import qualified Text.ParserCombinators.Parsec as P
-import Parser (parse, Expr (..), E (..))
+import Parser (parse)
+import LangData (Val(..))
 
 interpret :: String -> String
 interpret input = case parse input of
     Left err -> show err
-    Right (TopLevel es) -> "==> " ++ show (evals es)
+    Right val -> "==> " ++ show (eval val)
+    --Right (TopLevel es) -> "==> " ++ show (evals es)
     --Right val -> "==> " ++ show (runEval Map.empty (eval val))
-
+{-
 data Err = ParserErr P.ParseError
     | ArityErr Int [Expr]
     | Default String
@@ -49,34 +51,37 @@ showVal NullVal = ""
 
 instance Show Val where
     show = showVal
+-}
 
-eval :: Expr -> Val
-eval (Int i) = IntVal i
-eval (Float f) = FloatVal f
-eval (Bool b) = BoolVal b
-eval (Expr []) = NullVal
+eval :: Val -> Val
+eval (Expr []) = Null
+eval (Expr [Expr expr]) = eval $ Expr expr
 eval (Expr (Ident fname : args)) = funcall fname $ map eval args
-evals :: [Expr] -> [Val]
-evals es = map eval es
+eval x = x
 
 funcall :: String -> [Val] -> Val
 funcall fname args = maybe
-    (BoolVal False) ($ args) $ lookup fname primitives
+    (Bool False) ($ args) $ lookup fname primitives
 
 primitives :: [(String, [Val] -> Val)]
 primitives = [
-    ("+", numOp (+))
-    , ("-", numOp (-))
-    , ("*", numOp (*))
-    , ("/", numOp div)
+    ("+", intBinOp "+")
+    , ("-", intBinOp "-")
+    , ("*", intBinOp "*")
+    , ("/", intBinOp "/")
     ]
 
-numOp :: (Integer -> Integer -> Integer) -> [Val] -> Val
-numOp op (arg1:arg2:[]) = IntVal (unpackInt arg1 `op` unpackInt arg2)
+intBinOps = [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("div", div)]
 
-unpackInt :: Val -> Integer
-unpackInt (IntVal i) = i
+intBinOp op (Int arg1 : Int arg2 : []) =
+    Int ((lookup op numOps) arg1 arg2)
+intBinOp op (Float arg1 : Float arg2 : []) = Float ((lookup op numOps) arg1 arg2)
 
+getFunc key funcs = case lookup key funcs of
+    Nothing -> error "Bleh"
+    Just op -> op
+
+-- [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("div", div)] :: (Num a) => [(String, a)]
 
 {-
 type Env = Map.Map String Val
