@@ -1,4 +1,4 @@
-module StdLib where
+module CoreLib where
 
 import LangData
 

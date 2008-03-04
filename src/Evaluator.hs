@@ -9,7 +9,7 @@ import Data.Maybe
 import qualified Text.ParserCombinators.Parsec as P
 import Parser (parse)
 import LangData (Val(..))
-import qualified StdLib as Std
+import qualified CoreLib as Core
 
 interpret :: String -> String
 interpret input = case parse input of
@@ -61,7 +61,7 @@ eval (Expr (Ident fname : args)) = funcall fname $ map eval args
 eval x = x
 
 funcall :: String -> [Val] -> Val
-funcall fname args = case lookup fname Std.primitives of
+funcall fname args = case lookup fname Core.primitives of
     Nothing -> Bool False
     Just f -> f args
 
