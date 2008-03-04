@@ -198,7 +198,7 @@ parseDict = do
     lbrace
     l <- P.sepBy parseKeyVal (P.try comma)
     rbrace
-    return l
+    return $ Dict l
 
 parseKeyVal = do
     Ident key <- parseIdent
@@ -223,6 +223,7 @@ parseToken =
 --    <|> P.try parseLet
 --    <|> P.try parseDef
     <|> P.try parseList
+    <|> P.try parseDict
     <|> P.try parseParenExpr
     <|> P.try parseBool
     <|> P.try parseChar

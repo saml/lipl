@@ -24,7 +24,10 @@ data Val = Comment String
     | Dict Env
     | Expr [Val]
 
+instance Show Val where show = PP.render . ppVal
+
 ppVal (Comment s) = PP.text ("#" ++ s)
+ppVal Null = PP.text "Null"
 ppVal (Ident s) = PP.text s
 ppVal (Int i) = PP.integer i
 ppVal (Float f) = PP.double f
@@ -37,7 +40,6 @@ ppVal (Dict xs) = PP.braces
     (PP.hsep $ PP.punctuate PP.comma (map ppKeyVal xs))
 ppVal (Expr xs) = PP.parens (PP.hsep $ map ppVal xs)
 
-instance Show Val where show = PP.render . ppVal
 
 example = List [Ident "foo", Int 42, Char 'a'
     , List [Bool True, Str "Hello World", Float (-242.53)]

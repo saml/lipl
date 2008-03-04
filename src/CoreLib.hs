@@ -24,6 +24,8 @@ opDiv args@([Int _, Int _]) = mkOp div args
 opDiv args = mkOp (/) args
 -}
 
+-- (opAdd.)(:) :: Val -> [Val] -> Val
+-- \x xs -> opAdd (x:xs)
 opAdd [Int a, Int b] = Int (a + b)
 opAdd [Float a, Float b] = Float (a + b)
 opAdd [Int a, Float b] = Float (fromIntegral a + b)

@@ -54,6 +54,20 @@ instance Show Val where
     show = showVal
 -}
 
+type Stack = [Val]
+type Queue = [Val]
+
+pop :: Stack -> Val
+pop [] = Null
+pop (x:xs) = x
+
+push :: Val -> Stack -> Stack
+push v s = v : s
+
+-- | evaluation using 'Stack' and 'Queue'
+--sqEval :: Stack -> Queue -> Stack
+--sqEval s (Ident fname : xs) = funcall fname
+
 eval :: Val -> Val
 eval (Expr []) = Null
 eval (Expr [Expr expr]) = eval $ Expr expr
