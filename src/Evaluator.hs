@@ -8,7 +8,7 @@ import Data.Maybe
 
 import qualified Text.ParserCombinators.Parsec as P
 import Parser (parse)
-import LangData (Val(..))
+import LangData
 import qualified CoreLib as Core
 
 interpret :: String -> String
@@ -54,23 +54,18 @@ instance Show Val where
     show = showVal
 -}
 
-type Stack = [Val]
-type Queue = [Val]
+eval' :: Stack -> Queue -> Val -> Val
+eval' s q (Expr []) = Null
+eval' s q (Expr (Ident fname : args)) = funcall' s q fname
 
-pop :: Stack -> Val
-pop [] = Null
-pop (x:xs) = x
-
-push :: Val -> Stack -> Stack
-push v s = v : s
-
--- | evaluation using 'Stack' and 'Queue'
---sqEval :: Stack -> Queue -> Stack
---sqEval s (Ident fname : xs) = funcall fname
+funcall' :: Stack -> Queue -> String -> Val
+funcall' s q fname = case lookup fname Core.primitives' of
+    Nothing -> Bool False
+    Just f -> f s q
 
 eval :: Val -> Val
 eval (Expr []) = Null
-eval (Expr [Expr expr]) = eval $ Expr expr
+eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
 eval (Expr (Ident fname : args)) = funcall fname $ map eval args
 eval x = x
 

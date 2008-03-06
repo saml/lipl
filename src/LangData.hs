@@ -1,4 +1,6 @@
-module LangData (Val (..)) where
+module LangData ( Val (..)
+    , Stack, pop, push
+    , Queue ) where
 
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ (
@@ -44,3 +46,21 @@ ppVal (Expr xs) = PP.parens (PP.hsep $ map ppVal xs)
 example = List [Ident "foo", Int 42, Char 'a'
     , List [Bool True, Str "Hello World", Float (-242.53)]
     , List [Ident "d", Dict [("bar", Int 24), ("f", Char 'c')]]]
+
+type Stack = [Val]
+type Queue = [Val]
+
+pop :: Stack -> Val
+pop [] = Null
+pop (x:xs) = x
+
+push :: Val -> Stack -> Stack
+push v s = v : s
+
+-- | evaluation using 'Stack' and 'Queue'
+--sqEval :: Stack -> Queue -> Stack
+--sqEval s (Ident fname : xs) =
+
+--f :: Stack -> Queue -> Val
+
+
