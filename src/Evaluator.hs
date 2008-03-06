@@ -9,12 +9,14 @@ import Data.Maybe
 import qualified Text.ParserCombinators.Parsec as P
 import Parser (parse)
 import LangData
-import qualified CoreLib as Core
+import CoreLib
+
+import Debug.Trace (trace)
 
 interpret :: String -> String
 interpret input = case parse input of
     Left err -> show err
-    Right val -> show (eval val)
+    Right expr@(Expr val) -> show (expr, eval' [] val)
     --Right (TopLevel es) -> "==> " ++ show (evals es)
     --Right val -> "==> " ++ show (runEval Map.empty (eval val))
 {-
@@ -54,14 +56,66 @@ instance Show Val where
     show = showVal
 -}
 
-eval' :: Stack -> Queue -> Val -> Val
-eval' s q (Expr []) = Null
-eval' s q (Expr (Ident fname : args)) = funcall' s q fname
+eval' :: Stack -> Queue -> (Stack, Queue)
+eval' s [] = (s, [])
+eval' s (Ident fname : args) = let
+    (s', q) = funcall' s args fname
+    in
+        eval' s' q
 
-funcall' :: Stack -> Queue -> String -> Val
-funcall' s q fname = case lookup fname Core.primitives' of
-    Nothing -> Bool False
+eval' s (x : q) = let
+    s' = push x s
+    in
+        eval' s' q
+
+funcall' :: Stack -> Queue -> String -> (Stack, Queue)
+funcall' s q fname = case lookup fname primitives' of
+    Nothing -> (push (Bool False) s, q)
     Just f -> f s q
+
+primitives' :: [(String, Stack -> Queue -> (Stack, Queue))]
+primitives' = [
+    ("+", opAdd')
+    ]
+
+fromVal (Int i) = i
+--fromVal (Float f) = f
+toVal i = Int i
+
+opAdd' :: Stack -> Queue -> (Stack, Queue)
+opAdd' s q | length s >= 2 = let
+    (a, s') = pop s
+    (b, s'') = pop s'
+    result = toVal $ fromVal a + fromVal b
+    in
+        (push result s'', q)
+
+opAdd' s q | length s >= 1 = let
+    (a, s') = pop s
+    (b, q') = front q
+    b' = case b of
+        Expr e -> (fst . pop . fst) (eval' [] e)
+        otherwise -> b
+    result = toVal $ fromVal a + fromVal b'
+    in
+        (push result s', q')
+
+opAdd' s q = let
+    (a, q') = front q
+    (b, q'') = front q'
+    a' = case a of
+        Expr e -> (fst . pop . fst) (eval' [] e)
+        otherwise -> a
+    b' = case b of
+        Expr e -> (fst . pop . fst) (eval' [] e)
+        otherwise -> b
+    result = toVal $ fromVal a' + fromVal b'
+    in
+        (push result s, q'')
+
+
+
+
 
 eval :: Val -> Val
 eval (Expr []) = Null
@@ -70,7 +124,7 @@ eval (Expr (Ident fname : args)) = funcall fname $ map eval args
 eval x = x
 
 funcall :: String -> [Val] -> Val
-funcall fname args = case lookup fname Core.primitives of
+funcall fname args = case lookup fname primitives of
     Nothing -> Bool False
     Just f -> f args
 

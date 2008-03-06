@@ -1,6 +1,6 @@
 module LangData ( Val (..)
     , Stack, pop, push
-    , Queue ) where
+    , Queue, front ) where
 
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ (
@@ -22,11 +22,13 @@ data Val = Comment String
     | Bool Bool
     | Char Char
     | Str String
+    | Fun [String] Val -- params, body
     | List [Val]
     | Dict Env
     | Expr [Val]
+    deriving (Show)
 
-instance Show Val where show = PP.render . ppVal
+--instance Show Val where show = PP.render . ppVal
 
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
@@ -50,12 +52,16 @@ example = List [Ident "foo", Int 42, Char 'a'
 type Stack = [Val]
 type Queue = [Val]
 
-pop :: Stack -> Val
-pop [] = Null
-pop (x:xs) = x
+pop :: Stack -> (Val, Stack)
+pop (x:xs) = (x, xs)
+pop _ = (Null, [])
 
 push :: Val -> Stack -> Stack
 push v s = v : s
+
+front :: Queue -> (Val, Queue)
+front (x:xs) = (x, xs)
+front _ = (Null, [])
 
 -- | evaluation using 'Stack' and 'Queue'
 --sqEval :: Stack -> Queue -> Stack

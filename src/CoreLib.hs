@@ -10,16 +10,6 @@ primitives = [
     , ("/", opDiv)
     ]
 
-primitives' :: [(String, Stack -> Queue -> Val)]
-primitives' = [
-    ("+", opAdd')
-    ]
-
-opAdd' :: Stack -> Queue -> Val
-opAdd' s q | length s >= 2 = opAdd (take 2 s)
-opAdd' s q | length s >= 1 = opAdd (take 1 s ++ take 1 q)
-opAdd' s q = opAdd (take 2 q)
-
 {-
 mkOp :: (Num a) => (a -> a -> a) -> [Val] -> Val
 mkOp f [Int a, Int b] = Int (f a b)
