@@ -1,3 +1,5 @@
+[Accompanying presentation](http://docs.google.com/Present?docid=ddr69psk_183cncbcz29&skipauth=true)
+
 I was thinking about how to let users mix up prefix, infix, and postfix
 syntax.
 
@@ -247,3 +249,28 @@ Actual evaluate function that transforms user input to string.
 Finally, main function.
 
 > main = repl
+
+Let's run it!
+
+    $ runhaskell staque.lhs
+    staque> 1 + 2
+    3
+    staque> + 1 2
+    3
+    staque> 1 2 +
+    3
+    staque> 1 + 2 + ((1 - -2) * 3) 3 / (+ 1 2) *
+    12
+    staque> :q
+    bye
+
+For exercises:
+
+- Add more types like string, float, list, char, bool...
+  to the language.
+- Add function definition and lambda abstraction.
+- Add static type checking with user defined types.
+- Get fancier with type system.
+- Add foreign function interface.
+- Add OpenGL binding.
+- Make a first point shooter.
