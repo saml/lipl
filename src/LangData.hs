@@ -26,9 +26,9 @@ data Val = Comment String
     | List [Val]
     | Dict Env
     | Expr [Val]
-    deriving (Show)
+    --deriving (Show)
 
---instance Show Val where show = PP.render . ppVal
+instance Show Val where show = PP.render . ppVal
 
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"

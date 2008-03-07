@@ -16,7 +16,9 @@ import Debug.Trace (trace)
 interpret :: String -> String
 interpret input = case parse input of
     Left err -> show err
-    Right expr@(Expr val) -> show (expr, eval' [] val)
+    --Right expr@(Expr val) -> show (fst . pop . fst $ eval' [] val)
+    Right val -> show (eval val)
+    --Right expr@(Expr val) -> show (expr, eval' [] val)
     --Right (TopLevel es) -> "==> " ++ show (evals es)
     --Right val -> "==> " ++ show (runEval Map.empty (eval val))
 {-
@@ -82,33 +84,34 @@ fromVal (Int i) = i
 --fromVal (Float f) = f
 toVal i = Int i
 
+evalVal val = case val of
+    Expr e -> fst . pop . fst $ eval' [] e
+    otherwise -> val
+
 opAdd' :: Stack -> Queue -> (Stack, Queue)
 opAdd' s q | length s >= 2 = let
     (a, s') = pop s
     (b, s'') = pop s'
-    result = toVal $ fromVal a + fromVal b
+    a' = evalVal a
+    b' = evalVal b
+    result = toVal $ fromVal a' + fromVal b'
     in
         (push result s'', q)
 
 opAdd' s q | length s >= 1 = let
     (a, s') = pop s
     (b, q') = front q
-    b' = case b of
-        Expr e -> (fst . pop . fst) (eval' [] e)
-        otherwise -> b
-    result = toVal $ fromVal a + fromVal b'
+    a' = evalVal a
+    b' = evalVal b
+    result = toVal $ fromVal a' + fromVal b'
     in
         (push result s', q')
 
 opAdd' s q = let
     (a, q') = front q
     (b, q'') = front q'
-    a' = case a of
-        Expr e -> (fst . pop . fst) (eval' [] e)
-        otherwise -> a
-    b' = case b of
-        Expr e -> (fst . pop . fst) (eval' [] e)
-        otherwise -> b
+    a' = evalVal a
+    b' = evalVal b
     result = toVal $ fromVal a' + fromVal b'
     in
         (push result s, q'')
