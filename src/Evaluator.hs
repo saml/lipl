@@ -61,7 +61,7 @@ instance Show Val where
 eval' :: Stack -> Queue -> (Stack, Queue)
 eval' s [] = (s, [])
 eval' s (Ident fname : args) = let
-    (s', q) = funcall' s args fname
+    (s', q) = funcall' fname s args
     in
         eval' s' q
 
@@ -70,8 +70,8 @@ eval' s (x : q) = let
     in
         eval' s' q
 
-funcall' :: Stack -> Queue -> String -> (Stack, Queue)
-funcall' s q fname = case lookup fname primitives' of
+funcall' :: String -> Stack -> Queue -> (Stack, Queue)
+funcall' fname s q = case lookup fname primitives' of
     Nothing -> (push (Bool False) s, q)
     Just f -> f s q
 
@@ -90,8 +90,8 @@ evalVal val = case val of
 
 opAdd' :: Stack -> Queue -> (Stack, Queue)
 opAdd' s q | length s >= 2 = let
-    (a, s') = pop s
-    (b, s'') = pop s'
+    (b, s') = pop s
+    (a, s'') = pop s'
     a' = evalVal a
     b' = evalVal b
     result = toVal $ fromVal a' + fromVal b'
