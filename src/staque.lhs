@@ -41,7 +41,6 @@ Import stuff for parser.
 Import stuff for printing.
 
 > import qualified Text.PrettyPrint.HughesPJ as PP
-> import Text.PrettyPrint.HughesPJ ( (<>), (<+>), ($$), ($+$) )
 
 Import stuff for repl.
 
@@ -135,6 +134,10 @@ the result of evaluation.
 
 > eval s [] | length s == 1 = (fst . pop) s
 
+When the queue contains an expression, evaluate the expression.
+
+> eval s [Expr q] = eval s q
+
 Now, the queue's front is an identifier. Let's look it up and call
 the function bound to the identifier.
 Also, we make sure the rest of the queue is evaluated with
@@ -144,7 +147,6 @@ the updated stack.
 >     (s', q) = funcall fname s args
 >     in
 >         eval s' q
-
 
 The queue's front is not an identifier. Assume it's a literal and
 push it to the stack and evaluate the rest of the queue.
