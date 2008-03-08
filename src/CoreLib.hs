@@ -1,8 +1,10 @@
 module CoreLib where
 
+import qualified Control.Monad.Error as E
+
 import LangData
 
-primitives :: [(String, [Val] -> Val)]
+primitives :: [(String, [Val] -> CanBeErr Val)]
 primitives = [
     ("+", opAdd)
     , ("-", opSub)
@@ -26,24 +28,29 @@ opDiv args = mkOp (/) args
 
 -- (opAdd.)(:) :: Val -> [Val] -> Val
 -- \x xs -> opAdd (x:xs)
-opAdd [Int a, Int b] = Int (a + b)
-opAdd [Float a, Float b] = Float (a + b)
-opAdd [Int a, Float b] = Float (fromIntegral a + b)
-opAdd [Float a, Int b] = Float (a + fromIntegral b)
+    --
+opAdd [Int a, Int b] = return $ Int (a + b)
+opAdd [Float a, Float b] = return $ Float (a + b)
+opAdd [Int a, Float b] = return $ Float (fromIntegral a + b)
+opAdd [Float a, Int b] = return $ Float (a + fromIntegral b)
+opAdd x = E.throwError $ ArityErr 2 x
 
-opSub [Int a, Int b] = Int (a - b)
-opSub [Float a, Float b] = Float (a - b)
-opSub [Int a, Float b] = Float (fromIntegral a - b)
-opSub [Float a, Int b] = Float (a - fromIntegral b)
+opSub [Int a, Int b] = return $ Int (a - b)
+opSub [Float a, Float b] = return $ Float (a - b)
+opSub [Int a, Float b] = return $ Float (fromIntegral a - b)
+opSub [Float a, Int b] = return $ Float (a - fromIntegral b)
+opSub x = E.throwError $ ArityErr 2 x
 
-opMult [Int a, Int b] = Int (a * b)
-opMult [Float a, Float b] = Float (a * b)
-opMult [Int a, Float b] = Float (fromIntegral a * b)
-opMult [Float a, Int b] = Float (a * fromIntegral b)
+opMult [Int a, Int b] = return $ Int (a * b)
+opMult [Float a, Float b] = return $ Float (a * b)
+opMult [Int a, Float b] = return $ Float (fromIntegral a * b)
+opMult [Float a, Int b] = return $ Float (a * fromIntegral b)
+opMult x = E.throwError $ ArityErr 2 x
 
-opDiv [Int a, Int b] = Int (div a b)
-opDiv [Float a, Float b] = Float (a / b)
-opDiv [Int a, Float b] = Float (fromIntegral a / b)
-opDiv [Float a, Int b] = Float (a / fromIntegral b)
+opDiv [Int a, Int b] = return $ Int (div a b)
+opDiv [Float a, Float b] = return $ Float (a / b)
+opDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
+opDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
+opDiv x = E.throwError $ ArityErr 2 x
 
 

@@ -1,134 +1,49 @@
 module Evaluator where
 
-import qualified Control.Monad.Reader as M
-import qualified Control.Monad.Identity as M
-import qualified Control.Monad.Error as M
+--import qualified Control.Monad.Reader as M
+--import qualified Control.Monad.Identity as M
+import qualified Control.Monad.Error as E
 import qualified Data.Map as Map
 import Data.Maybe
 
 import qualified Text.ParserCombinators.Parsec as P
-import Parser (parse)
+import Parser (parse, parseSingle)
 import LangData
 import CoreLib
 
 import Debug.Trace (trace)
 
 interpret :: String -> String
-interpret input = case parse input of
+interpret input = case parseSingle input of
     Left err -> show err
+    Right val -> case eval val of
+        Left error -> show error
+        Right value -> show value
+
+    --Right val -> (show . unpackVal) $ eval val
+    --Left err -> show err
+    --Right val -> show (eval val)
     --Right expr@(Expr val) -> show (fst . pop . fst $ eval' [] val)
-    Right val -> show (eval val)
+    --Right val -> show (eval val)
     --Right expr@(Expr val) -> show (expr, eval' [] val)
     --Right (TopLevel es) -> "==> " ++ show (evals es)
     --Right val -> "==> " ++ show (runEval Map.empty (eval val))
-{-
-data Err = ParserErr P.ParseError
-    | ArityErr Int [Expr]
-    | Default String
 
-showErr :: Err -> String
-showErr (ParserErr err) = "Parse error at " ++ show err
-showErr (ArityErr i ts) =
-    "Expecting " ++ show i ++ " arguments; found " ++ unwordsToks ts
-
-unwordsToks = unwords . map show
-
-instance Show Err where show = showErr
-
-instance M.Error Err where
-    noMsg = Default "Error occurred"
-    strMsg = Default
-
-type ThrowErr = Either Err
-
-data Val = IntVal Integer
-    | FloatVal Double
---    | FunVal { ident :: String
---        , arity :: Int, env :: Env, body :: Parser.Expr }
-    | BoolVal Bool
-    | NullVal
-
-showVal :: Val -> String
-showVal (IntVal i) = show i
-showVal (FloatVal f) = show f
-showVal (BoolVal b) = show b
-showVal NullVal = ""
-
-instance Show Val where
-    show = showVal
--}
-
-eval' :: Stack -> Queue -> (Stack, Queue)
-eval' s [] = (s, [])
-eval' s (Ident fname : args) = let
-    (s', q) = funcall' fname s args
-    in
-        eval' s' q
-
-eval' s (x : q) = let
-    s' = push x s
-    in
-        eval' s' q
-
-funcall' :: String -> Stack -> Queue -> (Stack, Queue)
-funcall' fname s q = case lookup fname primitives' of
-    Nothing -> (push (Bool False) s, q)
-    Just f -> f s q
-
-primitives' :: [(String, Stack -> Queue -> (Stack, Queue))]
-primitives' = [
-    ("+", opAdd')
-    ]
-
-fromVal (Int i) = i
---fromVal (Float f) = f
-toVal i = Int i
-
-evalVal val = case val of
-    Expr e -> fst . pop . fst $ eval' [] e
-    otherwise -> val
-
-opAdd' :: Stack -> Queue -> (Stack, Queue)
-opAdd' s q | length s >= 2 = let
-    (b, s') = pop s
-    (a, s'') = pop s'
-    a' = evalVal a
-    b' = evalVal b
-    result = toVal $ fromVal a' + fromVal b'
-    in
-        (push result s'', q)
-
-opAdd' s q | length s >= 1 = let
-    (a, s') = pop s
-    (b, q') = front q
-    a' = evalVal a
-    b' = evalVal b
-    result = toVal $ fromVal a' + fromVal b'
-    in
-        (push result s', q')
-
-opAdd' s q = let
-    (a, q') = front q
-    (b, q'') = front q'
-    a' = evalVal a
-    b' = evalVal b
-    result = toVal $ fromVal a' + fromVal b'
-    in
-        (push result s, q'')
-
-
-
-
-
-eval :: Val -> Val
-eval (Expr []) = Null
+eval :: Val -> CanBeErr Val
+eval e@(Int _) = return e
+eval e@(Float _) = return e
+eval e@(Bool _) = return e
+eval (Expr []) = return Null
 eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
-eval (Expr (Ident fname : args)) = funcall fname $ map eval args
-eval x = x
+eval (Expr (Ident fname : args)) = do
+    params <- mapM eval args
+    funcall fname params
+eval x = E.throwError $ BadExprErr "Bad Expr" x
 
-funcall :: String -> [Val] -> Val
+funcall :: String -> [Val] -> CanBeErr Val
 funcall fname args = case lookup fname primitives of
-    Nothing -> Bool False
+    Nothing -> E.throwError
+        $ NotFunErr "Unrecognizable primitive function" fname
     Just f -> f args
 
 -- [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("div", div)] :: (Num a) => [(String, a)]

@@ -2,11 +2,21 @@ module Parser where
 
 import qualified Text.ParserCombinators.Parsec as P
 import Text.ParserCombinators.Parsec ((<|>))
+
+import qualified Control.Monad.Error as E
+
 import Data.Char ( chr )
 import LangData
 
-parse :: String -> Either P.ParseError Val
-parse input = P.parse parseExpr "lipl" input
+parseSingle :: String -> CanBeErr Val
+parseSingle input = case P.parse parseSingleExpr "lipl" input of
+    Left err -> E.throwError $ ParseErr err
+    Right val -> return val
+
+parse :: String -> CanBeErr Val
+parse input = case P.parse parseExpr "lipl" input of
+    Left err -> E.throwError $ ParseErr err
+    Right val -> return val
 
 parseComment = do
     P.char '#'
@@ -186,3 +196,8 @@ parseToken =
 parseExpr = do
     toks <- P.sepEndBy parseToken mustSpaces
     return $ Expr toks
+
+parseSingleExpr = do
+    e <- parseExpr
+    P.eof
+    return e
