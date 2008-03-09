@@ -9,8 +9,21 @@ primitives = [
     ("+", opAdd)
     , ("-", opSub)
     , ("*", opMult)
-    , ("/", opDiv)
+    , ("/", floatOpDiv)
+    , ("div", intOpDiv)
+    , ("&&", boolBinOp (&&))
+    , ("||", boolBinOp (||))
+    , ("not", boolNot)
     ]
+
+{-
+numBinOp op [a,b] = do
+    let
+        a' = unpackNum a
+        b' = unpackNum b
+        result = a' `op` b'
+    return $
+-}
 
 {-
 mkOp :: (Num a) => (a -> a -> a) -> [Val] -> Val
@@ -28,7 +41,8 @@ opDiv args = mkOp (/) args
 
 -- (opAdd.)(:) :: Val -> [Val] -> Val
 -- \x xs -> opAdd (x:xs)
-    --
+
+
 opAdd [Int a, Int b] = return $ Int (a + b)
 opAdd [Float a, Float b] = return $ Float (a + b)
 opAdd [Int a, Float b] = return $ Float (fromIntegral a + b)
@@ -47,10 +61,27 @@ opMult [Int a, Float b] = return $ Float (fromIntegral a * b)
 opMult [Float a, Int b] = return $ Float (a * fromIntegral b)
 opMult x = E.throwError $ ArityErr 2 x
 
-opDiv [Int a, Int b] = return $ Int (div a b)
-opDiv [Float a, Float b] = return $ Float (a / b)
-opDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
-opDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
-opDiv x = E.throwError $ ArityErr 2 x
+floatOpDiv [Int a, Int b] = return
+    $ Float (fromIntegral a / fromIntegral b)
+floatOpDiv [Float a, Float b] = return $ Float (a / b)
+floatOpDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
+floatOpDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
+floatOpDiv x = E.throwError $ ArityErr 2 x
 
+intOpDiv [Int a, Int b] = return $ Int (div a b)
+intOpDiv [Float a, Int b] = return $ Int (div (floor a) b)
+intOpDiv [Int a, Float b] = return $ Int (div a (floor b))
+intOpDiv [Float a, Float b] = return
+    $ Int (div (floor a) (floor b))
+intOpDiv x = E.throwError $ ArityErr 2 x
 
+boolBinOp op [Bool a, Bool b] = return $ Bool (a `op` b)
+boolBinOp op [Bool _, x] =
+    E.throwError $ TypeErr "Want Bool there" x
+boolBinOp op [x, Bool _] =
+    E.throwError $ TypeErr "Want Bool there" x
+boolBinOp op x = E.throwError $ ArityErr 2 x
+
+boolNot [Bool a] = return $ Bool (not a)
+boolNot [x] = E.throwError $ TypeErr "Want 1 Bool" x
+boolNot [] = E.throwError $ ArityErr 1 []

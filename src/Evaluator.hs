@@ -38,6 +38,7 @@ eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
 eval (Expr (Ident fname : args)) = do
     params <- mapM eval args
     funcall fname params
+eval (Expr [a]) = eval a
 eval x = E.throwError $ BadExprErr "Bad Expr" x
 
 funcall :: String -> [Val] -> CanBeErr Val
