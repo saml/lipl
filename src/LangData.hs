@@ -24,12 +24,12 @@ ppKeyValList = map ppKeyVal
 
 data Val = Comment String
     | Null
-    | Ident String
-    | Int Integer
-    | Float Double
-    | Bool Bool
-    | Char Char
-    | Str String
+    | Ident { unpackIdent :: String }
+    | Int { unpackInt :: Integer }
+    | Float { unpackFloat :: Double }
+    | Bool { unpackBool :: Bool }
+    | Char { unpackChar :: Char }
+    | Str { unpackStr :: String }
     | Fun [String] Val -- params, body
     | List [Val]
     | Dict Env
