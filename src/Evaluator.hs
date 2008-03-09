@@ -33,10 +33,17 @@ eval :: Val -> CanBeErr Val
 eval e@(Int _) = return e
 eval e@(Float _) = return e
 eval e@(Bool _) = return e
+eval e@(Char _) = return e
+eval e@(Str _) = return e
 eval (Expr []) = return Null
 eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
+eval (Expr [Ident "if", pred, ifCase, elseCase]) = do
+    ifOrElse <- eval pred
+    case ifOrElse of
+        Bool False -> eval elseCase
+        otherwise -> eval ifCase
 eval (Expr (Ident fname : args)) = do
-    params <- mapM eval args
+    params <- mapM eval args -- eager evaluation
     funcall fname params
 eval (Expr [a]) = eval a
 eval x = E.throwError $ BadExprErr "Bad Expr" x

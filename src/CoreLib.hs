@@ -14,7 +14,50 @@ primitives = [
     , ("&&", boolBinOp (&&))
     , ("||", boolBinOp (||))
     , ("not", boolNot)
+    , ("==", numEq)
+    , ("<", numLt)
+    , ("<=", numLte)
+    , (">", numGt)
+    , (">=", numGte)
     ]
+
+numEq = compareOp (ordBool [EQ])
+numLt = compareOp (ordBool [LT])
+numLte = compareOp (ordBool [LT, EQ])
+numGt = compareOp (ordBool [GT])
+numGte = compareOp (ordBool [GT, EQ])
+
+ordBool target x = elem x target
+
+--compareOp op [a, b] =
+--    return $ Bool $ op (unpackVal a `compare` unpackVal b)
+compareOp op [Int a, Int b] = return $ Bool $ op (compare a b)
+compareOp op [Float a, Int b] =
+    return $ Bool $ op (compare a (fromIntegral b))
+compareOp op [Int a, Float b] =
+    return $ Bool $ op (compare (fromIntegral a) b)
+compareOp op [Float a, Float b] = return $ Bool $ op (compare a b)
+compareOp op [Bool a, Bool b] = return $ Bool $ op (compare a b)
+compareOp op [Str a, Str b] = return $ Bool $ op (compare a b)
+compareOp op [Char a, Char b] = return $ Bool $ op (compare a b)
+
+{-
+compareOp unpacker op [a,b] = do
+    return $ Bool (unpacker a `op` unpacker b)
+compareOp unpacker op x = E.throwError $ ArityErr 2 x
+
+numCompareOp = compareOp unpackInt
+
+unpackInt :: Val -> CanBeErr Integer
+unpackInt (Int i) = return i
+unpackInt (Expr [i]) = unpackInt i
+
+unpackFloat (Float f) = return f
+unpackFloat (Expr [f]) = unpackFloat f
+
+unpackBool (Bool b) = return b
+unpackBool (Expr [b]) = unpackBool b
+-}
 
 {-
 numBinOp op [a,b] = do
@@ -61,8 +104,8 @@ opMult [Int a, Float b] = return $ Float (fromIntegral a * b)
 opMult [Float a, Int b] = return $ Float (a * fromIntegral b)
 opMult x = E.throwError $ ArityErr 2 x
 
-floatOpDiv [Int a, Int b] = return
-    $ Float (fromIntegral a / fromIntegral b)
+floatOpDiv x@([Int a, Int b]) =
+    E.throwError $ TypeErr "Want Floats" (Expr x)
 floatOpDiv [Float a, Float b] = return $ Float (a / b)
 floatOpDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
 floatOpDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
@@ -71,17 +114,17 @@ floatOpDiv x = E.throwError $ ArityErr 2 x
 intOpDiv [Int a, Int b] = return $ Int (div a b)
 intOpDiv [Float a, Int b] = return $ Int (div (floor a) b)
 intOpDiv [Int a, Float b] = return $ Int (div a (floor b))
-intOpDiv [Float a, Float b] = return
-    $ Int (div (floor a) (floor b))
+intOpDiv x@([Float a, Float b]) =
+    E.throwError $ TypeErr "Want Ints" (Expr x)
 intOpDiv x = E.throwError $ ArityErr 2 x
 
 boolBinOp op [Bool a, Bool b] = return $ Bool (a `op` b)
-boolBinOp op [Bool _, x] =
-    E.throwError $ TypeErr "Want Bool there" x
-boolBinOp op [x, Bool _] =
-    E.throwError $ TypeErr "Want Bool there" x
+boolBinOp op x@([Bool _, _]) =
+    E.throwError $ TypeErr "Want Bool for 2nd arg" (Expr x)
+boolBinOp op x@([_, Bool _]) =
+    E.throwError $ TypeErr "Want Bool for 1st arg" (Expr x)
 boolBinOp op x = E.throwError $ ArityErr 2 x
 
 boolNot [Bool a] = return $ Bool (not a)
-boolNot [x] = E.throwError $ TypeErr "Want 1 Bool" x
+boolNot [x] = E.throwError $ TypeErr "Want Bool" x
 boolNot [] = E.throwError $ ArityErr 1 []
