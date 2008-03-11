@@ -22,7 +22,7 @@ repl = do
     if input == ":q"
         then putStrLn "bye"
         else do
-            putStrLn $ interpret input
+            putStrLn $ interpretSingle input
             repl
 
 prompt :: String -> IO String
@@ -34,4 +34,5 @@ prompt p = do
 runFile :: FilePath -> IO ()
 runFile fn = do
     prog <- readFile fn
-    putStrLn $ interpret prog
+    putStrLn $ interpretMultiple prog
+

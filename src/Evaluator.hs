@@ -7,18 +7,25 @@ import qualified Data.Map as Map
 import Data.Maybe
 
 import qualified Text.ParserCombinators.Parsec as P
-import Parser (parse, parseSingle)
+import Parser (parse, parseSingle, parseMultiple)
 import LangData
 import CoreLib
 
 import Debug.Trace (trace)
 
-interpret :: String -> String
-interpret input = case parseSingle input of
+interpretSingle :: String -> String
+interpretSingle input = case parseSingle input of
     Left err -> show err
     Right val -> case eval val of
         Left error -> show error
         Right value -> show value
+
+interpretMultiple input = case parseMultiple input of
+    Left err -> show err
+    Right vals -> case mapM eval vals of
+        Left error -> show error
+        Right values -> show values
+
 
     --Right val -> (show . unpackVal) $ eval val
     --Left err -> show err
@@ -35,8 +42,12 @@ eval e@(Float _) = return e
 eval e@(Bool _) = return e
 eval e@(Char _) = return e
 eval e@(Str _) = return e
+eval (List xs) = do          -- eager evaluation
+    elems <- mapM eval xs
+    return $ List elems
 eval (Expr []) = return Null
 eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
+eval (Expr [Ident "=", Ident name, body]) = return Null
 eval (Expr [Ident "if", pred, ifCase, elseCase]) = do
     ifOrElse <- eval pred
     case ifOrElse of

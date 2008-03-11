@@ -14,18 +14,23 @@ primitives = [
     , ("&&", boolBinOp (&&))
     , ("||", boolBinOp (||))
     , ("not", boolNot)
-    , ("==", numEq)
-    , ("<", numLt)
-    , ("<=", numLte)
-    , (">", numGt)
-    , (">=", numGte)
+    , ("==", compareEq)
+    , ("!=", compareNeq)
+    , ("<", compareLt)
+    , ("<=", compareLte)
+    , (">", compareGt)
+    , (">=", compareGte)
+    , ("head", listHead)
+    , ("tail", listTail)
+    , ("cons", listCons)
     ]
 
-numEq = compareOp (ordBool [EQ])
-numLt = compareOp (ordBool [LT])
-numLte = compareOp (ordBool [LT, EQ])
-numGt = compareOp (ordBool [GT])
-numGte = compareOp (ordBool [GT, EQ])
+compareEq = compareOp (ordBool [EQ])
+compareNeq = compareOp (ordBool [LT, GT])
+compareLt = compareOp (ordBool [LT])
+compareLte = compareOp (ordBool [LT, EQ])
+compareGt = compareOp (ordBool [GT])
+compareGte = compareOp (ordBool [GT, EQ])
 
 ordBool target x = elem x target
 
@@ -40,6 +45,9 @@ compareOp op [Float a, Float b] = return $ Bool $ op (compare a b)
 compareOp op [Bool a, Bool b] = return $ Bool $ op (compare a b)
 compareOp op [Str a, Str b] = return $ Bool $ op (compare a b)
 compareOp op [Char a, Char b] = return $ Bool $ op (compare a b)
+compareOp op [List a, List b] = return $ Bool $ op (compare a b)
+compareOp op e@([a,b]) =
+    E.throwError $ TypeErr "Can't compare" $ Expr e
 
 {-
 compareOp unpacker op [a,b] = do
@@ -105,7 +113,7 @@ opMult [Float a, Int b] = return $ Float (a * fromIntegral b)
 opMult x = E.throwError $ ArityErr 2 x
 
 floatOpDiv x@([Int a, Int b]) =
-    E.throwError $ TypeErr "Want Floats" (Expr x)
+    E.throwError $ TypeErr "2 Floats" (Expr x)
 floatOpDiv [Float a, Float b] = return $ Float (a / b)
 floatOpDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
 floatOpDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
@@ -115,16 +123,32 @@ intOpDiv [Int a, Int b] = return $ Int (div a b)
 intOpDiv [Float a, Int b] = return $ Int (div (floor a) b)
 intOpDiv [Int a, Float b] = return $ Int (div a (floor b))
 intOpDiv x@([Float a, Float b]) =
-    E.throwError $ TypeErr "Want Ints" (Expr x)
+    E.throwError $ TypeErr "2 Ints" (Expr x)
 intOpDiv x = E.throwError $ ArityErr 2 x
 
 boolBinOp op [Bool a, Bool b] = return $ Bool (a `op` b)
 boolBinOp op x@([Bool _, _]) =
-    E.throwError $ TypeErr "Want Bool for 2nd arg" (Expr x)
+    E.throwError $ TypeErr "Bool for 2nd arg" (Expr x)
 boolBinOp op x@([_, Bool _]) =
-    E.throwError $ TypeErr "Want Bool for 1st arg" (Expr x)
+    E.throwError $ TypeErr "Bool for 1st arg" (Expr x)
 boolBinOp op x = E.throwError $ ArityErr 2 x
 
 boolNot [Bool a] = return $ Bool (not a)
-boolNot [x] = E.throwError $ TypeErr "Want Bool" x
+boolNot [x] = E.throwError $ TypeErr "Bool" x
 boolNot [] = E.throwError $ ArityErr 1 []
+
+listHead [List (x:xs)] = return x
+listHead [e@(List [])] =
+    E.throwError $ TypeErr "non empty list" e
+listHead [x] = E.throwError $ TypeErr "non empty list" x
+listHead x = E.throwError $ ArityErr 1 x
+
+listTail [List (x:xs)] = return $ List xs
+listTail [e@(List [])] =
+    E.throwError $ TypeErr "non empty list" e
+listTail [x] = E.throwError $ TypeErr "non empty list" x
+listTail x = E.throwError $ ArityErr 1 x
+
+listCons [x, List []] = return $ List [x]
+listCons [x, List xs] = return $ List (x:xs)
+listCons x = E.throwError $ ArityErr 2 x

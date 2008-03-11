@@ -13,6 +13,11 @@ parseSingle input = case P.parse parseSingleExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
     Right val -> return val
 
+parseMultiple :: String -> CanBeErr [Val]
+parseMultiple input = case P.parse parseMultipleExpr "lipl" input of
+    Left err -> E.throwError $ ParseErr err
+    Right vals -> return vals
+
 parse :: String -> CanBeErr Val
 parse input = case P.parse parseExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
@@ -198,6 +203,12 @@ parseExpr = do
     return $ Expr toks
 
 parseSingleExpr = do
-    e <- parseExpr
+    e <- parseToken
+    P.spaces
     P.eof
     return e
+
+parseMultipleExpr = do
+    es <- P.sepEndBy parseParenExpr P.spaces
+    P.eof
+    return es

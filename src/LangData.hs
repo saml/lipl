@@ -34,7 +34,8 @@ data Val = Comment String
     | List [Val]
     | Dict Env
     | Expr [Val]
-    --deriving (Show)
+    deriving (Ord, Eq)
+--    deriving (Show)
 
 instance Show Val where show = PP.render . ppVal
 
@@ -66,17 +67,17 @@ data Err = ArityErr Int [Val]
     | BadExprErr String Val
     | DefaultErr String
 
-ppErr (ArityErr expected found) = PP.text "Expecting arity:"
+ppErr (ArityErr expected found) = PP.text "ArityErr: expecting"
     <+> PP.int expected
-    <+> PP.text "Found:"
+    <+> PP.text "args, Found:"
     <+> (PP.hsep $ ppValList found)
-ppErr (TypeErr expected found) = PP.text "Expecting type:"
+ppErr (TypeErr expected found) = PP.text "TypeErr: expecting"
     <+> PP.text expected
-    <+> PP.text "Found:"
+    <+> PP.text ", Found:"
     <+> ppVal found
-ppErr (ParseErr err) = PP.text "Parse error:"
+ppErr (ParseErr err) = PP.text "ParseErr:"
     <+> PP.text (show err)
-ppErr (NotFunErr msg val) = PP.text "Not function:"
+ppErr (NotFunErr msg val) = PP.text "NotFunErr: not a function:"
     <+> PP.text msg
     <+> PP.text val
 ppErr (UnboundIdentErr msg var) = PP.text msg
