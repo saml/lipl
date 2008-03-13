@@ -4,7 +4,13 @@ import qualified Control.Monad.Error as E
 
 import LangData
 
-primitives :: [(String, [Val] -> CanBeErr Val)]
+funcall :: String -> [Val] -> EvalVal Val
+funcall fname args = case lookup fname primitives of
+    Nothing -> E.throwError
+        $ NotFunErr "Unrecognizable primitive function" fname
+    Just f -> f args
+
+primitives :: [(String, [Val] -> EvalVal Val)]
 primitives = [
     ("+", opAdd)
     , ("-", opSub)

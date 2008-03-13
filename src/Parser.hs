@@ -5,28 +5,35 @@ import Text.ParserCombinators.Parsec ((<|>))
 
 import qualified Control.Monad.Error as E
 
+import qualified Data.Map as Map
+
 import Data.Char ( chr )
 import LangData
 
-parseSingle :: String -> CanBeErr Val
+parseSingle :: String -> EvalVal Val
 parseSingle input = case P.parse parseSingleExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
     Right val -> return val
 
-parseMultiple :: String -> CanBeErr [Val]
+parseMultiple :: String -> EvalVal [Val]
 parseMultiple input = case P.parse parseMultipleExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
     Right vals -> return vals
 
-parse :: String -> CanBeErr Val
+parse :: String -> EvalVal Val
 parse input = case P.parse parseExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
     Right val -> return val
 
+testParse p input = case P.parse p "lipl test" input of
+    Left err -> show err
+    Right val -> show val
+
 parseComment = do
     P.char '#'
     s <- P.many (P.noneOf "\n\r")
-    return $ Comment s
+    return ()
+    --return $ Comment s
 
 parseBool = do
     b <- P.string "True" <|> P.string "False"
@@ -164,7 +171,7 @@ parseDict = do
     lbrace
     l <- P.sepBy parseKeyVal (P.try comma)
     rbrace
-    return $ Dict l
+    return $ Dict (Map.fromList l)
 
 parseKeyVal = do
     Ident key <- parseIdent
@@ -174,7 +181,9 @@ parseKeyVal = do
     val <- parseToken
     return (key, val)
 
-mustSpaces = P.skipMany1 P.space
+mustSpaces = P.try parseComment <|> P.skipMany1 P.space
+
+ws = P.try parseComment <|> P.spaces
 
 {-
 parseTopLevel = do
@@ -184,11 +193,11 @@ parseTopLevel = do
 -}
 
 parseToken =
-    P.try parseComment
+--    P.try parseComment
 --    <|> P.try parseIf
 --    <|> P.try parseLet
 --    <|> P.try parseDef
-    <|> P.try parseList
+        P.try parseList
     <|> P.try parseDict
     <|> P.try parseParenExpr
     <|> P.try parseBool
@@ -209,6 +218,6 @@ parseSingleExpr = do
     return e
 
 parseMultipleExpr = do
-    es <- P.sepEndBy parseParenExpr P.spaces
+    es <- P.sepEndBy parseParenExpr ws
     P.eof
     return es

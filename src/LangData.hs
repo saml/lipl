@@ -1,6 +1,7 @@
 module LangData ( Val (..)
     , Err (..)
-    , CanBeErr
+    , EvalVal, runEvalVal
+    , emptyEnv, putKeyVals
     , Stack, pop, push
     , Queue, front ) where
 
@@ -11,10 +12,28 @@ import Text.PrettyPrint.HughesPJ (
 import qualified Text.ParserCombinators.Parsec as P
 
 import qualified Control.Monad.Error as E
+import qualified Control.Monad.Identity as I
+import qualified Control.Monad.Reader as R
+
+import qualified Data.Map as Map
 
 type Key = String
 type KeyVal = (Key, Val)
-type Env = [KeyVal]
+type EnvList = [KeyVal]
+type Env = Map.Map String Val
+
+putKeyVal (key, val) env = if Map.member key env
+    then
+        E.throwError $ EnvUpdateErr key
+    else
+        return $ Map.insert key val env
+
+toEnvList keys vals = zip keys vals
+
+putKeyVals keys vals env = Map.union env
+    $ Map.fromList $ toEnvList keys vals
+
+emptyEnv = Map.empty
 
 ppKeyVal (k, v) = ppVal (Ident k)
     <+> PP.text "="
@@ -30,7 +49,7 @@ data Val = Comment String
     | Bool { unpackBool :: Bool }
     | Char { unpackChar :: Char }
     | Str { unpackStr :: String }
-    | Fun [String] Val -- params, body
+    | Fun Env String [String] Val -- environment, name, params, body
     | List [Val]
     | Dict Env
     | Expr [Val]
@@ -47,23 +66,29 @@ ppVal (Float f) = PP.double f
 ppVal (Bool b) = PP.text $ show b
 ppVal (Char c) = PP.text $ show c
 ppVal (Str s) = PP.text $ show s
+ppVal (Fun env name args body) = PP.parens
+    $ PP.hsep [PP.text "def", PP.text name, ppArgs args, ppVal body]
 ppVal (List xs) = PP.brackets
     (PP.hsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = PP.braces
-    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList xs))
+    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList (Map.toList xs)))
 ppVal (Expr xs) = PP.parens (PP.hsep $ ppValList xs)
 
 ppValList = map ppVal
+ppStrList = map PP.text
+ppArgs args = PP.parens $ PP.hsep $ ppStrList args
 
 example = List [Ident "foo", Int 42, Char 'a'
     , List [Bool True, Str "Hello World", Float (-242.53)]
-    , List [Ident "d", Dict [("bar", Int 24), ("f", Char 'c')]]]
+    , List [Ident "d"
+        , Dict $ Map.fromList [("bar", Int 24), ("f", Char 'c')]]]
 
 data Err = ArityErr Int [Val]
     | TypeErr String Val
     | ParseErr P.ParseError
     | NotFunErr String String -- msg, fname
     | UnboundIdentErr String String
+    | EnvUpdateErr String
     | BadExprErr String Val
     | DefaultErr String
 
@@ -83,6 +108,8 @@ ppErr (NotFunErr msg val) = PP.text "NotFunErr: not a function:"
 ppErr (UnboundIdentErr msg var) = PP.text msg
     <> PP.text ":"
     <+> PP.text var
+ppErr (EnvUpdateErr var) = PP.text "destructive update on"
+    <+> PP.text var
 ppErr (BadExprErr msg val) = PP.text msg
     <> PP.text ":"
     <+> ppVal val
@@ -95,7 +122,11 @@ instance E.Error Err where
     noMsg = DefaultErr "Error"
     strMsg = DefaultErr
 
-type CanBeErr = Either Err
+
+--type EvalVal a = E.ErrorT Err I.Identity a
+--runEvalVal = I.runIdentity . E.runErrorT
+type EvalVal a = R.ReaderT Env (E.ErrorT Err I.Identity) a
+runEvalVal env e = (I.runIdentity . E.runErrorT) $ R.runReaderT e env
 
 type Stack = [Val]
 type Queue = [Val]

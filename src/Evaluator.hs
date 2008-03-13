@@ -1,6 +1,6 @@
 module Evaluator where
 
---import qualified Control.Monad.Reader as M
+import qualified Control.Monad.Reader as R
 --import qualified Control.Monad.Identity as M
 import qualified Control.Monad.Error as E
 import qualified Data.Map as Map
@@ -14,15 +14,15 @@ import CoreLib
 import Debug.Trace (trace)
 
 interpretSingle :: String -> String
-interpretSingle input = case parseSingle input of
+interpretSingle input = case runEvalVal emptyEnv $ parseSingle input of
     Left err -> show err
-    Right val -> case eval val of
+    Right val -> case runEvalVal emptyEnv $ eval val of
         Left error -> show error
         Right value -> show value
 
-interpretMultiple input = case parseMultiple input of
+interpretMultiple input = case runEvalVal emptyEnv $ parseMultiple input of
     Left err -> show err
-    Right vals -> case mapM eval vals of
+    Right vals -> case mapM ((runEvalVal emptyEnv) . eval) vals of
         Left error -> show error
         Right values -> show values
 
@@ -36,7 +36,14 @@ interpretMultiple input = case parseMultiple input of
     --Right (TopLevel es) -> "==> " ++ show (evals es)
     --Right val -> "==> " ++ show (runEval Map.empty (eval val))
 
-eval :: Val -> CanBeErr Val
+
+
+eval :: Val -> EvalVal Val
+eval e@(Ident var) = do
+    env <- R.ask
+    case Map.lookup var env of
+        Nothing -> E.throwError $ UnboundIdentErr "var not bound" var
+        Just val -> return val
 eval e@(Int _) = return e
 eval e@(Float _) = return e
 eval e@(Bool _) = return e
@@ -47,7 +54,9 @@ eval (List xs) = do          -- eager evaluation
     return $ List elems
 eval (Expr []) = return Null
 eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
-eval (Expr [Ident "=", Ident name, body]) = return Null
+eval (Expr [Ident "=", Ident name, body]) = do
+    env <- R.ask
+    return $ Fun env name [] body
 eval (Expr [Ident "if", pred, ifCase, elseCase]) = do
     ifOrElse <- eval pred
     case ifOrElse of
@@ -56,14 +65,20 @@ eval (Expr [Ident "if", pred, ifCase, elseCase]) = do
 eval (Expr (Ident fname : args)) = do
     params <- mapM eval args -- eager evaluation
     funcall fname params
-eval (Expr [a]) = eval a
-eval x = E.throwError $ BadExprErr "Bad Expr" x
+{-
+eval (Expr (fn@(Ident fname) : args)) = do
+    f <- eval fn
+    case f of
+        Fun env name keys body -> do
+            params <- mapM eval args -- eager evaluation
+            let env' = putKeyVals keys params env
+            R.local (const env') (eval body)
+        otherwise -> E.throwError $ NotFunErr "not function" fname
+-}
 
-funcall :: String -> [Val] -> CanBeErr Val
-funcall fname args = case lookup fname primitives of
-    Nothing -> E.throwError
-        $ NotFunErr "Unrecognizable primitive function" fname
-    Just f -> f args
+eval (Expr [a]) = eval a
+eval x = return x
+--eval x = E.throwError $ BadExprErr "Bad Expr" x
 
 -- [("+", (+)), ("-", (-)), ("*", (*)), ("/", (/)), ("div", div)] :: (Num a) => [(String, a)]
 
