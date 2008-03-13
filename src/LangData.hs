@@ -1,4 +1,5 @@
 module LangData ( Val (..)
+    , PrimFun (..)
     , Err (..)
     , EvalVal, runEvalVal
     , emptyEnv, putKeyVals
@@ -49,7 +50,10 @@ data Val = Comment String
     | Bool { unpackBool :: Bool }
     | Char { unpackChar :: Char }
     | Str { unpackStr :: String }
-    | Fun Env String [String] Val -- environment, name, params, body
+    -- | environment, name, params, body
+    | Fun Env String [String] Val
+    -- | primitive function: name, func
+    | Prim String PrimFun
     | List [Val]
     | Dict Env
     | Expr [Val]
@@ -57,6 +61,13 @@ data Val = Comment String
 --    deriving (Show)
 
 instance Show Val where show = PP.render . ppVal
+
+newtype PrimFun = PrimFun ([Val] -> EvalVal Val)
+instance Ord PrimFun where
+    compare a b = LT
+instance Eq PrimFun where
+    a == b = False
+
 
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
@@ -68,6 +79,8 @@ ppVal (Char c) = PP.text $ show c
 ppVal (Str s) = PP.text $ show s
 ppVal (Fun env name args body) = PP.parens
     $ PP.hsep [PP.text "def", PP.text name, ppArgs args, ppVal body]
+ppVal (Prim name body) = PP.parens
+    $ PP.hsep [PP.text "\\def", PP.text name]
 ppVal (List xs) = PP.brackets
     (PP.hsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = PP.braces
