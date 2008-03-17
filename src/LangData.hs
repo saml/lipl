@@ -3,10 +3,10 @@
 module LangData ( Val (..)
 --    , PrimFun (..)
     , Err (..)
-    , Eval (..)
-    , Wrap
+--    , Eval (..)
+    , Wrap, runWrap, unwrap, putVal, getVal, getEnv
     , EnvStack
-    , emptyEnv, putKeyVals
+--    , emptyEnv, putKeyVals
     , Stack, pop, push
     , Queue, front ) where
 
@@ -26,8 +26,9 @@ import qualified Data.Map as Map
 type Key = String
 type KeyVal = (Key, Val)
 type EnvList = [KeyVal]
-type Env = Map.Map String Val
+type Env = Map.Map Key Val
 
+{-
 putKeyVal (key, val) env = if Map.member key env
     then
         E.throwError $ EnvUpdateErr key
@@ -40,6 +41,7 @@ putKeyVals keys vals env = Map.union env
     $ Map.fromList $ toEnvList keys vals
 
 emptyEnv = Map.empty
+-}
 
 ppKeyVal (k, v) = ppVal (Ident k)
     <+> PP.text "="
@@ -55,7 +57,7 @@ data Val = Comment String
     | Bool { unpackBool :: Bool }
     | Char { unpackChar :: Char }
     | Str { unpackStr :: String }
-    -- | environment, name, params, body
+    -- | environment, name, params, arity left, body
     | Fun Env String [String] Val
     -- | primitive function: name, func
 --    | Prim String PrimFun
@@ -112,8 +114,8 @@ data Err = ArityErr Int [Val]
     | TypeErr String Val
     | ParseErr P.ParseError
     | NotFunErr String String -- msg, fname
-    | UnboundIdentErr String String
-    | EnvUpdateErr String
+    | UnboundIdentErr String Key
+    | EnvUpdateErr Key
     | BadExprErr String Val
     | DefaultErr String
 
@@ -152,16 +154,52 @@ instance E.Error Err where
 --runEvalVal = I.runIdentity . E.runErrorT
 --type EvalVal a = R.ReaderT Env (E.ErrorT Err I.Identity) a
 type EnvStack = Stack Env
+
+getEnv :: Wrap Env
+getEnv = do
+    (st:rst) <- S.get
+    return st
+
 {-
 type ValI = I.Identity
 type ValS = S.StateT EnvStack ValI
 type ValE = E.ErrorT Err ValS
 -}
 
-type Wrap = E.ErrorT Err (S.StateT EnvStack I.Identity)
+newtype Wrap a = Wrap {
+    runWrap :: E.ErrorT Err (S.StateT EnvStack I.Identity) a
+} deriving (Functor, Monad, E.MonadError Err, S.MonadState EnvStack)
+
+unwrap wrap = case fst $ (
+        I.runIdentity $ S.runStateT (E.runErrorT $ runWrap wrap) []) of
+    Left err -> Null
+    Right val -> val
+
+
+putVal key val = do
+    (st:xs) <- S.get
+    if Map.member key st
+        then
+            E.throwError $ EnvUpdateErr key
+        else
+            S.put (Map.insert key val st:xs)
+
+getVal key = do
+    (st:xs) <- S.get
+    case Map.lookup key st of
+        Just val -> return val
+        otherwise -> E.throwError $ UnboundIdentErr "not found" key
+
+
+--runWrap env a = I.runIdentity (S.runStateT (E.runErrorT a) env)
+
+--runEval :: EnvStack -> Wrap Val -> (Either Err Val, EnvStack)
+--runEval env val = I.runIdentity (S.runStateT (E.runErrorT val) env)
+
+{-
 newtype Eval a = Eval (Wrap a)
     deriving (Functor, Monad)
-
+-}
 --type Val' = Eval Val
 --type EvaluatedVal = (Either Err Val, EnvStack)
 --runEval :: EnvStack -> Val' -> (Either Err Val, EnvStack)

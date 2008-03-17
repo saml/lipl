@@ -10,10 +10,14 @@ import qualified Data.Map as Map
 import Data.Char ( chr )
 import LangData
 
-parseSingle :: String -> Wrap Val
+--parseSingle :: String -> Wrap Val
+parseSingle input = P.parse parseSingleExpr "lipl" input
+{-
 parseSingle input = case P.parse parseSingleExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
     Right val -> return val
+-}
+
 {-
 parseMultiple :: String -> EvalVal [Val]
 parseMultiple input = case P.parse parseMultipleExpr "lipl" input of

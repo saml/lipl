@@ -14,9 +14,9 @@ import CoreLib
 
 import Debug.Trace (trace)
 
-
-runEval :: EnvStack -> Wrap Val -> (Either Err Val, EnvStack)
-runEval env val = I.runIdentity (S.runStateT (E.runErrorT val) env)
+--runEval :: EnvStack -> Wrap Val -> (Either Err Val, EnvStack)
+runEval env val = I.runIdentity
+    (S.runStateT (E.runErrorT $ runWrap val) env)
 
 {-
 interpretSingle :: String -> String
@@ -34,12 +34,10 @@ interpretMultiple input = case runEvalVal emptyEnv $ parseMultiple input of
 -}
 --apply :: ValM -> ValM -> ValM
 
-eval :: Val -> Wrap Val
+--eval :: Val -> Wrap Val
 eval e@(Ident var) = do
-    (env:xs) <- S.get
-    case Map.lookup var env of
-        Nothing -> E.throwError $ UnboundIdentErr "var not bound" var
-        Just val -> return val
+    val <- getVal var
+    return val
 eval e@(Int _) = return e
 eval e@(Float _) = return e
 eval e@(Bool _) = return e
@@ -51,8 +49,8 @@ eval (List xs) = do          -- eager evaluation
 eval (Expr []) = return Null
 eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
 eval (Expr [Ident "=", Ident name, body]) = do
-    (env:xs) <- S.get
---    let env' = Map.insert name body env
+    putVal name body
+    env <- getEnv
     return $ Fun env name [] body
 eval (Expr [Ident "if", pred, ifCase, elseCase]) = do
     ifOrElse <- eval pred
