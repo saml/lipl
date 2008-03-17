@@ -16,7 +16,12 @@ main = do
             hSetBuffering stdout LineBuffering
             repl
 
+
+
 repl :: IO ()
+repl = loopUntil (\x -> x == ":q") (prompt "lipl> ") evalAndPrint
+
+{-
 repl = do
     input <- prompt "lipl> "
     if input == ":q"
@@ -24,6 +29,19 @@ repl = do
         else do
             putStrLn $ interpretSingle input
             repl
+-}
+
+
+loopUntil pred prompt action = do
+    input <- prompt
+    if pred input
+    then
+        return ()
+    else
+        do
+            action result
+            loopUntil pred prompt action
+
 
 prompt :: String -> IO String
 prompt p = do

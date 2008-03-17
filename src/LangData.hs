@@ -1,7 +1,11 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module LangData ( Val (..)
-    , PrimFun (..)
+--    , PrimFun (..)
     , Err (..)
-    , EvalVal, runEvalVal
+    , Eval (..)
+    , Wrap
+    , EnvStack
     , emptyEnv, putKeyVals
     , Stack, pop, push
     , Queue, front ) where
@@ -15,6 +19,7 @@ import qualified Text.ParserCombinators.Parsec as P
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Reader as R
+import qualified Control.Monad.State as S
 
 import qualified Data.Map as Map
 
@@ -53,21 +58,26 @@ data Val = Comment String
     -- | environment, name, params, body
     | Fun Env String [String] Val
     -- | primitive function: name, func
-    | Prim String PrimFun
+--    | Prim String PrimFun
     | List [Val]
     | Dict Env
     | Expr [Val]
+    | Let Env Val
+    | Closure Val Env
+    | Partial String Int [Val] -- func name, args needed, args have
+    | If Val Val Val -- pred, if case, else case
     deriving (Ord, Eq)
 --    deriving (Show)
 
 instance Show Val where show = PP.render . ppVal
 
+{-
 newtype PrimFun = PrimFun ([Val] -> EvalVal Val)
 instance Ord PrimFun where
     compare a b = LT
 instance Eq PrimFun where
     a == b = False
-
+-}
 
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
@@ -79,8 +89,10 @@ ppVal (Char c) = PP.text $ show c
 ppVal (Str s) = PP.text $ show s
 ppVal (Fun env name args body) = PP.parens
     $ PP.hsep [PP.text "def", PP.text name, ppArgs args, ppVal body]
+{-
 ppVal (Prim name body) = PP.parens
     $ PP.hsep [PP.text "\\def", PP.text name]
+-}
 ppVal (List xs) = PP.brackets
     (PP.hsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = PP.braces
@@ -138,27 +150,33 @@ instance E.Error Err where
 
 --type EvalVal a = E.ErrorT Err I.Identity a
 --runEvalVal = I.runIdentity . E.runErrorT
-type EvalVal a = R.ReaderT Env (E.ErrorT Err I.Identity) a
-runEvalVal env e = (I.runIdentity . E.runErrorT) $ R.runReaderT e env
+--type EvalVal a = R.ReaderT Env (E.ErrorT Err I.Identity) a
+type EnvStack = Stack Env
+{-
+type ValI = I.Identity
+type ValS = S.StateT EnvStack ValI
+type ValE = E.ErrorT Err ValS
+-}
 
-type Stack = [Val]
-type Queue = [Val]
+type Wrap = E.ErrorT Err (S.StateT EnvStack I.Identity)
+newtype Eval a = Eval (Wrap a)
+    deriving (Functor, Monad)
 
-pop :: Stack -> (Val, Stack)
+--type Val' = Eval Val
+--type EvaluatedVal = (Either Err Val, EnvStack)
+--runEval :: EnvStack -> Val' -> (Either Err Val, EnvStack)
+--runEval :: EnvStack -> Eval Val -> (Either Err Val, EnvStack)
+
+type Stack a = [a]
+type Queue a = [a]
+
+pop :: Stack a -> (a, Stack a)
 pop (x:xs) = (x, xs)
-pop _ = (Null, [])
 
-push :: Val -> Stack -> Stack
+push :: a -> Stack a -> Stack a
 push v s = v : s
 
-front :: Queue -> (Val, Queue)
+front :: Queue a -> (a, Queue a)
 front (x:xs) = (x, xs)
-front _ = (Null, [])
-
--- | evaluation using 'Stack' and 'Queue'
---sqEval :: Stack -> Queue -> Stack
---sqEval s (Ident fname : xs) =
-
---f :: Stack -> Queue -> Val
 
 

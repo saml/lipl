@@ -10,11 +10,11 @@ import qualified Data.Map as Map
 import Data.Char ( chr )
 import LangData
 
-parseSingle :: String -> EvalVal Val
+parseSingle :: String -> Wrap Val
 parseSingle input = case P.parse parseSingleExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
     Right val -> return val
-
+{-
 parseMultiple :: String -> EvalVal [Val]
 parseMultiple input = case P.parse parseMultipleExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
@@ -28,6 +28,7 @@ parse input = case P.parse parseExpr "lipl" input of
 testParse p input = case P.parse p "lipl test" input of
     Left err -> show err
     Right val -> show val
+-}
 
 parseComment = do
     P.char '#'
@@ -142,8 +143,6 @@ parseParenExpr = do
     rparen
     return $ Expr val
 
-{-
-parseIf :: P.Parser Expr
 parseIf = do
     P.string "if"
     mustSpaces
@@ -154,15 +153,13 @@ parseIf = do
     elseCase <- parseToken
     return $ If pred ifCase elseCase
 
-parseLet :: P.Parser Expr
 parseLet = do
     P.string "let"
     mustSpaces
-    env <- parseDict
+    Dict env <- parseDict
     mustSpaces
     body <- parseToken
     return $ Let env body
--}
 
 lbrace = P.char '{' >> P.spaces
 rbrace = P.spaces >> P.char '}'
