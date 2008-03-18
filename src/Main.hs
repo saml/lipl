@@ -2,14 +2,16 @@ module Main where
 
 import System.IO
 import System.Environment (getArgs)
+import qualified Data.Map as Map
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.State as S
 import qualified Control.Monad.Trans as T
 import qualified Control.Monad as M
+import Control.Applicative ((<$>))
+
 import Evaluator
 import Parser
 import LangData
-import qualified Data.Map as Map
 
 
 {-
@@ -45,6 +47,7 @@ nullEnv = [Map.empty]
 
 main = S.runStateT (E.runErrorT (runWrap repl)) nullEnv
 
+{-
 repl :: Wrap ()
 repl = do
     line <- T.liftIO $ prompt "lipl> "
@@ -54,6 +57,34 @@ repl = do
             ((M.liftM show (parseAndEval line))
                 `E.catchError` (return . show)) >>= (T.liftIO . putStrLn)
             repl
+-}
+
+repl :: Wrap ()
+repl = do
+    line <- T.liftIO $ prompt "lipl> "
+    case line of
+        ":q" -> return ()
+        otherwise -> do
+            result <- (show <$> parseAndEval line)
+                `E.catchError`
+                (\e -> return (show e))
+            T.liftIO $ putStrLn result
+            repl
+
+{-
+--
+
+handleErrors :: MonadError m => m a -> m ()
+handleErrors action = action >> return () `catchError` print
+
+repl :: Wrap ()
+repl = showErrors $ do
+    line <- T.liftIO $ prompt "lipl> "
+    when (line == ":q") $ return ()
+    handleErrors $ parseAndEval line >>= liftIO print
+    repl
+-}
+
 
 --result <- E.catchError (parseAndEval line) (\e -> return e)
 --result <- parseAndEval line
