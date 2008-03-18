@@ -4,7 +4,7 @@ module LangData ( Val (..)
 --    , PrimFun (..)
     , Err (..)
 --    , Eval (..)
-    , Wrap, runWrap, unwrap, putVal, getVal, getEnv
+    , Wrap, runWrap, putVal, getVal, getEnv
     , EnvStack
 --    , emptyEnv, putKeyVals
     , Stack, pop, push
@@ -18,7 +18,7 @@ import qualified Text.ParserCombinators.Parsec as P
 
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Identity as I
-import qualified Control.Monad.Reader as R
+import qualified Control.Monad.Trans as T
 import qualified Control.Monad.State as S
 
 import qualified Data.Map as Map
@@ -167,14 +167,16 @@ type ValE = E.ErrorT Err ValS
 -}
 
 newtype Wrap a = Wrap {
-    runWrap :: E.ErrorT Err (S.StateT EnvStack I.Identity) a
-} deriving (Functor, Monad, E.MonadError Err, S.MonadState EnvStack)
+    runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
+} deriving (
+    Functor, Monad, E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
 
+{-
 unwrap wrap = case fst $ (
         I.runIdentity $ S.runStateT (E.runErrorT $ runWrap wrap) []) of
     Left err -> Null
     Right val -> val
-
+-}
 
 putVal key val = do
     (st:xs) <- S.get

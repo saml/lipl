@@ -3,10 +3,14 @@ module Main where
 import System.IO
 import System.Environment (getArgs)
 import qualified Control.Monad.Error as E
+import qualified Control.Monad.State as S
+import qualified Control.Monad.Trans as T
+import qualified Control.Monad as M
 import Evaluator
 import Parser
 import LangData
 import qualified Data.Map as Map
+
 
 {-
 main :: IO ()
@@ -37,24 +41,39 @@ evalAndPrint input = do
         Right val -> putStrLn $ show val
 -}
 
+nullEnv = [Map.empty]
 
+main = S.runStateT (E.runErrorT (runWrap repl)) nullEnv
+
+repl :: Wrap ()
+repl = do
+    line <- T.liftIO $ prompt "lipl> "
+    case line of
+        ":q" -> return ()
+        otherwise -> do
+            ((M.liftM show (parseAndEval line))
+                `E.catchError` (return . show)) >>= (T.liftIO . putStrLn)
+            repl
+
+--result <- E.catchError (parseAndEval line) (\e -> return e)
+--result <- parseAndEval line
 
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> eval val
 
+{-
 runEvalAndPrint env wrapped = case runEval env wrapped of
     (Left err, st) -> putStrLn $ show err
     (Right val, st) -> putStrLn $ show val
 
 evalAndPrint env input = runEvalAndPrint env $ parseAndEval input
+-}
 
 
-nullEnv :: IO EnvStack
-nullEnv = return [Map.empty]
 
-repl = nullEnv
-    >>= loopUntil (\x -> x == ":q") (prompt "lipl> ") . evalAndPrint
+--repl = nullEnv
+--    >>= loopUntil (\x -> x == ":q") (prompt "lipl> ") . evalAndPrint
 
 {-
 main = do

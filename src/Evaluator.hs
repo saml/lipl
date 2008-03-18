@@ -15,9 +15,10 @@ import CoreLib
 import Debug.Trace (trace)
 
 --runEval :: EnvStack -> Wrap Val -> (Either Err Val, EnvStack)
+{-
 runEval env val = I.runIdentity
     (S.runStateT (E.runErrorT $ runWrap val) env)
-
+-}
 {-
 interpretSingle :: String -> String
 interpretSingle input = case runEvalVal emptyEnv $ parseSingle input of
@@ -47,7 +48,7 @@ eval (List xs) = do          -- eager evaluation
     elems <- mapM eval xs
     return $ List elems
 eval (Expr []) = return Null
-eval (Expr [Expr expr]) = eval $ Expr expr -- hack for ((+ 1 2))
+eval (Expr [e]) = eval e -- unwrap outer parens
 eval (Expr [Ident "=", Ident name, body]) = do
     putVal name body
     env <- getEnv
@@ -60,7 +61,6 @@ eval (Expr [Ident "if", pred, ifCase, elseCase]) = do
 eval (Expr (Ident fname : args)) = do
     params <- mapM eval args -- eager evaluation
     funcall fname params
-eval (Expr [a]) = eval a
 eval x = return x
 --eval x = E.throwError $ BadExprErr "Bad Expr" x
 
