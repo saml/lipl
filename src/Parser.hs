@@ -1,14 +1,15 @@
 module Parser where
 
 import qualified Text.ParserCombinators.Parsec as P
+import qualified Text.ParserCombinators.Parsec.Token as P
 import Text.ParserCombinators.Parsec ((<|>))
 
 import qualified Control.Monad.Error as E
-
 import qualified Data.Map as Map
-
 import Data.Char ( chr )
+
 import LangData
+import CoreLib (builtinNames)
 
 --parseSingle :: String -> Wrap Val
 parseSingle input = P.parse parseSingleExpr "lipl" input
@@ -60,6 +61,14 @@ parseIdent = do
     where
         parseOp = parseHeadBody opChar opChar
         parseName = parseHeadBody identChar identChar
+
+parsePrimFun = do
+    (Ident ident) <- P.try parseIdent <|> return (Ident "")
+    if ident `elem` builtinNames
+        then
+            return $ PrimFun ident
+        else
+            fail ""
 
 nat = P.many1 P.digit
 
@@ -122,7 +131,6 @@ parseList = do
     rbracket
     return $ List l
 
-{-
 parseDef = do
     P.string "def"
     mustSpaces
@@ -131,12 +139,11 @@ parseDef = do
     Expr args <- parseParenExpr
     mustSpaces
     body <- parseToken
-    return $ Def name (getIdents args) body
+    return $ FunDef name (getIdents args) body
     where
         getIdents [] = []
         getIdents (Ident a:xs) = [a] ++ getIdents xs
 --        getIdents _ = error "Blah" -- TODO: better error handling
--}
 
 lparen = P.char '(' >> P.spaces
 rparen = P.spaces >> P.char ')'
@@ -195,10 +202,10 @@ parseTopLevel = do
 
 parseToken =
 --    P.try parseComment
---    <|> P.try parseIf
+    P.try parseIf
 --    <|> P.try parseLet
---    <|> P.try parseDef
-        P.try parseList
+    <|> P.try parseDef
+    <|> P.try parseList
     <|> P.try parseDict
     <|> P.try parseParenExpr
     <|> P.try parseBool
@@ -206,6 +213,7 @@ parseToken =
     <|> P.try parseStr
     <|> P.try parseFloat
     <|> P.try parseInt
+    <|> P.try parsePrimFun
     <|> P.try parseIdent
 
 parseExpr = do

@@ -4,32 +4,45 @@ import qualified Control.Monad.Error as E
 
 import LangData
 
+data Builtin = Builtin {
+    getBuiltinArity :: Int
+    , getBuiltinFun :: [Val] -> Wrap Val
+    }
+
 funcall :: String -> [Val] -> Wrap Val
 funcall fname args = case lookup fname primitives of
     Nothing -> E.throwError
         $ NotFunErr "Unrecognizable primitive function" fname
-    Just f -> f args
+    Just f -> (getBuiltinFun f) args
 
-primitives :: [(String, [Val] -> Wrap Val)]
+arityOf name = case lookup name primitives of
+    Nothing -> (-1)
+    Just f -> getBuiltinArity f
+
+primitives :: [(String, Builtin)]
 primitives = [
-    ("+", opAdd)
-    , ("-", opSub)
-    , ("*", opMult)
-    , ("/", floatOpDiv)
-    , ("div", intOpDiv)
-    , ("&&", boolBinOp (&&))
-    , ("||", boolBinOp (||))
-    , ("not", boolNot)
-    , ("==", compareEq)
-    , ("!=", compareNeq)
-    , ("<", compareLt)
-    , ("<=", compareLte)
-    , (">", compareGt)
-    , (">=", compareGte)
-    , ("head", listHead)
-    , ("tail", listTail)
-    , ("cons", listCons)
+    ("+", Builtin 2 opAdd)
+    , ("-", Builtin 2 opSub)
+    , ("*", Builtin 2 opMult)
+    , ("/", Builtin 2 floatOpDiv)
+    , ("div", Builtin 2 intOpDiv)
+    , ("&&", Builtin 2 $ boolBinOp (&&))
+    , ("||", Builtin 2 $ boolBinOp (||))
+    , ("not", Builtin 1 boolNot)
+    , ("==", Builtin 2 compareEq)
+    , ("!=", Builtin 2 compareNeq)
+    , ("<", Builtin 2 compareLt)
+    , ("<=", Builtin 2 compareLte)
+    , (">", Builtin 2 compareGt)
+    , (">=", Builtin 2 compareGte)
+    , ("head", Builtin 1 listHead)
+    , ("tail", Builtin 1 listTail)
+    , ("cons", Builtin 2 listCons)
     ]
+
+builtinNames = map fst primitives
+builtins = map snd primitives
+
 
 compareEq = compareOp (ordBool [EQ])
 compareNeq = compareOp (ordBool [LT, GT])
