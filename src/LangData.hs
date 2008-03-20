@@ -4,7 +4,8 @@ module LangData ( Val (..)
 --    , PrimFun (..)
     , Err (..)
 --    , Eval (..)
-    , Wrap, runWrap, putVal, getVal, getEnv, pushEnv, popEnv
+    , Wrap, runWrap, putVal, getVal
+    , getEnv, pushEnv, popEnv, extendPushEnv
     , EnvStack
 --    , emptyEnv, putKeyVals
     , Stack, pop, push
@@ -219,6 +220,17 @@ popEnv = do
     st <- S.get
     S.put $ (snd . pop) st
 
+extendPushEnv :: Env -> Wrap ()
+extendPushEnv env = do
+    st <- S.get
+    if isEmpty st
+        then
+            S.put (push env st)
+        else
+            S.put $ push (env `Map.union` head st) st
+            -- ^ do I have to check for duplicates??
+            --
+
 --runWrap env a = I.runIdentity (S.runStateT (E.runErrorT a) env)
 
 --runEval :: EnvStack -> Wrap Val -> (Either Err Val, EnvStack)
@@ -235,6 +247,9 @@ newtype Eval a = Eval (Wrap a)
 
 type Stack a = [a]
 type Queue a = [a]
+
+isEmpty :: Stack a -> Bool
+isEmpty = null
 
 pop :: Stack a -> (a, Stack a)
 pop (x:xs) = (x, xs)

@@ -74,12 +74,15 @@ eval (Expr [Ident "=", Ident name, body]) = do
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let firstArg = head e
     let restArgs = tail e
-    evaluatedFun <- eval f
-    case evaluatedFun of
-        fun@(Fun _ _ _ _) -> do
+    function <- eval f
+    case function of
+        fun@(Fun env _ _ _) -> do
+            extendPushEnv env
             arg <- eval firstArg
             partial <- apply fun arg
-            eval $ Expr (partial : restArgs)
+            val <- eval $ Expr (partial : restArgs)
+            popEnv
+            return val
         fun@(Prim name remaining args) -> do
             arg <- eval firstArg
             if remaining == 1
@@ -105,7 +108,7 @@ apply (Fun env name (arg:rst) body) e = do
     if null rst
         then
             do
-                pushEnv env'
+                extendPushEnv env'
                 val <- eval body
                 popEnv
                 return val
