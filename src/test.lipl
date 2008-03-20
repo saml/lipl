@@ -1,16 +1,27 @@
 (= a 42)
 
-(+ ( if ( == 1 2)
-    True
-    (if (== 'a' 'b')
-        1
-        2 ) )
- 40)
+(def foo (a b)
+    (if (== a b)
+        "they are the same"
+        "they are different"))
 
-(+ (if (  && (== 1 1.0)
-             (head (tail ([False, (!= "hello" "world"), False]))))
-    2
-    -2)
- (* 10 (+ (- 1  -1  ) (/ (* 2 2) 2.0)  )))
+(def id (a) a)
+
+(def one (a) (let {a = 1, b = 0} (+ b a)))
+
+(= fortyTwo
+    (+ ( if ( == 1 2)
+        True
+        (if (== 'a' 'b')
+            1
+            2 ) )
+     40))
+
+(= fortyTwo2
+    (+ (if (  && (== 1 1.0)
+                 (head (tail ([False, (!= "hello" "world"), False]))))
+        2
+        -2)
+     (* 10 (+ (- 1  -1  ) (/ (* 2 2) 2.0)  ))))
 
 

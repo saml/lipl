@@ -62,14 +62,25 @@ repl = do
 repl :: Wrap ()
 repl = do
     line <- T.liftIO $ prompt "lipl> "
-    case line of
+    case (head . words) line of
         ":q" -> return ()
+        ":load" -> do
+            let fileName = (head . tail . words) line
+            interpret fileName
+            T.liftIO $ putStrLn (fileName ++ " loaded")
+            repl
         otherwise -> do
             result <- (show <$> parseAndEval line)
                 `E.catchError`
                 (\e -> return (show e))
             T.liftIO $ putStrLn result
             repl
+
+interpret :: FilePath -> Wrap ()
+interpret file = do
+    prog <- T.liftIO $ readFile file
+    parseAndEvalMultiple prog
+    return ()
 
 {-
 --
@@ -92,6 +103,12 @@ repl = showErrors $ do
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> eval val
+
+parseAndEvalMultiple input = case parseMultiple input of
+    Left err -> E.throwError $ ParseErr err
+    Right vals -> do
+        evaled <- M.mapM eval vals
+        return Null
 
 {-
 runEvalAndPrint env wrapped = case runEval env wrapped of

@@ -61,6 +61,12 @@ eval (If pred ifCase elseCase) = do
         Bool False -> eval elseCase
         otherwise -> eval ifCase
 
+eval (Let env body) = do
+    extendPushEnv env
+    val <- eval body
+    popEnv
+    return val
+
 eval (PrimFun name) = do
     return $ Prim name (arityOf name) []
 
@@ -76,22 +82,10 @@ eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let restArgs = tail e
     function <- eval f
     case function of
-        fun@(Fun env _ _ _) -> do
-            extendPushEnv env
-            arg <- eval firstArg
-            partial <- apply fun arg
-            val <- eval $ Expr (partial : restArgs)
-            popEnv
-            return val
-        fun@(Prim name remaining args) -> do
-            arg <- eval firstArg
-            if remaining == 1
-                then
-                    funcall name (args ++ [arg])
-                else
-                    eval $ Expr (
-                        Prim name (remaining-1) (args ++ [arg])
-                        : restArgs)
+        fun@(Fun env _ _ _) ->
+            evalFun env fun firstArg restArgs
+        fun@(Prim name remaining args) ->
+            evalPrim name firstArg restArgs args remaining
         otherwise -> E.throwError $ NotFunErr "" (show f)
 {-
 -- | primitive function application
@@ -101,6 +95,24 @@ eval (Expr (Ident fname : args)) = do
 -}
 eval x = return x
 --eval x = E.throwError $ BadExprErr "Bad Expr" x
+
+evalFun env fun firstArg restArgs = do
+    extendPushEnv env
+    arg1 <- eval firstArg
+    partial <- apply fun arg1
+    val <- eval $ Expr (partial : restArgs)
+    popEnv
+    return val
+
+evalPrim fname firstArg restArgs argsHave remaining = do
+    arg1 <- eval firstArg
+    let args = argsHave ++ [arg1]
+    if remaining == 1
+        then
+            funcall fname args
+        else
+            eval $ Expr (
+                (Prim fname (remaining-1) args) : restArgs)
 
 apply :: Val -> Val -> Wrap Val
 apply (Fun env name (arg:rst) body) e = do

@@ -19,12 +19,10 @@ parseSingle input = case P.parse parseSingleExpr "lipl" input of
     Right val -> return val
 -}
 
-{-
-parseMultiple :: String -> EvalVal [Val]
-parseMultiple input = case P.parse parseMultipleExpr "lipl" input of
-    Left err -> E.throwError $ ParseErr err
-    Right vals -> return vals
+--parseMultiple :: String -> Wrap [Val]
+parseMultiple input = P.parse parseMultipleExpr "lipl" input
 
+{-
 parse :: String -> EvalVal Val
 parse input = case P.parse parseExpr "lipl" input of
     Left err -> E.throwError $ ParseErr err
@@ -203,7 +201,7 @@ parseTopLevel = do
 parseToken =
 --    P.try parseComment
     P.try parseIf
---    <|> P.try parseLet
+    <|> P.try parseLet
     <|> P.try parseDef
     <|> P.try parseList
     <|> P.try parseDict

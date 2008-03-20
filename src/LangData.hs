@@ -105,8 +105,9 @@ ppVal (Prim name remaining params) = PP.parens
         , PP.parens $ PP.hsep $ ppValList params]
 ppVal (List xs) = PP.brackets
     (PP.hsep $ PP.punctuate PP.comma (ppValList xs))
-ppVal (Dict xs) = PP.braces
-    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList (Map.toList xs)))
+ppVal (Dict xs) = ppEnv xs
+--ppVal (Dict xs) = PP.braces
+--    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList (Map.toList xs)))
 ppVal (Expr xs) = PP.parens (PP.hsep $ ppValList xs)
 ppVal (If pred ifCase elseCase) = PP.parens
     $ PP.hsep [PP.text "if", ppVal pred, ppVal ifCase, ppVal elseCase]
@@ -114,7 +115,11 @@ ppVal (FunDef name args body) = PP.parens
     $ PP.hsep [PP.text "def", PP.text name
         , ppArgs args
         , ppVal body]
+ppVal (Let env val) = PP.parens
+    $ PP.hsep [PP.text "let", ppEnv env, ppVal val]
 
+ppEnv env = PP.braces
+    $ PP.hsep $ PP.punctuate PP.comma (ppKeyValList $ Map.toList env)
 ppValList = map ppVal
 ppStrList = map PP.text
 ppArgs args = PP.parens $ PP.hsep $ ppStrList args
