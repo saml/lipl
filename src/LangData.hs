@@ -5,7 +5,7 @@ module LangData ( Val (..)
     , Err (..)
 --    , Eval (..)
     , Wrap, runWrap, putVal, getVal
-    , getEnv, pushEnv, popEnv, extendPushEnv
+    , getEnv, pushEnv, popEnv, clearEnv, extendPushEnv, showEnv
     , EnvStack
 --    , emptyEnv, putKeyVals
     , Stack, pop, push
@@ -28,6 +28,8 @@ type Key = String
 type KeyVal = (Key, Val)
 type EnvList = [KeyVal]
 type Env = Map.Map Key Val
+
+showEnv env = show $ ppEnv env
 
 {-
 putKeyVal (key, val) env = if Map.member key env
@@ -225,6 +227,10 @@ popEnv = do
     st <- S.get
     S.put $ (snd . pop) st
 
+clearEnv :: Wrap ()
+clearEnv = do
+    S.put []
+
 extendPushEnv :: Env -> Wrap ()
 extendPushEnv env = do
     st <- S.get
@@ -258,6 +264,7 @@ isEmpty = null
 
 pop :: Stack a -> (a, Stack a)
 pop (x:xs) = (x, xs)
+--pop [] = (0,[])
 
 push :: a -> Stack a -> Stack a
 push v s = v : s

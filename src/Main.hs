@@ -32,10 +32,25 @@ main = do
 repl :: IO ()
 repl = loopUntil (\x -> x == ":q") (prompt "lipl> ") evalAndPrint
 
+eval env val = ... (env, evaluatedVal)
+
+
+
 evalAndPrint :: String -> IO ()
 evalAndPrint input = do
     case runEval (evalString input) of
     putStrLn $ show (evalString input)
+-}
+
+{-
+main = repl emptyEnv
+
+repl env = do
+    input <- getLine
+    parsed <- parse input
+    (env, result) <- eval env parsed
+    print result
+    repl env
 -}
 
 {-
@@ -65,6 +80,17 @@ repl = do
     line <- T.liftIO $ prompt "lipl> "
     case (head . words) line of
         ":q" -> return ()
+        ":env" -> do
+            printEnv
+            repl
+        ":popenv" -> do
+            popEnv
+            printEnv
+            repl
+        ":clearenv" -> do
+            clearEnv
+            printEnv
+            repl
         ":load" -> do
             let fileName = (head . tail . words) line
             result <- (interpret fileName >>
@@ -79,6 +105,11 @@ repl = do
                 (\e -> return (show e))
             T.liftIO $ putStrLn result
             repl
+
+printEnv :: Wrap ()
+printEnv = do
+    env <- getEnv
+    T.liftIO $ putStrLn (showEnv env)
 
 interpret :: FilePath -> Wrap ()
 interpret file = do
