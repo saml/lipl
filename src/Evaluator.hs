@@ -4,7 +4,9 @@ module Evaluator where
 import qualified Control.Monad.State as S
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Error as E
+import qualified Control.Exception as Ex
 import qualified Data.Map as Map
+
 import Data.Maybe
 import Data.List ((\\))
 
@@ -61,11 +63,13 @@ eval (If pred ifCase elseCase) = do
         Bool False -> eval elseCase
         otherwise -> eval ifCase
 
-eval (Let env body) = do
+eval (Let env body) = withEnv env (eval body)
+{-
     extendPushEnv env
     val <- eval body
     popEnv
     return val
+-}
 
 eval (PrimFun name) = do
     return $ Prim name (arityOf name) []
@@ -96,6 +100,7 @@ eval (Expr (Ident fname : args)) = do
 eval x = return x
 --eval x = E.throwError $ BadExprErr "Bad Expr" x
 
+{-
 evalFun env fun firstArg restArgs = do
     extendPushEnv env
     arg1 <- eval firstArg
@@ -103,6 +108,13 @@ evalFun env fun firstArg restArgs = do
     val <- eval $ Expr (partial : restArgs)
     popEnv
     return val
+-}
+
+evalFun env fun firstArg restArgs =
+    withEnv env (do
+        arg1 <- eval firstArg
+        partial <- apply fun arg1
+        eval $ Expr (partial : restArgs))
 
 evalPrim fname firstArg restArgs argsHave remaining = do
     arg1 <- eval firstArg
@@ -114,16 +126,33 @@ evalPrim fname firstArg restArgs argsHave remaining = do
             eval $ Expr (
                 (Prim fname (remaining-1) args) : restArgs)
 
+--withEnv :: Env -> Wrap a -> Wrap a
+withEnv env action = do
+    (do
+        extendPushEnv env
+        val <- action
+        popEnv
+        return val)
+    `E.catchError`
+    (\e -> do
+        popEnv
+        E.throwError e)
+--    (extendPushEnv env >> action) `Ex.finally` popEnv
+
+
 apply :: Val -> Val -> Wrap Val
 apply (Fun env name (arg:rst) body) e = do
     let env' = Map.insert arg e env
     if null rst
         then
+            withEnv env' (eval body)
+            {-
             do
                 extendPushEnv env'
                 val <- eval body
                 popEnv
                 return val
+            -}
         else
             return $ Fun env' name rst body
 
