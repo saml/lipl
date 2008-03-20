@@ -1,6 +1,7 @@
 module Main where
 
 import System.IO
+import System.Directory
 import System.Environment (getArgs)
 import qualified Data.Map as Map
 import qualified Control.Monad.Error as E
@@ -66,8 +67,11 @@ repl = do
         ":q" -> return ()
         ":load" -> do
             let fileName = (head . tail . words) line
-            interpret fileName
-            T.liftIO $ putStrLn (fileName ++ " loaded")
+            result <- (interpret fileName >>
+                return (fileName ++ " loaded"))
+                `E.catchError`
+                (\e -> return (show e))
+            T.liftIO $ putStrLn result
             repl
         otherwise -> do
             result <- (show <$> parseAndEval line)
@@ -78,9 +82,23 @@ repl = do
 
 interpret :: FilePath -> Wrap ()
 interpret file = do
+    isValidFile <- T.liftIO $ doesFileExist file
+    if isValidFile
+        then
+            do
+                prog <- T.liftIO $ readFile file
+                parseAndEvalMultiple prog
+                return ()
+        else
+            E.throwError $ DefaultErr $ "can't find file: " ++ file
+
+{-
+interpret file = do
     prog <- T.liftIO $ readFile file
     parseAndEvalMultiple prog
     return ()
+-}
+
 
 {-
 --
