@@ -129,6 +129,19 @@ parseList = do
     rbracket
     return $ List l
 
+getIdents [] = []
+getIdents (Ident a:xs) = a : getIdents xs
+getIdents (_:xs) = getIdents xs
+--getIdents _ = error "Blah" -- TODO: better error handling
+
+parseLambda = do
+    P.string "lambda"
+    mustSpaces
+    Expr args <- parseParenExpr
+    mustSpaces
+    body <- parseToken
+    return $ Lambda (getIdents args) body
+
 parseDef = do
     P.string "def"
     mustSpaces
@@ -138,10 +151,6 @@ parseDef = do
     mustSpaces
     body <- parseToken
     return $ FunDef name (getIdents args) body
-    where
-        getIdents [] = []
-        getIdents (Ident a:xs) = [a] ++ getIdents xs
---        getIdents _ = error "Blah" -- TODO: better error handling
 
 lparen = P.char '(' >> P.spaces
 rparen = P.spaces >> P.char ')'
@@ -203,6 +212,7 @@ parseToken =
     P.try parseIf
     <|> P.try parseLet
     <|> P.try parseDef
+    <|> P.try parseLambda
     <|> P.try parseList
     <|> P.try parseDict
     <|> P.try parseParenExpr

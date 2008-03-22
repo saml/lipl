@@ -8,6 +8,7 @@ import qualified Control.Exception as Ex
 import qualified Data.Map as Map
 
 import Data.Maybe
+import qualified Data.List as List
 import Data.List ((\\))
 
 import qualified Text.ParserCombinators.Parsec as P
@@ -51,11 +52,33 @@ eval (List xs) = do          -- eager evaluation
     elems <- mapM eval xs
     return $ List elems
 
+eval (PrimFun name) = do
+    return $ Prim name (arityOf name) []
+
+eval (Lambda args body) = do
+    let funEmptyEnv = Fun emptyEnv args body
+    if null (freeVars funEmptyEnv)
+        then
+            return funEmptyEnv
+        else
+            do
+                env <- getEnv
+                return $ Fun env args body
+
+
 eval (FunDef name args body) = do
-    env <- getEnv
-    let fun = Fun env name args body
-    putVal name fun
-    return fun
+    let funEmptyEnv = Fun emptyEnv args body
+    if null (freeVars funEmptyEnv)
+        then
+            do
+                putVal name funEmptyEnv
+                return funEmptyEnv
+        else
+            do
+                env <- getEnv
+                let fun = Fun env args body
+                putVal name fun
+                return fun
 
 eval (If pred ifCase elseCase) = do
     ifOrElse <- eval pred
@@ -71,22 +94,21 @@ eval (Let env body) = withEnv env (eval body)
     return val
 -}
 
-eval (PrimFun name) = do
-    return $ Prim name (arityOf name) []
+eval (Fun env args body) | null args = withEnv env (eval body)
 
 eval (Expr []) = return Null
 eval (Expr [e]) = eval e -- unwrap outer parens
 eval (Expr [Ident "=", Ident name, body]) = do
     putVal name body
     env <- getEnv
-    return $ Fun env name [] body
+    return $ Fun env [] body
 
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let firstArg = head e
     let restArgs = tail e
     function <- eval f
     case function of
-        fun@(Fun env _ _ _) ->
+        fun@(Fun env _ _) ->
             evalFun env fun firstArg restArgs
         fun@(Prim name remaining args) ->
             evalPrim name firstArg restArgs args remaining
@@ -141,7 +163,7 @@ withEnv env action = do
 
 
 apply :: Val -> Val -> Wrap Val
-apply (Fun env name (arg:rst) body) e = do
+apply (Fun env (arg:rst) body) e = do
     let env' = Map.insert arg e env
     if null rst
         then
@@ -154,8 +176,23 @@ apply (Fun env name (arg:rst) body) e = do
                 return val
             -}
         else
-            return $ Fun env' name rst body
+            return $ Fun env' rst body
 
 
 freeVars (Ident a) = [a]
-freeVars (Fun env name params body) = freeVars body \\ params
+freeVars (Let env body) = freeVars body \\ Map.keys env
+freeVars (Lambda params body) = freeVars body \\ params
+freeVars (Fun env params body) = freeVars body \\ params
+freeVars (Prim _ _ []) = []
+freeVars (Prim _ _ (x:xs)) = freeVars x `List.union` freeVars (Expr xs)
+freeVars (Expr (x:xs)) = freeVars x `List.union` freeVars (Expr xs)
+freeVars (Expr []) = []
+freeVars x = []
+
+{-
+freeVarsList (Ident a:xs) = a : freeVarsList xs
+freeVarsList (_:xs) = freeVarsList xs
+freeVarsList [] = []
+--freeVarsList = filter (null . freeVars)
+-}
+

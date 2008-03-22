@@ -6,6 +6,7 @@ module LangData ( Val (..)
 --    , Eval (..)
     , Wrap, runWrap, putVal, getVal
     , getEnv, pushEnv, popEnv, clearEnv, extendPushEnv, showEnv
+    , nullEnv, emptyEnv
     , EnvStack
 --    , emptyEnv, putKeyVals
     , Stack, pop, push
@@ -28,6 +29,9 @@ type Key = String
 type KeyVal = (Key, Val)
 type EnvList = [KeyVal]
 type Env = Map.Map Key Val
+
+emptyEnv = Map.empty
+nullEnv = [emptyEnv]
 
 showEnv env = show $ ppEnv env
 
@@ -65,7 +69,8 @@ data Val = Comment String
     | Char { unpackChar :: Char }
     | Str { unpackStr :: String }
     | FunDef Name Params Val
-    | Fun Env Name Params Val
+    | Lambda Params Val
+    | Fun Env Params Val
     -- | primitive function: name, func
     | PrimFun Name
     | Prim Name RemainingArgs [Val]
@@ -97,9 +102,11 @@ ppVal (Float f) = PP.double f
 ppVal (Bool b) = PP.text $ show b
 ppVal (Char c) = PP.text $ show c
 ppVal (Str s) = PP.text $ show s
-ppVal (Fun env name args body) = PP.parens
+ppVal (Fun env args body) = PP.parens
     $ PP.hsep [PP.text "function"
-        , PP.text name, ppArgs args, ppVal body]
+        , ppArgs args {-, ppVal body -}]
+ppVal (Lambda args body) = PP.parens
+    $ PP.sep [PP.text "lambda", ppArgs args, ppVal body]
 ppVal (PrimFun name) = PP.text name
 ppVal (Prim name remaining params) = PP.parens
     $ PP.hsep [PP.text "builtin-function"
@@ -225,11 +232,13 @@ pushEnv env = do
 popEnv :: Wrap ()
 popEnv = do
     st <- S.get
-    S.put $ (snd . pop) st
+    if nullEnv == st
+        then return ()
+        else S.put $ (snd . pop) st
 
 clearEnv :: Wrap ()
 clearEnv = do
-    S.put []
+    S.put nullEnv
 
 extendPushEnv :: Env -> Wrap ()
 extendPushEnv env = do

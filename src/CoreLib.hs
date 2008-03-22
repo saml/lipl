@@ -38,6 +38,7 @@ primitives = [
     , ("head", Builtin 1 listHead)
     , ("tail", Builtin 1 listTail)
     , ("cons", Builtin 2 listCons)
+    , ("isEmpty", Builtin 1 listIsEmpty)
     ]
 
 builtinNames = map fst primitives
@@ -117,18 +118,21 @@ opAdd [Int a, Int b] = return $ Int (a + b)
 opAdd [Float a, Float b] = return $ Float (a + b)
 opAdd [Int a, Float b] = return $ Float (fromIntegral a + b)
 opAdd [Float a, Int b] = return $ Float (a + fromIntegral b)
+opAdd x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
 opAdd x = E.throwError $ ArityErr 2 x
 
 opSub [Int a, Int b] = return $ Int (a - b)
 opSub [Float a, Float b] = return $ Float (a - b)
 opSub [Int a, Float b] = return $ Float (fromIntegral a - b)
 opSub [Float a, Int b] = return $ Float (a - fromIntegral b)
+opSub x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
 opSub x = E.throwError $ ArityErr 2 x
 
 opMult [Int a, Int b] = return $ Int (a * b)
 opMult [Float a, Float b] = return $ Float (a * b)
 opMult [Int a, Float b] = return $ Float (fromIntegral a * b)
 opMult [Float a, Int b] = return $ Float (a * fromIntegral b)
+opMult x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
 opMult x = E.throwError $ ArityErr 2 x
 
 floatOpDiv x@([Int a, Int b]) =
@@ -136,6 +140,7 @@ floatOpDiv x@([Int a, Int b]) =
 floatOpDiv [Float a, Float b] = return $ Float (a / b)
 floatOpDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
 floatOpDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
+floatOpDiv x@([_, _]) = E.throwError $ TypeErr "Float" (Expr x)
 floatOpDiv x = E.throwError $ ArityErr 2 x
 
 intOpDiv [Int a, Int b] = return $ Int (div a b)
@@ -143,6 +148,7 @@ intOpDiv [Float a, Int b] = return $ Int (div (floor a) b)
 intOpDiv [Int a, Float b] = return $ Int (div a (floor b))
 intOpDiv x@([Float a, Float b]) =
     E.throwError $ TypeErr "2 Ints" (Expr x)
+intOpDiv x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
 intOpDiv x = E.throwError $ ArityErr 2 x
 
 boolBinOp op [Bool a, Bool b] = return $ Bool (a `op` b)
@@ -171,3 +177,7 @@ listTail x = E.throwError $ ArityErr 1 x
 listCons [x, List []] = return $ List [x]
 listCons [x, List xs] = return $ List (x:xs)
 listCons x = E.throwError $ ArityErr 2 x
+
+listIsEmpty [List a] = return $ Bool (null a)
+listIsEmpty [x] = E.throwError $ TypeErr "need list" x
+listIsEmpty x = E.throwError $ ArityErr 1 x

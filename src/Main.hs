@@ -14,7 +14,6 @@ import Evaluator
 import Parser
 import LangData
 
-
 {-
 main :: IO ()
 main = do
@@ -59,7 +58,7 @@ repl env = do
         Right val -> putStrLn $ show val
 -}
 
-nullEnv = [Map.empty]
+--nullEnv = [Map.empty]
 
 main = S.runStateT (E.runErrorT (runWrap repl)) nullEnv
 
@@ -75,36 +74,51 @@ repl = do
             repl
 -}
 
+println s = T.liftIO $ putStrLn s
+
 repl :: Wrap ()
 repl = do
     line <- T.liftIO $ prompt "lipl> "
     case (head . words) line of
-        ":q" -> return ()
-        ":env" -> do
+        ":q" -> do
+            println "bye"
+            return ()
+        ":e" -> do
+            println "Current Environment"
             printEnv
             repl
-        ":popenv" -> do
+        ":pop" -> do
+            println "Pop Environment"
             popEnv
             printEnv
             repl
-        ":clearenv" -> do
+        ":c" -> do
+            println "Clear Environment"
             clearEnv
             printEnv
             repl
-        ":load" -> do
-            let fileName = (head . tail . words) line
-            result <- (interpret fileName >>
-                return (fileName ++ " loaded"))
-                `E.catchError`
-                (\e -> return (show e))
-            T.liftIO $ putStrLn result
+        ":l" -> do
+            loadFile $ (head . tail . words) line
+            repl
+        ":r" -> do
+            clearEnv
+            println "Cleared Environment"
+            loadFile $ (head . tail . words) line
             repl
         otherwise -> do
             result <- (show <$> parseAndEval line)
                 `E.catchError`
                 (\e -> return (show e))
-            T.liftIO $ putStrLn result
+            println result
             repl
+
+loadFile fileName = do
+    result <- (interpret fileName >>
+        return (fileName ++ " loaded"))
+        `E.catchError`
+        (\e -> return (show e))
+    println result
+
 
 printEnv :: Wrap ()
 printEnv = do

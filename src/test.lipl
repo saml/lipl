@@ -1,3 +1,36 @@
+(def map (f l) (if (isEmpty l)
+                   l
+                   (let {x = (head l), xs = (tail l)}
+                        (cons (f x) (map f xs)))))
+
+(def concat (l1 l2) (if (isEmpty l1)
+                        l2
+                        (let {x = (head l1), xs = (tail l1)}
+                             (cons x (concat xs l2)))))
+
+(def filter (f l) (if (isEmpty l)
+                      l
+                      (let {x = (head l), xs = (filter f (tail l))}
+                           (if (f x)
+                               (cons x xs)
+                               xs))))
+
+(def quick-sort (l) (if (isEmpty l)
+    l
+    (let {     x       = (head l)
+             , xs      = (tail l)
+             , lesser  = (filter (lambda (a) (< a x))  xs)
+             , greater = (filter (lambda (a) (>= a x)) xs)
+         }
+         (concat (concat (quick-sort lesser) (cons x []))
+                 (quick-sort greater)))))
+
+(def compose (f g x) (f (g x)))
+
+(def apply (f x) (f x))
+
+(def id (a) a)
+
 (= a 42)
 
 (def foo (a b)
@@ -5,7 +38,6 @@
         "they are the same"
         "they are different"))
 
-(def id (a) a)
 
 (def one (a) (let {a = 1, b = 0} (+ b a)))
 
