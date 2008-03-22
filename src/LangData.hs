@@ -54,7 +54,7 @@ ppKeyVal (k, v) = ppVal (Ident k)
     <+> PP.text "="
     <+> ppVal v
 
-ppKeyValList = map ppKeyVal
+ppKeyValList = map ((PP.empty $$) . ppKeyVal)
 
 type Name = String
 type Params = [Name]
@@ -103,35 +103,35 @@ ppVal (Bool b) = PP.text $ show b
 ppVal (Char c) = PP.text $ show c
 ppVal (Str s) = PP.text $ show s
 ppVal (Fun env args body) = PP.parens
-    $ PP.hsep [PP.text "function"
-        , ppArgs args {-, ppVal body -}]
+    $ PP.fsep [PP.text "function"
+        , ppArgs args, ppVal body]
 ppVal (Lambda args body) = PP.parens
-    $ PP.sep [PP.text "lambda", ppArgs args, ppVal body]
+    $ PP.fsep [PP.text "lambda", ppArgs args, ppVal body]
 ppVal (PrimFun name) = PP.text name
 ppVal (Prim name remaining params) = PP.parens
-    $ PP.hsep [PP.text "builtin-function"
+    $ PP.fsep [PP.text "builtin-function"
         , PP.text name, PP.int remaining
-        , PP.parens $ PP.hsep $ ppValList params]
+        , PP.parens $ PP.fsep $ ppValList params]
 ppVal (List xs) = PP.brackets
-    (PP.hsep $ PP.punctuate PP.comma (ppValList xs))
+    (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = ppEnv xs
 --ppVal (Dict xs) = PP.braces
 --    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList (Map.toList xs)))
-ppVal (Expr xs) = PP.parens (PP.hsep $ ppValList xs)
+ppVal (Expr xs) = PP.parens (PP.fsep $ ppValList xs)
 ppVal (If pred ifCase elseCase) = PP.parens
-    $ PP.hsep [PP.text "if", ppVal pred, ppVal ifCase, ppVal elseCase]
+    $ PP.fsep [PP.text "if", ppVal pred, ppVal ifCase, ppVal elseCase]
 ppVal (FunDef name args body) = PP.parens
-    $ PP.hsep [PP.text "def", PP.text name
+    $ PP.fsep [PP.text "def", PP.text name
         , ppArgs args
         , ppVal body]
 ppVal (Let env val) = PP.parens
-    $ PP.hsep [PP.text "let", ppEnv env, ppVal val]
+    $ PP.fsep [PP.text "let", ppEnv env, ppVal val]
 
 ppEnv env = PP.braces
-    $ PP.hsep $ PP.punctuate PP.comma (ppKeyValList $ Map.toList env)
+    $ PP.fsep $ PP.punctuate PP.comma (ppKeyValList $ Map.toList env)
 ppValList = map ppVal
 ppStrList = map PP.text
-ppArgs args = PP.parens $ PP.hsep $ ppStrList args
+ppArgs args = PP.parens $ PP.fsep $ ppStrList args
 
 example = List [Ident "foo", Int 42, Char 'a'
     , List [Bool True, Str "Hello World", Float (-242.53)]
@@ -150,7 +150,7 @@ data Err = ArityErr Int [Val]
 ppErr (ArityErr expected found) = PP.text "ArityErr: expecting"
     <+> PP.int expected
     <+> PP.text "args, Found:"
-    <+> (PP.hsep $ ppValList found)
+    <+> (PP.fsep $ ppValList found)
 ppErr (TypeErr expected found) = PP.text "TypeErr: expecting"
     <+> PP.text expected
     <+> PP.text ", Found:"
