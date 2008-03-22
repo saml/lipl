@@ -19,10 +19,12 @@
     l
     (let {     x       = (head l)
              , xs      = (tail l)
-             , lesser  = (filter (lambda (a) (< a x))  xs)
+             , lesser  = (filter (lambda (a)
+                          (< a x))  xs)
              , greater = (filter (lambda (a) (>= a x)) xs)
          }
-         (concat (concat (quick-sort lesser) (cons x []))
+         (concat (concat (quick-sort (trace (show lesser) lesser))
+                          (cons x []))
                  (quick-sort greater)))))
 
 (def compose (f g x) (f (g x)))
@@ -30,6 +32,8 @@
 (def apply (f x) (f x))
 
 (def id (a) a)
+
+(def trace (msg x) (if (println msg) x x))
 
 (= a 42)
 
@@ -56,4 +60,5 @@
         -2)
      (* 10 (+ (- 1  -1  ) (/ (* 2 2) 2.0)  ))))
 
+(def main () (println (show (quick-sort [3,2,1]))))
 

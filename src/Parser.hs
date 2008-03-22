@@ -46,7 +46,7 @@ parseBool = do
         _ ->  True
 
 identChar = P.letter <|> P.digit <|> P.oneOf "_-"
-opChar = P.oneOf ":!#$%&*+./<=>?@\\^|-~"
+opChar = P.oneOf ":!$%&*+./<=>?@\\^|-~"
 
 parseHeadBody headChar bodyChar = do
     h <- headChar
@@ -196,9 +196,9 @@ parseKeyVal = do
     val <- parseToken
     return (key, val)
 
-mustSpaces = P.try parseComment <|> P.skipMany1 P.space
+mustSpaces = parseComment <|> P.skipMany1 P.space
 
-ws = P.try parseComment <|> P.spaces
+ws = parseComment <|> P.spaces
 
 {-
 parseTopLevel = do
@@ -229,8 +229,9 @@ parseExpr = do
     return $ Expr toks
 
 parseSingleExpr = do
+    ws
     e <- parseToken
-    P.spaces
+    ws
     P.eof
     return e
 

@@ -60,7 +60,18 @@ repl env = do
 
 --nullEnv = [Map.empty]
 
-main = S.runStateT (E.runErrorT (runWrap repl)) nullEnv
+run wrap = S.runStateT (E.runErrorT (runWrap wrap)) nullEnv
+
+main = do
+    fn <- getArgs
+    if length fn > 0
+        then do
+            run (loadFile (fn !! 0) >> return ())
+        else do
+            putStrLn "Starting REPL..."
+            hSetBuffering stdout LineBuffering
+            run repl
+-- main = S.runStateT (E.runErrorT (runWrap repl)) nullEnv
 
 {-
 repl :: Wrap ()
@@ -78,7 +89,14 @@ println s = T.liftIO $ putStrLn s
 
 repl :: Wrap ()
 repl = do
-    line <- T.liftIO $ prompt "lipl> "
+    line <- M.liftM (unwords . words) $ T.liftIO $ prompt "lipl> "
+    if length line == 0
+        then
+            repl
+        else
+            processInput line
+
+processInput line =
     case (head . words) line of
         ":q" -> do
             println "bye"
@@ -98,12 +116,14 @@ repl = do
             printEnv
             repl
         ":l" -> do
-            loadFile $ (head . tail . words) line
+            result <- loadFile $ (head . tail . words) line
+            println result
             repl
         ":r" -> do
             clearEnv
             println "Cleared Environment"
-            loadFile $ (head . tail . words) line
+            result <- loadFile $ (head . tail . words) line
+            println result
             repl
         otherwise -> do
             result <- (show <$> parseAndEval line)
@@ -117,7 +137,7 @@ loadFile fileName = do
         return (fileName ++ " loaded"))
         `E.catchError`
         (\e -> return (show e))
-    println result
+    return result
 
 
 printEnv :: Wrap ()
@@ -228,8 +248,4 @@ prompt p = do
     hFlush stdout
     getLine
 
-runFile :: FilePath -> IO ()
-runFile fn = do
-    prog <- readFile fn
-    --putStrLn $ interpretMultiple prog
-    putStrLn prog
+

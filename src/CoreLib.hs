@@ -1,6 +1,8 @@
 module CoreLib where
 
 import qualified Control.Monad.Error as E
+import qualified Control.Monad.Trans as T
+import qualified Data.Map as Map
 
 import LangData
 
@@ -35,10 +37,16 @@ primitives = [
     , ("<=", Builtin 2 compareLte)
     , (">", Builtin 2 compareGt)
     , (">=", Builtin 2 compareGte)
+    , ("length", Builtin 1 listLength)
     , ("head", Builtin 1 listHead)
     , ("tail", Builtin 1 listTail)
     , ("cons", Builtin 2 listCons)
     , ("isEmpty", Builtin 1 listIsEmpty)
+    , ("println", Builtin 1 printVarLn)
+    , ("show", Builtin 1 showVar)
+    , ("env", Builtin 1 showEnvironment)
+    , ("from-str", Builtin 1 strToList)
+    , ("from-list", Builtin 1 listToStr)
     ]
 
 builtinNames = map fst primitives
@@ -160,24 +168,76 @@ boolBinOp op x = E.throwError $ ArityErr 2 x
 
 boolNot [Bool a] = return $ Bool (not a)
 boolNot [x] = E.throwError $ TypeErr "Bool" x
-boolNot [] = E.throwError $ ArityErr 1 []
+boolNot x = E.throwError $ ArityErr 1 x
+
+listLength [List x] = return $ Int (toInteger $ length x)
+listLength [Str x] = return $ Int (toInteger $ length x)
+listLength [x] = E.throwError $ TypeErr "need list" x
+listLength x = E.throwError $ ArityErr 1 x
 
 listHead [List (x:xs)] = return x
 listHead [e@(List [])] =
-    E.throwError $ TypeErr "non empty list" e
-listHead [x] = E.throwError $ TypeErr "non empty list" x
+    E.throwError $ TypeErr "need non empty list" e
+listHead [Str (x:xs)] = return $ Char x
+listHead [e@(Str "")] =
+    E.throwError $ TypeErr "need non empty string" e
+listHead [x] = E.throwError $ TypeErr "need non empty list" x
 listHead x = E.throwError $ ArityErr 1 x
 
 listTail [List (x:xs)] = return $ List xs
 listTail [e@(List [])] =
-    E.throwError $ TypeErr "non empty list" e
-listTail [x] = E.throwError $ TypeErr "non empty list" x
+    E.throwError $ TypeErr "need non empty list" e
+listTail [Str (x:xs)] = return $ Str xs
+listTail [e@(Str [])] =
+    E.throwError $ TypeErr "need non empty string" e
+listTail [x] = E.throwError $ TypeErr "need non empty list" x
 listTail x = E.throwError $ ArityErr 1 x
 
 listCons [x, List []] = return $ List [x]
 listCons [x, List xs] = return $ List (x:xs)
+listCons [Char x, Str ""] = return $ Str [x]
+listCons [Char x, Str xs] = return $ Str (x:xs)
 listCons x = E.throwError $ ArityErr 2 x
 
 listIsEmpty [List a] = return $ Bool (null a)
+listIsEmpty [Str a] = return $ Bool (null a)
 listIsEmpty [x] = E.throwError $ TypeErr "need list" x
 listIsEmpty x = E.throwError $ ArityErr 1 x
+
+printVarLn [Str x] = do
+    T.liftIO $ putStrLn x
+    return Null
+printVarLn [x] = E.throwError $ TypeErr "need string" x
+printVarLn x = E.throwError $ ArityErr 1 x
+
+{-
+concatStr [Str s1, Str s2] = return $ Str (s1 ++ s2)
+concatStr x@([_, _]) = E.throwError $ TypeErr "need string" (Expr x)
+concatStr x = E.throwError $ ArityErr 2 x
+-}
+
+showVar [x] = return $ Str (show x)
+showVar x = E.throwError $ ArityErr 1 x
+
+showEnvironment [Str key] = do
+    env <- getEnv
+    if key == ""
+        then
+            return $ Str (show env)
+        else
+            do
+                val <- Map.lookup key env
+                return val
+
+strToList [Str s] = return (List $ map Char s)
+strToList [x] = E.throwError $ TypeErr "need string" x
+strToList x = E.throwError $ ArityErr 1 x
+
+listToStr [List l] = do
+    s <- mapM toChar l
+    return $ Str s
+    where
+        toChar (Char c) = return c
+        toChar x = E.throwError $ TypeErr "need list of chars" x
+listToStr [x] = E.throwError $ TypeErr "need list" x
+listToStr x = E.throwError $ ArityErr 1 x

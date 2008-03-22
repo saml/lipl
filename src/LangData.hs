@@ -78,6 +78,7 @@ data Val = Comment String
     | Dict Env
     | Expr [Val]
     | Let Env Val
+--    | IOFun Name Val
     | Closure Val Env
     | Partial String Int [Val] -- func name, args needed, args have
     | If Val Val Val -- pred, if case, else case

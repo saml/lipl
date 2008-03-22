@@ -4,6 +4,7 @@ module Evaluator where
 import qualified Control.Monad.State as S
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Error as E
+import qualified Control.Monad.Trans as T
 import qualified Control.Exception as Ex
 import qualified Data.Map as Map
 
@@ -93,6 +94,8 @@ eval (Let env body) = withEnv env (eval body)
     popEnv
     return val
 -}
+
+--eval (IOFun name arg) = T.liftIO $ putStrLn (show arg)
 
 eval (Fun env args body) | null args = withEnv env (eval body)
 
