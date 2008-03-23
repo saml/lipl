@@ -58,25 +58,27 @@ eval (PrimFun name) = do
 
 eval (Lambda args body) = do
     let funEmptyEnv = Fun emptyEnv args body
-    if null (freeVars funEmptyEnv)
+    let keys = freeVars funEmptyEnv
+    if null keys
         then
             return funEmptyEnv
         else
             do
-                env <- getEnv
+                env <- getEnvFor keys
                 return $ Fun env args body
 
 
 eval (FunDef name args body) = do
     let funEmptyEnv = Fun emptyEnv args body
-    if null (freeVars funEmptyEnv)
+    let keys = freeVars funEmptyEnv
+    if null keys
         then
             do
                 putVal name funEmptyEnv
                 return funEmptyEnv
         else
             do
-                env <- getEnv
+                env <- getEnvFor keys
                 let fun = Fun env args body
                 putVal name fun
                 return fun
@@ -103,7 +105,8 @@ eval (Expr []) = return Null
 eval (Expr [e]) = eval e -- unwrap outer parens
 eval (Expr [Ident "=", Ident name, body]) = do
     putVal name body
-    env <- getEnv
+    let keys = freeVars body
+    env <- getEnvFor keys
     return $ Fun env [] body
 
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case

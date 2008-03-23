@@ -5,7 +5,8 @@ module LangData ( Val (..)
     , Err (..)
 --    , Eval (..)
     , Wrap, runWrap, putVal, getVal
-    , getEnv, pushEnv, popEnv, clearEnv, extendPushEnv, showEnv
+    , getEnv, getEnvFor
+    , pushEnv, popEnv, clearEnv, extendPushEnv, showEnv
     , nullEnv, emptyEnv
     , EnvStack
 --    , emptyEnv, putKeyVals
@@ -188,6 +189,12 @@ getEnv :: Wrap Env
 getEnv = do
     st <- S.get
     return $ (fst . pop) st
+
+getEnvFor :: [Key] -> Wrap Env
+getEnvFor keys = do
+    env <- getEnv
+    let keysEnv = Map.fromList $ map (\k -> (k, Null)) keys
+    return $ env `Map.intersection` keysEnv
 
 {-
 type ValI = I.Identity

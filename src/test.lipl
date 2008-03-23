@@ -15,17 +15,18 @@
                                (cons x xs)
                                xs))))
 
-(def quick-sort (l) (if (isEmpty l)
-    l
+(def quick-sort (l n) (if (isEmpty l)
+    (trace (concat "last: " (show n)) l)
     (let {     x       = (head l)
              , xs      = (tail l)
              , lesser  = (filter (lambda (a)
                           (< a x))  xs)
-             , greater = (filter (lambda (a) (>= a x)) xs)
+             , greater = (filter (lambda (a)
+                          (>= a x)) xs)
          }
-         (concat (concat (quick-sort (trace (show lesser) lesser))
-                          (cons x []))
-                 (quick-sort greater)))))
+         (concat (concat (quick-sort lesser (trace (show (+ n 1)) (+ n 1)))
+                         (cons x []))
+                 (quick-sort greater (trace (show (+ n 2)) (+ n 2)))))))
 
 (def compose (f g x) (f (g x)))
 
