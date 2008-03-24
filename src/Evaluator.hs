@@ -16,6 +16,7 @@ import qualified Text.ParserCombinators.Parsec as P
 import Parser
 import LangData
 import CoreLib
+import Utils
 
 import Debug.Trace (trace)
 
@@ -49,12 +50,16 @@ eval e@(Float _) = return e
 eval e@(Bool _) = return e
 eval e@(Char _) = return e
 eval e@(Str _) = return e
+--eval e@(List _) = return e
 eval (List xs) = do          -- eager evaluation
     elems <- mapM eval xs
     return $ List elems
-
 eval (PrimFun name) = do
     return $ Prim name (arityOf name) []
+
+eval (Lambda [] body) = do
+    env <- getEnvFor (freeVars body)
+    withEnv env (eval body)
 
 eval (Lambda args body) = do
     let funEmptyEnv = Fun emptyEnv args body
@@ -99,7 +104,7 @@ eval (Let env body) = withEnv env (eval body)
 
 --eval (IOFun name arg) = T.liftIO $ putStrLn (show arg)
 
-eval (Fun env args body) | null args = withEnv env (eval body)
+eval (Fun env [] body) = withEnv env (eval body)
 
 eval (Expr []) = return Null
 eval (Expr [e]) = eval e -- unwrap outer parens
@@ -183,17 +188,8 @@ apply (Fun env (arg:rst) body) e = do
             -}
         else
             return $ Fun env' rst body
+apply e _ = E.throwError $ NotFunErr "not function" (show e)
 
-
-freeVars (Ident a) = [a]
-freeVars (Let env body) = freeVars body \\ Map.keys env
-freeVars (Lambda params body) = freeVars body \\ params
-freeVars (Fun env params body) = freeVars body \\ params
-freeVars (Prim _ _ []) = []
-freeVars (Prim _ _ (x:xs)) = freeVars x `List.union` freeVars (Expr xs)
-freeVars (Expr (x:xs)) = freeVars x `List.union` freeVars (Expr xs)
-freeVars (Expr []) = []
-freeVars x = []
 
 {-
 freeVarsList (Ident a:xs) = a : freeVarsList xs

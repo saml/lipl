@@ -5,6 +5,7 @@ import qualified Control.Monad.Trans as T
 import qualified Data.Map as Map
 
 import LangData
+import Utils
 
 data Builtin = Builtin {
     getBuiltinArity :: Int
@@ -12,17 +13,17 @@ data Builtin = Builtin {
     }
 
 funcall :: String -> [Val] -> Wrap Val
-funcall fname args = case lookup fname primitives of
+funcall fname args = case Map.lookup fname primitives of
     Nothing -> E.throwError
         $ NotFunErr "Unrecognizable primitive function" fname
     Just f -> (getBuiltinFun f) args
 
-arityOf name = case lookup name primitives of
+arityOf name = case Map.lookup name primitives of
     Nothing -> (-1)
     Just f -> getBuiltinArity f
 
-primitives :: [(String, Builtin)]
-primitives = [
+--primitives :: [(String, Builtin)]
+primitives = Map.fromList [
     ("+", Builtin 2 opAdd)
     , ("-", Builtin 2 opSub)
     , ("*", Builtin 2 opMult)
@@ -45,12 +46,15 @@ primitives = [
     , ("println", Builtin 1 printVarLn)
     , ("show", Builtin 1 showVar)
     , ("env", Builtin 1 showEnvironment)
+    , ("free-vars", Builtin 1 getFreeVars)
     , ("from-str", Builtin 1 strToList)
     , ("from-list", Builtin 1 listToStr)
     ]
 
-builtinNames = map fst primitives
-builtins = map snd primitives
+primitivesList = Map.toList primitives
+
+builtinNames = map fst primitivesList
+builtins = map snd primitivesList
 
 
 compareEq = compareOp (ordBool [EQ])
@@ -241,3 +245,5 @@ listToStr [List l] = do
         toChar x = E.throwError $ TypeErr "need list of chars" x
 listToStr [x] = E.throwError $ TypeErr "need list" x
 listToStr x = E.throwError $ ArityErr 1 x
+
+getFreeVars [x] = return $ List (map Ident (freeVars x))
