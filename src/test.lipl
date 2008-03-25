@@ -8,21 +8,23 @@
                         (let {x = (head l1), xs = (tail l1)}
                              (cons x (concat xs l2)))))
 
-(def filter (f l) (if (isEmpty l)
-                      l
-                      (let {x = (head l), xs = (filter f (tail l))}
-                           (if (f x)
-                               (cons x xs)
-                               xs))))
+(def filter (f l)
+     (if (isEmpty l)
+         l
+         (let {
+                x  = (head l)
+              , xs = (filter f (tail l))
+              }
+              (if (f x)
+                  (cons x xs)
+                  xs))))
 
 (def quick-sort (l) (if (isEmpty l)
     l
     (let {     x       = (head l)
              , xs      = (tail l)
-             , lesser  = (filter (lambda (a)
-                          (< a x))  xs)
-             , greater = (filter (lambda (a)
-                          (>= a x)) xs)
+             , lesser  = (filter (lambda (a) (< (trace (show (env "")) a) x))  xs)
+             , greater = (filter (lambda (a) (>= a x)) xs)
          }
          (concat (concat (quick-sort lesser)
                          (cons x []))

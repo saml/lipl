@@ -4,9 +4,9 @@ module LangData ( Val (..)
 --    , PrimFun (..)
     , Err (..)
 --    , Eval (..)
-    , Wrap, runWrap, putVal, getVal
+    , Wrap, runWrap, putVal, updateVal, getVal
     , getEnv, getEnvFor
-    , pushEnv, popEnv, clearEnv, extendPushEnv, showEnv
+    , pushEnv, popEnv, clearEnv, showEnv
     , nullEnv, emptyEnv
     , EnvStack
 --    , emptyEnv, putKeyVals
@@ -23,8 +23,12 @@ import qualified Control.Monad.Error as E
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Trans as T
 import qualified Control.Monad.State as S
-
+import qualified Control.Monad as M
+import qualified Control.Applicative as A
 import qualified Data.Map as Map
+import Data.Maybe (catMaybes)
+
+import Debug.Trace (trace)
 
 type Key = String
 type KeyVal = (Key, Val)
@@ -109,11 +113,14 @@ ppVal (Fun env args body) = PP.parens
         , ppArgs args, ppVal body]
 ppVal (Lambda args body) = PP.parens
     $ PP.fsep [PP.text "lambda", ppArgs args, ppVal body]
+--ppVal (Fun _ _ _) = PP.text "function"
+--ppVal (Lambda _ _) = PP.text "lambda"
 ppVal (PrimFun name) = PP.text name
 ppVal (Prim name remaining params) = PP.parens
     $ PP.fsep [PP.text "builtin-function"
         , PP.text name, PP.int remaining
         , PP.parens $ PP.fsep $ ppValList params]
+--ppVal (Prim name _ _) = PP.text name
 ppVal (List xs) = PP.brackets
     (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = ppEnv xs
@@ -205,7 +212,12 @@ type ValE = E.ErrorT Err ValS
 newtype Wrap a = Wrap {
     runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
 } deriving (
-    Functor, Monad, E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
+    Functor, Monad
+    , E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
+
+instance A.Applicative Wrap where
+    pure = return
+    (<*>) = M.ap
 
 {-
 instance (Show a) => Show Wrap a where
@@ -226,11 +238,22 @@ putVal key val = do
         else
             S.put (Map.insert key val st:xs)
 
+updateVal key val = do
+    (env:xs) <- S.get
+    S.put (Map.insert key val env : xs)
+
+getVal key = do
+    envs <- S.get
+    case (catMaybes $ map (Map.lookup key) envs) of
+        (x:_) -> return x
+        otherwise -> E.throwError $ UnboundIdentErr "not found" key
+{-
 getVal key = do
     (st:xs) <- S.get
     case Map.lookup key st of
         Just val -> return val
         otherwise -> E.throwError $ UnboundIdentErr "not found" key
+-}
 
 pushEnv :: Env -> Wrap ()
 pushEnv env = do
@@ -255,7 +278,10 @@ extendPushEnv env = do
         then
             S.put (push env st)
         else
-            S.put $ push (env `Map.union` head st) st
+            do
+                let st' = head st
+                let env' = push ((trace ("arg1: " ++ show env) env) `Map.union` (trace ("arg2: " ++ show st') st')) st
+                S.put (trace ("result: " ++ show (head env')) env')
             -- ^ do I have to check for duplicates??
             --
 

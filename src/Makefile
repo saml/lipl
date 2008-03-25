@@ -1,5 +1,10 @@
+
+OBJDIR= tmp_obj_dir
+HSC= ghc
+HSFLAGS= --make -odir $(OBJDIR) -hidir $(OBJDIR) -stubdir $(OBJDIR)
+
 all:
-	ghc --make Main.hs
+	$(HSC) $(HSFLAGS) Main.hs
 
 clean:
-	rm -rf *.o *.hi
+	rm -rf $(OBJDIR)
