@@ -5,30 +5,43 @@
 
 (def concat (l1 l2) (if (isEmpty l1)
                         l2
-                        (let {x = (head l1), xs = (tail l1)}
-                             (cons x (concat xs l2)))))
+                        (let {x2 = (head l1), xs2 = (tail l1)}
+                             (cons x2 (concat xs2 l2)))))
 
 (def filter (f l)
      (if (isEmpty l)
          l
          (let {
-                x  = (head l)
-              , xs = (filter f (tail l))
+                x1  = (head l)
+              , xs1 = (filter f (tail l))
+              , lfilter = l
+              , ff = f
               }
-              (if (f x)
-                  (cons x xs)
-                  xs))))
+              (if (f x1)
+                  (cons x1 xs1)
+                  xs1))))
 
 (def quick-sort (l) (if (isEmpty l)
     l
     (let {     x       = (head l)
              , xs      = (tail l)
-             , lesser  = (filter (lambda (a) (< (trace (show (env "")) a) x))  xs)
+             , lesser  = (filter (lambda (a) (< a x))  xs)
              , greater = (filter (lambda (a) (>= a x)) xs)
+             , lqs = l
          }
          (concat (concat (quick-sort lesser)
                          (cons x []))
                  (quick-sort greater)))))
+
+(def qs (l) (if (isEmpty l)
+    l
+    ((concat (concat (qs
+                      (filter (lambda (a) (< a (head l))) (tail l)))
+                     (cons (head l) []))
+             (qs
+              (filter (lambda (a) (>= a (head l))) (tail l)))))))
+
+
 
 (def compose (f g x) (f (g x)))
 
@@ -37,6 +50,11 @@
 (def id (a) a)
 
 (def trace (msg x) (if (println msg) x x))
+
+(def app1 (f l) (f l))
+
+(def test (l) (let {x = (app1 f l), f = (lambda (l) (head l))}
+                   x))
 
 (= a 42)
 

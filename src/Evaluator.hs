@@ -4,9 +4,9 @@ import qualified Control.Monad.State as S
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Trans as T
+import qualified Control.Monad.Fix as F
 import qualified Control.Exception as Ex
 import qualified Data.Map as Map
-
 import Data.Maybe
 import qualified Data.List as List
 import Data.List ((\\))
@@ -43,7 +43,10 @@ eval (Lambda [] body) = do
 eval (Lambda args body) = do
     --let funEmptyEnv = Fun emptyEnv args body
     env <- getEnv
-    return $ Fun env args body
+    let fun = Fun env args body
+    return fun
+    --return $ (trace ("\nlambda " ++ show args ++ ": " ++ show env) fun)
+
 {-
     let keys = freeVars funEmptyEnv
     if null keys
@@ -86,10 +89,13 @@ eval (If pred ifCase elseCase) = do
         otherwise -> eval ifCase
 
 eval (Let env body) = do
+--    env' <- traverse (\x -> return $ Closure env' x) env
     env' <- evalEnv env
     withEnv env' (eval body)
 
 eval (Fun env [] body) = withEnv env (eval body)
+
+eval (Closure env body) = withEnv env (eval $! body)
 
 eval (Expr []) = return Null
 eval (Expr [e]) = eval e -- unwrap outer parens
@@ -105,25 +111,26 @@ eval (Expr [Ident "=", Ident name, body]) = do
     return $ Fun env [] body
 -}
 
+
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let firstArg = head e
     let restArgs = tail e
-    function <- eval f
+    function <- eval $! f
     case function of
         fun@(Fun env _ _) -> do
-            arg1 <- eval firstArg
+            arg1 <- eval $! firstArg
             evalFun env fun arg1 restArgs
         fun@(Prim name remaining args) -> do
-            arg1 <- eval firstArg
+            arg1 <- eval $! firstArg
             evalPrim name arg1 restArgs args remaining
         otherwise -> E.throwError $ NotFunErr "" (show f)
 
 eval x = return x
 
-evalFun env fun arg1 restArgs =
+evalFun env fun arg1 restArgs = do
     withEnv env (do
         partial <- apply fun arg1
-        eval $ Expr (partial : restArgs))
+        eval $! Expr (partial : restArgs))
 
 evalPrim fname arg1 restArgs argsHave remaining = do
     let args = argsHave ++ [arg1]
@@ -131,7 +138,7 @@ evalPrim fname arg1 restArgs argsHave remaining = do
         then
             funcall fname args
         else
-            eval $ Expr (
+            eval $! Expr (
                 (Prim fname (remaining-1) args) : restArgs)
 
 withEnv env action = do
@@ -152,14 +159,19 @@ apply (Fun env (arg:rst) body) e = do
     let env' = Map.insert arg e env
     if null rst
         then
-            withEnv env' (eval body)
+            withEnv env'(eval body)
         else
             return $ Fun env' rst body
 apply e _ = E.throwError $ NotFunErr "not function" (show e)
 
-
 evalEnv env = do
-    env' <- traverse eval env
+    env' <- withEnv env (traverse (eval $!) env)
     return env'
-
+--    env'' <- withEnv env' (traverse (eval $!) env')
+--    return (trace ("\nevalEnv: " ++ show env') env')
+{-
+    x <- withEnv env' (getVal "x")
+    x' <- withEnv env'' (getVal "x")
+    return (trace ("\nbefore: " ++ show x ++ "\nafter: " ++ show x') env'')
+-}
 --evalVal  = flip const eval

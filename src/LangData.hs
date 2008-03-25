@@ -19,6 +19,7 @@ import Text.PrettyPrint.HughesPJ (
 
 import qualified Text.ParserCombinators.Parsec as P
 
+import qualified Control.Monad.Fix as F
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Trans as T
@@ -76,21 +77,20 @@ data Val = Comment String
     | FunDef Name Params Val
     | Lambda Params Val
     | Fun Env Params Val
-    -- | primitive function: name, func
     | PrimFun Name
     | Prim Name RemainingArgs [Val]
     | List [Val]
     | Dict Env
     | Expr [Val]
     | Let Env Val
---    | IOFun Name Val
-    | Closure Val Env
-    | Partial String Int [Val] -- func name, args needed, args have
+    | Closure Env Val
+--    | Partial String Int [Val] -- func name, args needed, args have
     | If Val Val Val -- pred, if case, else case
     deriving (Ord, Eq)
 --    deriving (Show)
 
 instance Show Val where show = PP.render . ppVal
+
 
 {-
 newtype PrimFun = PrimFun ([Val] -> EvalVal Val)
@@ -135,6 +135,8 @@ ppVal (FunDef name args body) = PP.parens
         , ppVal body]
 ppVal (Let env val) = PP.parens
     $ PP.fsep [PP.text "let", ppEnv env, ppVal val]
+ppVal (Closure env val) = PP.parens
+    $ PP.fsep [PP.text "closure", ppEnv env, ppVal val]
 
 ppEnv env = PP.braces
     $ PP.fsep $ PP.punctuate PP.comma (ppKeyValList $ Map.toList env)
@@ -212,7 +214,7 @@ type ValE = E.ErrorT Err ValS
 newtype Wrap a = Wrap {
     runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
 } deriving (
-    Functor, Monad
+    Functor, Monad, F.MonadFix
     , E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
 
 instance A.Applicative Wrap where
