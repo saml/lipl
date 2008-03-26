@@ -68,6 +68,7 @@ type RemainingArgs = Int
 
 data Val = Comment String
     | Null
+--    | NullFun -- for sequencing??
     | Ident { unpackIdent :: Name }
     | Int { unpackInt :: Integer }
     | Float { unpackFloat :: Double }
@@ -102,6 +103,7 @@ instance Eq PrimFun where
 
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
+--PPVal NullFun = PP.text "NullFun"
 ppVal (Ident s) = PP.text s
 ppVal (Int i) = PP.integer i
 ppVal (Float f) = PP.double f
@@ -249,10 +251,11 @@ getVal key = do
     case (catMaybes $ map (Map.lookup key) envs) of
         (x:_) -> return x
         otherwise -> E.throwError $ UnboundIdentErr "not found" key
+
 {-
 getVal key = do
-    (st:xs) <- S.get
-    case Map.lookup key st of
+    (env:xs) <- S.get
+    case Map.lookup key env of
         Just val -> return val
         otherwise -> E.throwError $ UnboundIdentErr "not found" key
 -}
@@ -273,6 +276,7 @@ clearEnv :: Wrap ()
 clearEnv = do
     S.put nullEnv
 
+{-
 extendPushEnv :: Env -> Wrap ()
 extendPushEnv env = do
     st <- S.get
@@ -286,6 +290,7 @@ extendPushEnv env = do
                 S.put (trace ("result: " ++ show (head env')) env')
             -- ^ do I have to check for duplicates??
             --
+-}
 
 --runWrap env a = I.runIdentity (S.runStateT (E.runErrorT a) env)
 

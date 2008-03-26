@@ -3,6 +3,7 @@ module CoreLib where
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Trans as T
 import qualified Data.Map as Map
+import System.IO
 
 import LangData
 import Utils
@@ -43,7 +44,11 @@ primitives = Map.fromList [
     , ("tail", Builtin 1 listTail)
     , ("cons", Builtin 2 listCons)
     , ("isEmpty", Builtin 1 listIsEmpty)
-    , ("println", Builtin 1 printVarLn)
+    , ("println", Builtin 1 $ printStr True)
+    , ("print", Builtin 1 $ printStr False)
+    , ("printVarLn", Builtin 1 $ printVar True)
+    , ("printVar", Builtin 1 $ printVar False)
+    , ("getLine", Builtin 0 $ readFrom stdin)
     , ("show", Builtin 1 showVar)
     , ("env", Builtin 1 showEnvironment)
     , ("free-vars", Builtin 1 getFreeVars)
@@ -208,11 +213,19 @@ listIsEmpty [Str a] = return $ Bool (null a)
 listIsEmpty [x] = E.throwError $ TypeErr "need list" x
 listIsEmpty x = E.throwError $ ArityErr 1 x
 
-printVarLn [Str x] = do
-    T.liftIO $ putStrLn x
+printStr newLine [Str x] = do
+    T.liftIO $ putStr x
+    T.liftIO $ putChar (if newLine then '\n' else '\0')
     return Null
-printVarLn [x] = E.throwError $ TypeErr "need string" x
-printVarLn x = E.throwError $ ArityErr 1 x
+printStr _ [x] = E.throwError $ TypeErr "need string" x
+printStr _ x = E.throwError $ ArityErr 1 x
+
+printVar newLine [Str x] = do
+    T.liftIO $ putStr x
+    T.liftIO $ putChar (if newLine then '\n' else ' ')
+    return Null
+printVar newLine [x] = printVar newLine [Str $ show x]
+printVar _ x = E.throwError $ ArityErr 1 x
 
 {-
 concatStr [Str s1, Str s2] = return $ Str (s1 ++ s2)
@@ -227,7 +240,7 @@ showEnvironment [Str key] = do
     env <- getEnv
     if key == ""
         then
-            return $ Str (show env)
+            return $ Dict env
         else
             do
                 val <- Map.lookup key env
@@ -247,3 +260,7 @@ listToStr [x] = E.throwError $ TypeErr "need list" x
 listToStr x = E.throwError $ ArityErr 1 x
 
 getFreeVars [x] = return $ List (map Ident (freeVars x))
+
+readFrom handle [] = do
+    s <- T.liftIO $ hGetLine handle
+    return $ Str s

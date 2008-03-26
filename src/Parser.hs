@@ -2,6 +2,8 @@ module Parser where
 
 import qualified Text.ParserCombinators.Parsec as P
 import qualified Text.ParserCombinators.Parsec.Token as P
+--import qualified Text.ParserCombinators.Parsec.Expr as P
+import qualified Text.ParserCombinators.Parsec.Language as P
 import Text.ParserCombinators.Parsec ((<|>))
 
 import qualified Control.Monad.Error as E
@@ -10,6 +12,34 @@ import Data.Char ( chr )
 
 import LangData
 import CoreLib (builtinNames)
+
+lexer  = P.makeTokenParser (P.haskellStyle {
+    P.commentLine = "#"
+    , P.identLetter = P.alphaNum <|> P.oneOf "_'-"
+    , P.reservedNames = ["def", "if", "let", "lambda"]
+    })
+
+ws = P.whiteSpace lexer
+
+{-
+lexeme = P.lexeme lexer
+symbol = P.symbol lexer
+natural = P.natural lexer
+parens = P.parens lexer
+identifier = P.identifier lexer
+reserved = P.reserved lexer
+reservedOp = P.reservedOp lexer
+
+runLex p input = P.parse (do
+    x <- p
+    P.eof
+    return x) "" input
+-}
+
+
+--whiteSpace = P.whiteSpace lexer
+--lexeme = P.lexeme lexer
+
 
 --parseSingle :: String -> Wrap Val
 parseSingle input = P.parse parseSingleExpr "lipl" input
@@ -20,7 +50,8 @@ parseSingle input = case P.parse parseSingleExpr "lipl" input of
 -}
 
 --parseMultiple :: String -> Wrap [Val]
-parseMultiple input = P.parse parseMultipleExpr "lipl" input
+parseMultiple fileName input =
+    P.parse parseMultipleExpr fileName input
 
 {-
 parse :: String -> EvalVal Val
@@ -35,9 +66,8 @@ testParse p input = case P.parse p "lipl test" input of
 
 parseComment = do
     P.char '#'
-    s <- P.many (P.noneOf "\n\r")
+    s <- P.many (P.noneOf "\n")
     return ()
-    --return $ Comment s
 
 parseBool = do
     b <- P.string "True" <|> P.string "False"
@@ -196,9 +226,13 @@ parseKeyVal = do
     val <- parseToken
     return (key, val)
 
-mustSpaces = parseComment <|> P.skipMany1 P.space
+mustSpaces = P.skipMany1 P.space >> ws
 
-ws = parseComment <|> P.spaces
+{-
+ws = do
+    P.try parseComment
+    P.spaces
+-}
 
 {-
 parseTopLevel = do
@@ -207,9 +241,26 @@ parseTopLevel = do
     return $ TopLevel exprs
 -}
 
+{-
 parseToken =
---    P.try parseComment
-    P.try parseIf
+        P.try (lexeme parseIf)
+    <|> P.try (lexeme parseLet)
+    <|> P.try (lexeme parseDef)
+    <|> P.try (lexeme parseLambda)
+    <|> P.try (lexeme parseList)
+    <|> P.try (lexeme parseDict)
+    <|> P.try (lexeme parseParenExpr)
+    <|> P.try (lexeme parseBool)
+    <|> P.try (lexeme parseChar)
+    <|> P.try (lexeme parseStr)
+    <|> P.try (lexeme parseFloat)
+    <|> P.try (lexeme parseInt)
+    <|> P.try (lexeme parsePrimFun)
+    <|> P.try (lexeme parseIdent)
+-}
+
+parseToken =
+        P.try parseIf
     <|> P.try parseLet
     <|> P.try parseDef
     <|> P.try parseLambda
@@ -224,9 +275,11 @@ parseToken =
     <|> P.try parsePrimFun
     <|> P.try parseIdent
 
+{-
 parseExpr = do
     toks <- P.sepEndBy parseToken mustSpaces
     return $ Expr toks
+-}
 
 parseSingleExpr = do
     ws
@@ -236,6 +289,7 @@ parseSingleExpr = do
     return e
 
 parseMultipleExpr = do
+    ws
     es <- P.sepEndBy parseParenExpr ws
     P.eof
     return es

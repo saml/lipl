@@ -33,34 +33,30 @@ eval (List xs) = do          -- eager evaluation
     return $ List elems
 
 eval (PrimFun name) = do
-    return $ Prim name (arityOf name) []
+    let arity = arityOf name
+    let fun = Prim name arity []
+    if arity == 0
+        then
+            eval fun
+        else
+            return fun
 
-eval (Lambda [] body) = do
-    --env <- getEnvFor (freeVars body)
-    env <- getEnv
+eval (Prim name 0 []) = funcall name []
+
+eval (Lambda [] body) = eval body {- do
+    env <- getEnvFor (freeVars body)
     withEnv env (eval body)
+    -}
 
-eval (Lambda args body) = do
-    --let funEmptyEnv = Fun emptyEnv args body
-    env <- getEnv
+eval e@(Lambda args body) = do
+    env <- getEnv --For (freeVars e)
     let fun = Fun env args body
     return fun
-    --return $ (trace ("\nlambda " ++ show args ++ ": " ++ show env) fun)
 
-{-
-    let keys = freeVars funEmptyEnv
-    if null keys
-        then
-            return funEmptyEnv
-        else
-            do
-                env <- getEnvFor keys
-                return $ Fun env args body
--}
 
-eval (FunDef name args body) = do
-    env <- getEnv
-    putVal name (Fun env args body)
+eval e@(FunDef name args body) = do
+    env <- getEnv --For (freeVars e)
+    putVal name (Fun env args body) -- for recursive definition ??
     env' <- getEnv
     let fun = Fun env' args body
     updateVal name fun
@@ -89,7 +85,7 @@ eval (If pred ifCase elseCase) = do
         otherwise -> eval ifCase
 
 eval (Let env body) = do
-    currEnv <- getEnv
+    currEnv <- getEnv --For (freeVars body)
     env' <- evalEnv (env `Map.union` currEnv)
     withEnv env' (eval body)
 
@@ -101,7 +97,7 @@ eval (Expr []) = return Null
 eval (Expr [e]) = eval e -- unwrap outer parens
 eval (Expr [Ident "=", Ident name, body]) = do
     putVal name body
-    env <- getEnv
+    env <- getEnv --For (freeVars body)
     return $ Fun env [] body
 
 {-
@@ -167,6 +163,11 @@ apply e _ = E.throwError $ NotFunErr "not function" (show e)
 evalEnv env = do
     env' <- withEnv env (traverse eval env)
     return env'
+
+toClosure e = do
+    env <- getEnv --For (freeVars e)
+    return $ Closure env e
+
 --    env'' <- withEnv env' (traverse (eval $!) env')
 --    return (trace ("\nevalEnv: " ++ show env') env')
 {-
@@ -175,3 +176,6 @@ evalEnv env = do
     return (trace ("\nbefore: " ++ show x ++ "\nafter: " ++ show x') env'')
 -}
 --evalVal  = flip const eval
+--
+test s = case parseSingle s of
+    Right val -> freeVars val

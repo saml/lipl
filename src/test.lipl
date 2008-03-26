@@ -1,3 +1,5 @@
+# Prelude
+
 (def map (f l) (if (isEmpty l)
                    l
                    (let {x = (head l), xs = (tail l)}
@@ -7,20 +9,19 @@
                         l2
                         (let {x = (head l1), xs = (tail l1)}
                              (cons x (concat xs l2)))))
-
 (def filter (f l)
      (if (isEmpty l)
          l
          (let {
                 x  = (head l)
               , xs = (filter f (tail l))
-              , lfilter = l
               }
               (if (f x)
                   (cons x xs)
                   xs))))
 
-(def quick-sort (l) (if (isEmpty l)
+# simple quick sort
+(def quick-sort (l) (if (isEmpty l) # is the list empty?
     l
     (let {     x       = (head l)
              , xs      = (tail l)
@@ -31,6 +32,7 @@
                          (cons x []))
                  (quick-sort greater)))))
 
+{-
 (def qs (l) (if (isEmpty l)
     l
     ((concat (concat (qs
@@ -38,8 +40,7 @@
                      (cons (head l) []))
              (qs
               (filter (lambda (a) (>= a (head l))) (tail l)))))))
-
-
+-}
 
 (def compose (f g x) (f (g x)))
 
@@ -49,35 +50,4 @@
 
 (def trace (msg x) (if (println msg) x x))
 
-(def app1 (f l) (f l))
-
-(def test (l) (let {x = (app1 f l), f = (lambda (l) (head l))}
-                   x))
-
-(= a 42)
-
-(def foo (a b)
-    (if (== a b)
-        "they are the same"
-        "they are different"))
-
-
-(def one (a) (let {a = 1, b = 0} (+ b a)))
-
-(= fortyTwo
-    (+ ( if ( == 1 2)
-        True
-        (if (== 'a' 'b')
-            1
-            2 ) )
-     40))
-
-(= fortyTwo2
-    (+ (if (  && (== 1 1.0)
-                 (head (tail ([False, (!= "hello" "world"), False]))))
-        2
-        -2)
-     (* 10 (+ (- 1  -1  ) (/ (* 2 2) 2.0)  ))))
-
-(def main () (println (show (quick-sort [3,2,1]))))
 

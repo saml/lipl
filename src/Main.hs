@@ -62,15 +62,26 @@ repl env = do
 
 run wrap = S.runStateT (E.runErrorT (runWrap wrap)) nullEnv
 
+prelude = "test.lipl"
+
+loadPrelude = runAndPrint (loadFile prelude)
+
+runAndPrint action = do
+    msg <- action
+    T.liftIO $ putStrLn msg
+
 main = do
     fn <- getArgs
     if length fn > 0
         then do
-            run (loadFile (fn !! 0) >> return ())
+            run (do
+                loadPrelude
+                loadFile (fn !! 0)
+                return ())
         else do
-            putStrLn "Starting REPL..."
             hSetBuffering stdout LineBuffering
-            run repl
+            putStrLn "Starting REPL..."
+            run (loadPrelude >> repl)
 -- main = S.runStateT (E.runErrorT (runWrap repl)) nullEnv
 
 {-
@@ -137,6 +148,7 @@ loadFile fileName = do
         return (fileName ++ " loaded"))
         `E.catchError`
         (\e -> return (show e))
+        --(\e -> E.throwError e)
     return result
 
 
@@ -152,7 +164,7 @@ interpret file = do
         then
             do
                 prog <- T.liftIO $ readFile file
-                parseAndEvalMultiple prog
+                parseAndEvalMultiple file prog
                 return ()
         else
             E.throwError $ DefaultErr $ "can't find file: " ++ file
@@ -187,7 +199,7 @@ parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> eval val
 
-parseAndEvalMultiple input = case parseMultiple input of
+parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> E.throwError $ ParseErr err
     Right vals -> do
         evaled <- M.mapM eval vals
