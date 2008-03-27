@@ -50,4 +50,11 @@
 
 (def trace (msg x) (if (println msg) x x))
 
+(def fac (n) (if (<= n 1) 1 (* n (fac (- n 1)))))
+
+(def fib (n)
+    (if (< n 2)
+        n
+        (let { i = (fib (- n 1)), i-1 = (fib (- n 2)) }
+             (+ i i-1))))
 

@@ -56,6 +56,7 @@ eval e@(Lambda args body) = do
 
 eval e@(FunDef name args body) = do
     env <- getEnv --For (freeVars e)
+    --let env' = Map.insert name (Fun env' args body) env
     putVal name (Fun env args body) -- for recursive definition ??
     env' <- getEnv
     let fun = Fun env' args body
