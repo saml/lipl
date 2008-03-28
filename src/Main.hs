@@ -14,52 +14,6 @@ import Evaluator
 import Parser
 import LangData
 
-{-
-main :: IO ()
-main = do
-    fn <- getArgs
-    if length fn > 0
-        then do
-            runFile (fn !! 0)
-        else do
-            putStrLn "Starting REPL..."
-            hSetBuffering stdout LineBuffering
-            repl
-
-
-
-repl :: IO ()
-repl = loopUntil (\x -> x == ":q") (prompt "lipl> ") evalAndPrint
-
-eval env val = ... (env, evaluatedVal)
-
-
-
-evalAndPrint :: String -> IO ()
-evalAndPrint input = do
-    case runEval (evalString input) of
-    putStrLn $ show (evalString input)
--}
-
-{-
-main = repl emptyEnv
-
-repl env = do
-    input <- getLine
-    parsed <- parse input
-    (env, result) <- eval env parsed
-    print result
-    repl env
--}
-
-{-
-    case evalString input of
-        Left err -> putStrLn $ show err
-        Right val -> putStrLn $ show val
--}
-
---nullEnv = [Map.empty]
-
 run wrap = S.runStateT (E.runErrorT (runWrap wrap)) nullEnv
 
 prelude = "test.lipl"
@@ -82,19 +36,6 @@ main = do
             hSetBuffering stdout LineBuffering
             putStrLn "Starting REPL..."
             run (loadPrelude >> repl)
--- main = S.runStateT (E.runErrorT (runWrap repl)) nullEnv
-
-{-
-repl :: Wrap ()
-repl = do
-    line <- T.liftIO $ prompt "lipl> "
-    case line of
-        ":q" -> return ()
-        otherwise -> do
-            ((M.liftM show (parseAndEval line))
-                `E.catchError` (return . show)) >>= (T.liftIO . putStrLn)
-            repl
--}
 
 println s = T.liftIO $ putStrLn s
 
@@ -169,32 +110,6 @@ interpret file = do
         else
             E.throwError $ DefaultErr $ "can't find file: " ++ file
 
-{-
-interpret file = do
-    prog <- T.liftIO $ readFile file
-    parseAndEvalMultiple prog
-    return ()
--}
-
-
-{-
---
-
-handleErrors :: MonadError m => m a -> m ()
-handleErrors action = action >> return () `catchError` print
-
-repl :: Wrap ()
-repl = showErrors $ do
-    line <- T.liftIO $ prompt "lipl> "
-    when (line == ":q") $ return ()
-    handleErrors $ parseAndEval line >>= liftIO print
-    repl
--}
-
-
---result <- E.catchError (parseAndEval line) (\e -> return e)
---result <- parseAndEval line
-
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> eval val
@@ -205,44 +120,13 @@ parseAndEvalMultiple fn input = case parseMultiple fn input of
         evaled <- M.mapM eval vals
         return Null
 
-{-
-runEvalAndPrint env wrapped = case runEval env wrapped of
-    (Left err, st) -> putStrLn $ show err
-    (Right val, st) -> putStrLn $ show val
-
-evalAndPrint env input = runEvalAndPrint env $ parseAndEval input
--}
-
-
-
---repl = nullEnv
---    >>= loopUntil (\x -> x == ":q") (prompt "lipl> ") . evalAndPrint
+prompt :: String -> IO String
+prompt p = do
+    putStr p
+    hFlush stdout
+    getLine
 
 {-
-main = do
-    input <- prompt "lipl> "
-    if input == ":q"
-        then
-            return ()
-        else
-            do
-                wrapVal <- parseAndEval input
-                let (val, st) = runEval wrapVal
--}
-
-    --return $ fst
-    --    $ runEval [Map.empty] $ (eval . unwrap . parseSingle) input
-{-
-repl = do
-    input <- prompt "lipl> "
-    if input == ":q"
-        then putStrLn "bye"
-        else do
-            putStrLn $ interpretSingle input
-            repl
--}
-
-
 loopUntil pred prompt action = do
     input <- prompt
     if pred input
@@ -252,12 +136,4 @@ loopUntil pred prompt action = do
             do
                 action input
                 loopUntil pred prompt action
-
-
-prompt :: String -> IO String
-prompt p = do
-    putStr p
-    hFlush stdout
-    getLine
-
-
+-}

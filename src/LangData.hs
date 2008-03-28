@@ -1,15 +1,12 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module LangData ( Val (..)
---    , PrimFun (..)
     , Err (..)
---    , Eval (..)
     , Wrap, runWrap, putVal, updateVal, getVal
     , getEnv, getEnvFor
     , pushEnv, popEnv, clearEnv, showEnv
     , nullEnv, emptyEnv
     , EnvStack
---    , emptyEnv, putKeyVals
     , Stack, pop, push
     , Queue, front ) where
 
@@ -41,21 +38,6 @@ nullEnv = [emptyEnv]
 
 showEnv env = show $ ppEnv env
 
-{-
-putKeyVal (key, val) env = if Map.member key env
-    then
-        E.throwError $ EnvUpdateErr key
-    else
-        return $ Map.insert key val env
-
-toEnvList keys vals = zip keys vals
-
-putKeyVals keys vals env = Map.union env
-    $ Map.fromList $ toEnvList keys vals
-
-emptyEnv = Map.empty
--}
-
 ppKeyVal (k, v) = ppVal (Ident k)
     <+> PP.text "="
     <+> ppVal v
@@ -68,7 +50,6 @@ type RemainingArgs = Int
 
 data Val = Comment String
     | Null
---    | NullFun -- for sequencing??
     | Ident { unpackIdent :: Name }
     | Int { unpackInt :: Integer }
     | Float { unpackFloat :: Double }
@@ -85,25 +66,13 @@ data Val = Comment String
     | Expr [Val]
     | Let Env Val
     | Closure Env Val
---    | Partial String Int [Val] -- func name, args needed, args have
     | If Val Val Val -- pred, if case, else case
     deriving (Ord, Eq)
---    deriving (Show)
 
 instance Show Val where show = PP.render . ppVal
 
-
-{-
-newtype PrimFun = PrimFun ([Val] -> EvalVal Val)
-instance Ord PrimFun where
-    compare a b = LT
-instance Eq PrimFun where
-    a == b = False
--}
-
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
---PPVal NullFun = PP.text "NullFun"
 ppVal (Ident s) = PP.text s
 ppVal (Int i) = PP.integer i
 ppVal (Float f) = PP.double f
@@ -190,10 +159,6 @@ instance E.Error Err where
     noMsg = DefaultErr "Error"
     strMsg = DefaultErr
 
-
---type EvalVal a = E.ErrorT Err I.Identity a
---runEvalVal = I.runIdentity . E.runErrorT
---type EvalVal a = R.ReaderT Env (E.ErrorT Err I.Identity) a
 type EnvStack = Stack Env
 
 getEnv :: Wrap Env
@@ -207,12 +172,6 @@ getEnvFor keys = do
     let keysEnv = Map.fromList $ map (\k -> (k, Null)) keys
     return $ env `Map.intersection` keysEnv
 
-{-
-type ValI = I.Identity
-type ValS = S.StateT EnvStack ValI
-type ValE = E.ErrorT Err ValS
--}
-
 newtype Wrap a = Wrap {
     runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
 } deriving (
@@ -222,17 +181,6 @@ newtype Wrap a = Wrap {
 instance A.Applicative Wrap where
     pure = return
     (<*>) = M.ap
-
-{-
-instance (Show a) => Show Wrap a where
-    show wrap = S.runErrorT (S.runStateT (runWrap wrap) [])
--}
-{-
-unwrap wrap = case fst $ (
-        I.runIdentity $ S.runStateT (E.runErrorT $ runWrap wrap) []) of
-    Left err -> Null
-    Right val -> val
--}
 
 putVal key val = do
     (st:xs) <- S.get
@@ -292,20 +240,6 @@ extendPushEnv env = do
             --
 -}
 
---runWrap env a = I.runIdentity (S.runStateT (E.runErrorT a) env)
-
---runEval :: EnvStack -> Wrap Val -> (Either Err Val, EnvStack)
---runEval env val = I.runIdentity (S.runStateT (E.runErrorT val) env)
-
-{-
-newtype Eval a = Eval (Wrap a)
-    deriving (Functor, Monad)
--}
---type Val' = Eval Val
---type EvaluatedVal = (Either Err Val, EnvStack)
---runEval :: EnvStack -> Val' -> (Either Err Val, EnvStack)
---runEval :: EnvStack -> Eval Val -> (Either Err Val, EnvStack)
-
 type Stack a = [a]
 type Queue a = [a]
 
@@ -321,5 +255,3 @@ push v s = v : s
 
 front :: Queue a -> (a, Queue a)
 front (x:xs) = (x, xs)
-
-

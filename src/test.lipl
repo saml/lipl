@@ -32,7 +32,6 @@
                          (cons x []))
                  (quick-sort greater)))))
 
-{-
 (def qs (l) (if (isEmpty l)
     l
     ((concat (concat (qs
@@ -40,7 +39,6 @@
                      (cons (head l) []))
              (qs
               (filter (lambda (a) (>= a (head l))) (tail l)))))))
--}
 
 (def compose (f g x) (f (g x)))
 

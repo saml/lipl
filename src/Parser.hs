@@ -20,6 +20,7 @@ lexer  = P.makeTokenParser (P.haskellStyle {
     })
 
 ws = P.whiteSpace lexer
+mustSpaces = P.skipMany1 P.space >> ws
 
 {-
 lexeme = P.lexeme lexer
@@ -36,33 +37,10 @@ runLex p input = P.parse (do
     return x) "" input
 -}
 
-
---whiteSpace = P.whiteSpace lexer
---lexeme = P.lexeme lexer
-
-
---parseSingle :: String -> Wrap Val
 parseSingle input = P.parse parseSingleExpr "lipl" input
-{-
-parseSingle input = case P.parse parseSingleExpr "lipl" input of
-    Left err -> E.throwError $ ParseErr err
-    Right val -> return val
--}
 
---parseMultiple :: String -> Wrap [Val]
 parseMultiple fileName input =
     P.parse parseMultipleExpr fileName input
-
-{-
-parse :: String -> EvalVal Val
-parse input = case P.parse parseExpr "lipl" input of
-    Left err -> E.throwError $ ParseErr err
-    Right val -> return val
-
-testParse p input = case P.parse p "lipl test" input of
-    Left err -> show err
-    Right val -> show val
--}
 
 parseComment = do
     P.char '#'
@@ -162,7 +140,6 @@ parseList = do
 getIdents [] = []
 getIdents (Ident a:xs) = a : getIdents xs
 getIdents (_:xs) = getIdents xs
---getIdents _ = error "Blah" -- TODO: better error handling
 
 parseLambda = do
     P.string "lambda"
@@ -226,38 +203,6 @@ parseKeyVal = do
     val <- parseToken
     return (key, val)
 
-mustSpaces = P.skipMany1 P.space >> ws
-
-{-
-ws = do
-    P.try parseComment
-    P.spaces
--}
-
-{-
-parseTopLevel = do
-    exprs <- P.sepEndBy parseParenExpr mustSpaces
-    P.eof
-    return $ TopLevel exprs
--}
-
-{-
-parseToken =
-        P.try (lexeme parseIf)
-    <|> P.try (lexeme parseLet)
-    <|> P.try (lexeme parseDef)
-    <|> P.try (lexeme parseLambda)
-    <|> P.try (lexeme parseList)
-    <|> P.try (lexeme parseDict)
-    <|> P.try (lexeme parseParenExpr)
-    <|> P.try (lexeme parseBool)
-    <|> P.try (lexeme parseChar)
-    <|> P.try (lexeme parseStr)
-    <|> P.try (lexeme parseFloat)
-    <|> P.try (lexeme parseInt)
-    <|> P.try (lexeme parsePrimFun)
-    <|> P.try (lexeme parseIdent)
--}
 
 parseToken =
         P.try parseIf
@@ -274,12 +219,6 @@ parseToken =
     <|> P.try parseInt
     <|> P.try parsePrimFun
     <|> P.try parseIdent
-
-{-
-parseExpr = do
-    toks <- P.sepEndBy parseToken mustSpaces
-    return $ Expr toks
--}
 
 parseSingleExpr = do
     ws

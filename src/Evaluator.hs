@@ -43,10 +43,7 @@ eval (PrimFun name) = do
 
 eval (Prim name 0 []) = funcall name []
 
-eval (Lambda [] body) = eval body {- do
-    env <- getEnvFor (freeVars body)
-    withEnv env (eval body)
-    -}
+eval (Lambda [] body) = eval body
 
 eval e@(Lambda args body) = do
     env <- getEnv --For (freeVars e)
@@ -56,28 +53,11 @@ eval e@(Lambda args body) = do
 
 eval e@(FunDef name args body) = do
     env <- getEnv --For (freeVars e)
-    --let env' = Map.insert name (Fun env' args body) env
     putVal name (Fun env args body) -- for recursive definition ??
     env' <- getEnv
     let fun = Fun env' args body
     updateVal name fun
     return fun
-
-{-
-    let funEmptyEnv = Fun emptyEnv args body
-    let keys = freeVars funEmptyEnv
-    if null keys
-        then
-            do
-                putVal name funEmptyEnv
-                return funEmptyEnv
-        else
-            do
-                env <- getEnvFor keys
-                let fun = Fun env args body
-                putVal name fun
-                return fun
--}
 
 eval (If pred ifCase elseCase) = do
     ifOrElse <- eval pred
@@ -100,14 +80,6 @@ eval (Expr [Ident "=", Ident name, body]) = do
     putVal name body
     env <- getEnv --For (freeVars body)
     return $ Fun env [] body
-
-{-
-    putVal name body
-    let keys = freeVars body
-    env <- getEnvFor keys
-    return $ Fun env [] body
--}
-
 
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let firstArg = head e
@@ -169,14 +141,5 @@ toClosure e = do
     env <- getEnv --For (freeVars e)
     return $ Closure env e
 
---    env'' <- withEnv env' (traverse (eval $!) env')
---    return (trace ("\nevalEnv: " ++ show env') env')
-{-
-    x <- withEnv env' (getVal "x")
-    x' <- withEnv env'' (getVal "x")
-    return (trace ("\nbefore: " ++ show x ++ "\nafter: " ++ show x') env'')
--}
---evalVal  = flip const eval
---
 test s = case parseSingle s of
     Right val -> freeVars val
