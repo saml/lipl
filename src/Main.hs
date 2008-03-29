@@ -16,7 +16,7 @@ import LangData
 
 run wrap = S.runStateT (E.runErrorT (runWrap wrap)) nullEnv
 
-prelude = "test.lipl"
+prelude = "core.lipl"
 
 loadPrelude = runAndPrint (loadFile prelude)
 
