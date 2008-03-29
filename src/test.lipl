@@ -56,3 +56,29 @@
         (let { i = (fib (- n 1)), i-1 = (fib (- n 2)) }
              (+ i i-1))))
 
+(def twice (f x) (f (f x)))
+
+(def succ (x) (+ x 1))
+
+{-
+((twice twice succ) 0)
+==> (twice (twice succ) 0)
+==> ((twice succ) ((twice succ) 0))
+==> (succ (succ ((twice succ) 0)))
+==> (+ (succ ((twice succ) 0)) 1)
+==> (+ (+ ((twice succ) 0) 1) 1)
+==> (+ (+ (succ (succ 0)) 1) 1)
+==> (+ (+ (succ 1) 1) 1)
+==> (+ (+ 2 1) 1)
+==> (+ 3 1)
+==> 4
+
+((twice (twice (twice succ))) 0)
+==> ((twice (twice (succ (succ)))) 0)
+==> (twice ((succ (succ)) ((succ (succ)))) 0)
+==> ((succ succ) ((succ succ) 0))
+==> ((succ succ) (succ (succ 0)))
+==> ((succ succ) 2)
+==> (succ (succ 2))
+==> 4
+-}

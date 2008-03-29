@@ -16,7 +16,7 @@ import CoreLib (builtinNames)
 lexer  = P.makeTokenParser (P.haskellStyle {
     P.commentLine = "#"
     , P.identLetter = P.alphaNum <|> P.oneOf "_'-"
-    , P.reservedNames = ["def", "if", "let", "lambda"]
+--    , P.reservedNames = ["def", "if", "let", "lambda"]
     })
 
 ws = P.whiteSpace lexer
