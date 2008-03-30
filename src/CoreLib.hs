@@ -206,6 +206,7 @@ listCons [x, List []] = return $ List [x]
 listCons [x, List xs] = return $ List (x:xs)
 listCons [Char x, Str ""] = return $ Str [x]
 listCons [Char x, Str xs] = return $ Str (x:xs)
+listCons e@([_,_]) = E.throwError $ TypeErr "need list" (List e)
 listCons x = E.throwError $ ArityErr 2 x
 
 listIsEmpty [List a] = return $ Bool (null a)

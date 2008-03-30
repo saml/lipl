@@ -3,16 +3,14 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="generator" content="Docutils 0.4: http://docutils.sourceforge.net/" />
+<meta name="generator" content="Docutils 0.5: http://docutils.sourceforge.net/" />
 <title>LIPL</title>
 <meta name="author" content="Sam Lee" />
 <style type="text/css">
 
 /*
-:Author: David Goodger
-:Contact: goodger@users.sourceforge.net
-:Date: $Date: 2005-12-18 01:56:14 +0100 (Sun, 18 Dec 2005) $
-:Revision: $Revision: 4224 $
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 5196 2007-06-03 20:25:28Z wiemann $
 :Copyright: This stylesheet has been placed in the public domain.
 
 Default cascading style sheet for the HTML output of Docutils.
@@ -118,7 +116,7 @@ div.line-block div.line-block {
   margin-left: 1.5em }
 
 div.sidebar {
-  margin-left: 1em ;
+  margin: 0 0 0.5em 1em ;
   border: medium outset ;
   padding: 1em ;
   background-color: #ffffee ;
@@ -224,8 +222,7 @@ pre.address {
 
 pre.literal-block, pre.doctest-block {
   margin-left: 2em ;
-  margin-right: 2em ;
-  background-color: #eeeeee }
+  margin-right: 2em }
 
 span.classifier {
   font-family: sans-serif ;
@@ -282,9 +279,6 @@ h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
 h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
   font-size: 100% }
 
-tt.docutils {
-  background-color: #eeeeee }
-
 ul.auto-toc {
   list-style-type: none }
 
@@ -301,61 +295,61 @@ ul.auto-toc {
 <td>Sam Lee</td></tr>
 </tbody>
 </table>
-<div class="contents topic">
-<p class="topic-title first"><a id="contents" name="contents">Contents</a></p>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
 <ul class="auto-toc simple">
-<li><a class="reference" href="#introduction" id="id3" name="id3">1&nbsp;&nbsp;&nbsp;Introduction</a></li>
-<li><a class="reference" href="#syntax" id="id4" name="id4">2&nbsp;&nbsp;&nbsp;Syntax</a><ul class="auto-toc">
-<li><a class="reference" href="#ebnf" id="id5" name="id5">2.1&nbsp;&nbsp;&nbsp;EBNF</a></li>
-<li><a class="reference" href="#predefined-non-terminals" id="id6" name="id6">2.2&nbsp;&nbsp;&nbsp;Predefined non-terminals</a></li>
-<li><a class="reference" href="#lexical-items" id="id7" name="id7">2.3&nbsp;&nbsp;&nbsp;Lexical items</a></li>
-<li><a class="reference" href="#expressions" id="id8" name="id8">2.4&nbsp;&nbsp;&nbsp;Expressions</a></li>
+<li><a class="reference internal" href="#introduction" id="id3">1&nbsp;&nbsp;&nbsp;Introduction</a></li>
+<li><a class="reference internal" href="#syntax" id="id4">2&nbsp;&nbsp;&nbsp;Syntax</a><ul class="auto-toc">
+<li><a class="reference internal" href="#ebnf" id="id5">2.1&nbsp;&nbsp;&nbsp;EBNF</a></li>
+<li><a class="reference internal" href="#predefined-non-terminals" id="id6">2.2&nbsp;&nbsp;&nbsp;Predefined non-terminals</a></li>
+<li><a class="reference internal" href="#lexical-items" id="id7">2.3&nbsp;&nbsp;&nbsp;Lexical items</a></li>
+<li><a class="reference internal" href="#expressions" id="id8">2.4&nbsp;&nbsp;&nbsp;Expressions</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#lexicon" id="id9" name="id9">3&nbsp;&nbsp;&nbsp;Lexicon</a><ul class="auto-toc">
-<li><a class="reference" href="#boolean" id="id10" name="id10">3.1&nbsp;&nbsp;&nbsp;Boolean</a></li>
-<li><a class="reference" href="#number" id="id11" name="id11">3.2&nbsp;&nbsp;&nbsp;Number</a></li>
-<li><a class="reference" href="#character" id="id12" name="id12">3.3&nbsp;&nbsp;&nbsp;Character</a></li>
-<li><a class="reference" href="#string" id="id13" name="id13">3.4&nbsp;&nbsp;&nbsp;String</a></li>
-<li><a class="reference" href="#identifier" id="id14" name="id14">3.5&nbsp;&nbsp;&nbsp;Identifier</a></li>
-<li><a class="reference" href="#operator" id="id15" name="id15">3.6&nbsp;&nbsp;&nbsp;Operator</a></li>
-<li><a class="reference" href="#list" id="id16" name="id16">3.7&nbsp;&nbsp;&nbsp;List</a></li>
-<li><a class="reference" href="#token" id="id17" name="id17">3.8&nbsp;&nbsp;&nbsp;Token</a></li>
-<li><a class="reference" href="#expression" id="id18" name="id18">3.9&nbsp;&nbsp;&nbsp;Expression</a></li>
+<li><a class="reference internal" href="#lexicon" id="id9">3&nbsp;&nbsp;&nbsp;Lexicon</a><ul class="auto-toc">
+<li><a class="reference internal" href="#boolean" id="id10">3.1&nbsp;&nbsp;&nbsp;Boolean</a></li>
+<li><a class="reference internal" href="#number" id="id11">3.2&nbsp;&nbsp;&nbsp;Number</a></li>
+<li><a class="reference internal" href="#character" id="id12">3.3&nbsp;&nbsp;&nbsp;Character</a></li>
+<li><a class="reference internal" href="#string" id="id13">3.4&nbsp;&nbsp;&nbsp;String</a></li>
+<li><a class="reference internal" href="#identifier" id="id14">3.5&nbsp;&nbsp;&nbsp;Identifier</a></li>
+<li><a class="reference internal" href="#operator" id="id15">3.6&nbsp;&nbsp;&nbsp;Operator</a></li>
+<li><a class="reference internal" href="#list" id="id16">3.7&nbsp;&nbsp;&nbsp;List</a></li>
+<li><a class="reference internal" href="#token" id="id17">3.8&nbsp;&nbsp;&nbsp;Token</a></li>
+<li><a class="reference internal" href="#expression" id="id18">3.9&nbsp;&nbsp;&nbsp;Expression</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#structure" id="id19" name="id19">4&nbsp;&nbsp;&nbsp;Structure</a><ul class="auto-toc">
-<li><a class="reference" href="#function-application" id="id20" name="id20">4.1&nbsp;&nbsp;&nbsp;Function Application</a></li>
-<li><a class="reference" href="#function-definition" id="id21" name="id21">4.2&nbsp;&nbsp;&nbsp;Function Definition</a></li>
-<li><a class="reference" href="#local-scope" id="id22" name="id22">4.3&nbsp;&nbsp;&nbsp;Local Scope</a></li>
-<li><a class="reference" href="#conditional" id="id23" name="id23">4.4&nbsp;&nbsp;&nbsp;Conditional</a><ul class="auto-toc">
-<li><a class="reference" href="#if" id="id24" name="id24">4.4.1&nbsp;&nbsp;&nbsp;If</a></li>
-<li><a class="reference" href="#case" id="id25" name="id25">4.4.2&nbsp;&nbsp;&nbsp;Case</a></li>
+<li><a class="reference internal" href="#structure" id="id19">4&nbsp;&nbsp;&nbsp;Structure</a><ul class="auto-toc">
+<li><a class="reference internal" href="#function-application" id="id20">4.1&nbsp;&nbsp;&nbsp;Function Application</a></li>
+<li><a class="reference internal" href="#function-definition" id="id21">4.2&nbsp;&nbsp;&nbsp;Function Definition</a></li>
+<li><a class="reference internal" href="#local-scope" id="id22">4.3&nbsp;&nbsp;&nbsp;Local Scope</a></li>
+<li><a class="reference internal" href="#conditional" id="id23">4.4&nbsp;&nbsp;&nbsp;Conditional</a><ul class="auto-toc">
+<li><a class="reference internal" href="#if" id="id24">4.4.1&nbsp;&nbsp;&nbsp;If</a></li>
+<li><a class="reference internal" href="#case" id="id25">4.4.2&nbsp;&nbsp;&nbsp;Case</a></li>
 </ul>
 </li>
-<li><a class="reference" href="#data-type" id="id26" name="id26">4.5&nbsp;&nbsp;&nbsp;Data Type</a><ul class="auto-toc">
-<li><a class="reference" href="#product-type" id="id27" name="id27">4.5.1&nbsp;&nbsp;&nbsp;Product Type</a></li>
-<li><a class="reference" href="#sum-type" id="id28" name="id28">4.5.2&nbsp;&nbsp;&nbsp;Sum Type</a></li>
+<li><a class="reference internal" href="#data-type" id="id26">4.5&nbsp;&nbsp;&nbsp;Data Type</a><ul class="auto-toc">
+<li><a class="reference internal" href="#product-type" id="id27">4.5.1&nbsp;&nbsp;&nbsp;Product Type</a></li>
+<li><a class="reference internal" href="#sum-type" id="id28">4.5.2&nbsp;&nbsp;&nbsp;Sum Type</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference" href="#examples" id="id29" name="id29">5&nbsp;&nbsp;&nbsp;Examples</a></li>
+<li><a class="reference internal" href="#examples" id="id29">5&nbsp;&nbsp;&nbsp;Examples</a></li>
 </ul>
 </div>
-<div class="section">
-<h1><a class="toc-backref" href="#id3" id="introduction" name="introduction">1&nbsp;&nbsp;&nbsp;Introduction</a></h1>
+<div class="section" id="introduction">
+<h1><a class="toc-backref" href="#id3">1&nbsp;&nbsp;&nbsp;Introduction</a></h1>
 <p>LIPL is a functional programming language.</p>
 </div>
-<div class="section">
-<h1><a class="toc-backref" href="#id4" id="syntax" name="syntax">2&nbsp;&nbsp;&nbsp;Syntax</a></h1>
-<div class="section">
-<h2><a class="toc-backref" href="#id5" id="ebnf" name="ebnf">2.1&nbsp;&nbsp;&nbsp;EBNF</a></h2>
-<p>Informal EBNF <a class="footnote-reference" href="#id2" id="id1" name="id1">[1]</a> is used.</p>
+<div class="section" id="syntax">
+<h1><a class="toc-backref" href="#id4">2&nbsp;&nbsp;&nbsp;Syntax</a></h1>
+<div class="section" id="ebnf">
+<h2><a class="toc-backref" href="#id5">2.1&nbsp;&nbsp;&nbsp;EBNF</a></h2>
+<p>Informal EBNF <a class="footnote-reference" href="#id2" id="id1">[1]</a> is used.</p>
 <table class="docutils footnote" frame="void" id="id2" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id1" name="id2">[1]</a></td><td><p class="first"><a class="reference" href="http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form">http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form</a></p>
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><p class="first"><a class="reference external" href="http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form">http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form</a></p>
 <ul class="last simple">
 <li><tt class="docutils literal"><span class="pre">{e}</span></tt> : zero or more occurrence of e</li>
 <li><tt class="docutils literal"><span class="pre">[e]</span></tt> : zero or one occurrence of e</li>
@@ -369,8 +363,8 @@ used here to explain difficult express terms.</li>
 </tbody>
 </table>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id6" id="predefined-non-terminals" name="predefined-non-terminals">2.2&nbsp;&nbsp;&nbsp;Predefined non-terminals</a></h2>
+<div class="section" id="predefined-non-terminals">
+<h2><a class="toc-backref" href="#id6">2.2&nbsp;&nbsp;&nbsp;Predefined non-terminals</a></h2>
 <p>Predefined non-terminals for convenience.</p>
 <pre class="literal-block">
 letter   = (* alphabetic character *)
@@ -394,8 +388,8 @@ float    = [ ( '-' | '+' ) ] nat '.' nat
 (* floating point number. . must present *)
 </pre>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id7" id="lexical-items" name="lexical-items">2.3&nbsp;&nbsp;&nbsp;Lexical items</a></h2>
+<div class="section" id="lexical-items">
+<h2><a class="toc-backref" href="#id7">2.3&nbsp;&nbsp;&nbsp;Lexical items</a></h2>
 <p>Defines what can be a token.</p>
 <pre class="literal-block">
 ident   = letter { ( letter | digit | '_' | '-' ) }
@@ -421,8 +415,8 @@ tokens  = token spaces token { spaces token }
 expr    = '(' tokens ')'
 </pre>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id8" id="expressions" name="expressions">2.4&nbsp;&nbsp;&nbsp;Expressions</a></h2>
+<div class="section" id="expressions">
+<h2><a class="toc-backref" href="#id8">2.4&nbsp;&nbsp;&nbsp;Expressions</a></h2>
 <p>All expressions are enclosed in <tt class="docutils literal"><span class="pre">()</span></tt>.  And, tokens
 in an expression are separated by white-spaces.
 Here, white-space token delimiters are omitted.</p>
@@ -458,75 +452,75 @@ st         = '(' 'st' ident ident-list ')'
 </pre>
 </div>
 </div>
-<div class="section">
-<h1><a class="toc-backref" href="#id9" id="lexicon" name="lexicon">3&nbsp;&nbsp;&nbsp;Lexicon</a></h1>
+<div class="section" id="lexicon">
+<h1><a class="toc-backref" href="#id9">3&nbsp;&nbsp;&nbsp;Lexicon</a></h1>
 <p>Explanation of basic building blocks of LIPL.</p>
-<div class="section">
-<h2><a class="toc-backref" href="#id10" id="boolean" name="boolean">3.1&nbsp;&nbsp;&nbsp;Boolean</a></h2>
+<div class="section" id="boolean">
+<h2><a class="toc-backref" href="#id10">3.1&nbsp;&nbsp;&nbsp;Boolean</a></h2>
 <p>A boolean can be either True or False.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id11" id="number" name="number">3.2&nbsp;&nbsp;&nbsp;Number</a></h2>
+<div class="section" id="number">
+<h2><a class="toc-backref" href="#id11">3.2&nbsp;&nbsp;&nbsp;Number</a></h2>
 <p>A number can be an integer: 1, +2, -32532, -00342, ...
 Or, a floating point number: +000.234, -23.43, 0.0023402, ...</p>
 <p>A number evaluates to itself. A number cannot be bound.
 For example, 42 evaluates to 42.
 It can not have another meaning.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id12" id="character" name="character">3.3&nbsp;&nbsp;&nbsp;Character</a></h2>
+<div class="section" id="character">
+<h2><a class="toc-backref" href="#id12">3.3&nbsp;&nbsp;&nbsp;Character</a></h2>
 <p>A character is any unicode character enclosed in <tt class="docutils literal"><span class="pre">''</span></tt>.
 For example, 'a', 'B', '2', ''' ... are valid characters.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id13" id="string" name="string">3.4&nbsp;&nbsp;&nbsp;String</a></h2>
+<div class="section" id="string">
+<h2><a class="toc-backref" href="#id13">3.4&nbsp;&nbsp;&nbsp;String</a></h2>
 <p>A string is a sequence of characters enclosed inside <tt class="docutils literal"><span class="pre">&quot;</span></tt>.
 Characters that make up a string are not surrounded by <tt class="docutils literal"><span class="pre">''</span></tt>.
 For example, &quot;aB2'&quot; is a valid string.</p>
 <p>To use <tt class="docutils literal"><span class="pre">&quot;</span></tt> inside a string, escape it using <tt class="docutils literal"><span class="pre">\</span></tt>.
 More examples: &quot;hi! i'm a string&quot;, &quot;let's escape &quot;!!&quot;, ...</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id14" id="identifier" name="identifier">3.5&nbsp;&nbsp;&nbsp;Identifier</a></h2>
+<div class="section" id="identifier">
+<h2><a class="toc-backref" href="#id14">3.5&nbsp;&nbsp;&nbsp;Identifier</a></h2>
 <p>An identifier starts with an alphabetic letter, and continues
 with a sequence of digits, letters, <tt class="docutils literal"><span class="pre">-</span></tt>, or <tt class="docutils literal"><span class="pre">_</span></tt>.</p>
 <p>For example, abc, abC123, apple-pie, apple_123, ... are valid
 identifiers.</p>
 <p>An identifier is bound to some other value.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id15" id="operator" name="operator">3.6&nbsp;&nbsp;&nbsp;Operator</a></h2>
+<div class="section" id="operator">
+<h2><a class="toc-backref" href="#id15">3.6&nbsp;&nbsp;&nbsp;Operator</a></h2>
 <p>An operator starts with one of special characters:
 <tt class="docutils literal"><span class="pre">+=_-*&amp;^%$#&#64;!~`</span></tt>.
 Otherwise, it is same as identifier, i.e., they denote some
 other values.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id16" id="list" name="list">3.7&nbsp;&nbsp;&nbsp;List</a></h2>
+<div class="section" id="list">
+<h2><a class="toc-backref" href="#id16">3.7&nbsp;&nbsp;&nbsp;List</a></h2>
 <p>A list is enclosed by <tt class="docutils literal"><span class="pre">[]</span></tt>. Elements in a list are separated
 by <tt class="docutils literal"><span class="pre">,</span></tt>.</p>
 <p>A list is homogeneous.
 For example, <tt class="docutils literal"><span class="pre">[1,2,3]</span></tt> is a valid list, while <tt class="docutils literal"><span class="pre">[1,2,&quot;hi&quot;]</span></tt> is not.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id17" id="token" name="token">3.8&nbsp;&nbsp;&nbsp;Token</a></h2>
+<div class="section" id="token">
+<h2><a class="toc-backref" href="#id17">3.8&nbsp;&nbsp;&nbsp;Token</a></h2>
 <p>A token is either a list, a boolean, a number, a character, a string,
 an identifier, an operator, or an expression.</p>
 <p>It is the smallest meaningful unit in LIPL.</p>
 <p>Examples include: foo, 123, &quot;hello world!&quot;, '*', +, (+ 1 2), ...</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id18" id="expression" name="expression">3.9&nbsp;&nbsp;&nbsp;Expression</a></h2>
+<div class="section" id="expression">
+<h2><a class="toc-backref" href="#id18">3.9&nbsp;&nbsp;&nbsp;Expression</a></h2>
 <p>An expression is a sequence of whitespace delimited tokens.
 Since a token can be an expression, nested expressions are allowed.</p>
 <p>For example, (+ (- 1 2) 3) is a valid expression.</p>
 </div>
 </div>
-<div class="section">
-<h1><a class="toc-backref" href="#id19" id="structure" name="structure">4&nbsp;&nbsp;&nbsp;Structure</a></h1>
+<div class="section" id="structure">
+<h1><a class="toc-backref" href="#id19">4&nbsp;&nbsp;&nbsp;Structure</a></h1>
 <p>Different structures (expressions) are available.</p>
-<div class="section">
-<h2><a class="toc-backref" href="#id20" id="function-application" name="function-application">4.1&nbsp;&nbsp;&nbsp;Function Application</a></h2>
+<div class="section" id="function-application">
+<h2><a class="toc-backref" href="#id20">4.1&nbsp;&nbsp;&nbsp;Function Application</a></h2>
 <p>When the first token in an expression is an identifier or an operator,
 the expression is function application expression.</p>
 <p><tt class="docutils literal"><span class="pre">(func</span> <span class="pre">arg1</span> <span class="pre">arg2</span> <span class="pre">...</span> <span class="pre">argN)</span></tt> denotes application of a function
@@ -537,8 +531,8 @@ named <tt class="docutils literal"><span class="pre">func</span></tt> on argumen
 <p>applies the operator function <tt class="docutils literal"><span class="pre">+</span></tt> on arguments 1 and 2.
 Since the operator <tt class="docutils literal"><span class="pre">+</span></tt> adds two numbers, the expression yields 3.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id21" id="function-definition" name="function-definition">4.2&nbsp;&nbsp;&nbsp;Function Definition</a></h2>
+<div class="section" id="function-definition">
+<h2><a class="toc-backref" href="#id21">4.2&nbsp;&nbsp;&nbsp;Function Definition</a></h2>
 <p>To define a function, use <strong>def</strong> keyword.</p>
 <p><tt class="docutils literal"><span class="pre">(def</span> <span class="pre">ident</span> <span class="pre">(arg1</span> <span class="pre">arg2</span> <span class="pre">...</span> <span class="pre">argN)</span> <span class="pre">body)</span></tt>
 defines a new function whose arguments are <tt class="docutils literal"><span class="pre">argi</span></tt>'s and body is <tt class="docutils literal"><span class="pre">body</span></tt>.
@@ -573,8 +567,8 @@ and calls it with parameters 2 and 3.</p>
 So, calling the function <tt class="docutils literal"><span class="pre">one</span></tt> yields 1.
 Note that <tt class="docutils literal"><span class="pre">()</span></tt> is used to say that the function takes no parameter.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id22" id="local-scope" name="local-scope">4.3&nbsp;&nbsp;&nbsp;Local Scope</a></h2>
+<div class="section" id="local-scope">
+<h2><a class="toc-backref" href="#id22">4.3&nbsp;&nbsp;&nbsp;Local Scope</a></h2>
 <p>A local scope can be created using <strong>let</strong> keyword.</p>
 <p><tt class="docutils literal"><span class="pre">(let</span> <span class="pre">((k1</span> <span class="pre">v1)</span> <span class="pre">(k2</span> <span class="pre">v2)</span> <span class="pre">...</span> <span class="pre">(kN</span> <span class="pre">vN))</span> <span class="pre">body)</span></tt>
 creates a new environment where ki is bound to vi.
@@ -600,10 +594,10 @@ So, the value of top-level local scope is 1.</p>
 <p>In other words, a local scope created by <strong>let</strong> expression
 shadows previously defined identifiers.</p>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id23" id="conditional" name="conditional">4.4&nbsp;&nbsp;&nbsp;Conditional</a></h2>
-<div class="section">
-<h3><a class="toc-backref" href="#id24" id="if" name="if">4.4.1&nbsp;&nbsp;&nbsp;If</a></h3>
+<div class="section" id="conditional">
+<h2><a class="toc-backref" href="#id23">4.4&nbsp;&nbsp;&nbsp;Conditional</a></h2>
+<div class="section" id="if">
+<h3><a class="toc-backref" href="#id24">4.4.1&nbsp;&nbsp;&nbsp;If</a></h3>
 <p>To create a single branch conditional, use <strong>if</strong> keyword.</p>
 <p><tt class="docutils literal"><span class="pre">(if</span> <span class="pre">bool</span> <span class="pre">if-case</span> <span class="pre">else-case)</span></tt> evaluates <tt class="docutils literal"><span class="pre">if-case</span></tt> if <tt class="docutils literal"><span class="pre">bool</span></tt>
 has true value. Otherwise, it evaluates <tt class="docutils literal"><span class="pre">else-case</span></tt>.</p>
@@ -619,8 +613,8 @@ So, instead of evaluating the string &quot;hey&quot;, the second if expression
 is evaluated, where <tt class="docutils literal"><span class="pre">(==</span> <span class="pre">1</span> <span class="pre">1)</span></tt> yields true value.
 Hence, &quot;bye&quot; is returned.</p>
 </div>
-<div class="section">
-<h3><a class="toc-backref" href="#id25" id="case" name="case">4.4.2&nbsp;&nbsp;&nbsp;Case</a></h3>
+<div class="section" id="case">
+<h3><a class="toc-backref" href="#id25">4.4.2&nbsp;&nbsp;&nbsp;Case</a></h3>
 <p>To use multi-branch conditional, use <strong>case</strong> keyword.</p>
 <p><tt class="docutils literal"><span class="pre">(case</span> <span class="pre">((bool1</span> <span class="pre">e1)</span> <span class="pre">(bool2</span> <span class="pre">e2)</span> <span class="pre">...</span> <span class="pre">(boolN</span> <span class="pre">eN)))</span></tt>
 tests truth value of booli. As soon as it finds that booli is true,
@@ -643,10 +637,10 @@ So, the nested case expression is evaluated. And, &quot;yay&quot; is returned.</
 does not evaluate it because the third case was already True.</p>
 </div>
 </div>
-<div class="section">
-<h2><a class="toc-backref" href="#id26" id="data-type" name="data-type">4.5&nbsp;&nbsp;&nbsp;Data Type</a></h2>
-<div class="section">
-<h3><a class="toc-backref" href="#id27" id="product-type" name="product-type">4.5.1&nbsp;&nbsp;&nbsp;Product Type</a></h3>
+<div class="section" id="data-type">
+<h2><a class="toc-backref" href="#id26">4.5&nbsp;&nbsp;&nbsp;Data Type</a></h2>
+<div class="section" id="product-type">
+<h3><a class="toc-backref" href="#id27">4.5.1&nbsp;&nbsp;&nbsp;Product Type</a></h3>
 <p>To create a product type, use <strong>pt</strong> keyword.</p>
 <p><tt class="docutils literal"><span class="pre">(pt</span> <span class="pre">type-ctor</span> <span class="pre">(type1</span> <span class="pre">type2</span> <span class="pre">...</span> <span class="pre">typeN))</span></tt> creates a product type
 that can be constructed with <tt class="docutils literal"><span class="pre">type-ctor</span></tt>.
@@ -665,8 +659,8 @@ initialized to &quot;fname&quot; and &quot;lname&quot;.</p>
 (like Name) and
 type names (like String).</p>
 </div>
-<div class="section">
-<h3><a class="toc-backref" href="#id28" id="sum-type" name="sum-type">4.5.2&nbsp;&nbsp;&nbsp;Sum Type</a></h3>
+<div class="section" id="sum-type">
+<h3><a class="toc-backref" href="#id28">4.5.2&nbsp;&nbsp;&nbsp;Sum Type</a></h3>
 <p>To create a sum type, <tt class="docutils literal"><span class="pre">st</span></tt> keyword can be used.</p>
 <p><tt class="docutils literal"><span class="pre">(st</span> <span class="pre">type-name</span> <span class="pre">(type-ctor1</span> <span class="pre">type-ctor2</span> <span class="pre">...</span> <span class="pre">type-ctorN)</span></tt>
 creates a sum type named <tt class="docutils literal"><span class="pre">type-name</span></tt>.
@@ -692,8 +686,8 @@ the Male object is Animal or Person, an error is thrown.</p>
 </div>
 </div>
 </div>
-<div class="section">
-<h1><a class="toc-backref" href="#id29" id="examples" name="examples">5&nbsp;&nbsp;&nbsp;Examples</a></h1>
+<div class="section" id="examples">
+<h1><a class="toc-backref" href="#id29">5&nbsp;&nbsp;&nbsp;Examples</a></h1>
 <pre class="literal-block">
 (def fib (n)
     (if (&lt; n 2)

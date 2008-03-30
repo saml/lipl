@@ -1,0 +1,741 @@
+====================================
+CS731 Software Development Practicum
+====================================
+
+--------------
+Midterm report
+--------------
+
+:Author: Sam Lee
+
+.. sectnum::
+.. contents::
+
+
+About
+=====
+
+An interpreter of LIPL, a functional programming language,
+is implemented in Haskell programming language
+as the term project of CS731.
+
+This document is status report for the term project.
+
+It describes:
+
+- syntax and semantics of LIPL
+- structure of the interpreter
+- usage of the interpreter
+
+LIPL: a Little Idiotic Programming Language
+===========================================
+
+LIPL is a dynamically typed functional programming language.
+A LIPL program is built from expressions, which are
+whitespace delimited tokens enclosed in parenthesis.
+An expression is usually function application, where
+the first token is a function that is being applied to
+the rest of tokens.
+Hence, a LIPL expression is very similar to a LISP list (or s-expression).
+
+In the following sections, syntax and semantics of LIPL is described
+in detail, including useful special constructs.
+
+Informal Syntax
+===============
+
+In this section, informal EBNF [#ebnf]_ is used to describe
+syntax of LIPL.
+
+.. [#ebnf] http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form
+
+   - ``{e}`` : zero or more occurrence of e
+   - ``[e]`` : zero or one occurrence of e
+   - ``(e1 | e2)`` : one occurrence of e1 or e2
+   - ``(* e *)`` : e is ignored. comments.
+   - ``'e'`` or ``"e"`` : literal e
+   - ``? e ?`` : e is special sequence.
+     used here to explain difficult express terms.
+
+Predefined non-terminals
+------------------------
+
+Non-terminals defined here are used in the later
+sections.
+
+::
+
+    letter   = 'a' | 'b' | ...
+    (* alphabetic character *)
+
+    digit    = '0' | '1' | ... | '9'
+    (* numeric digit *)
+
+    space    = ' ' | '\t' | ...
+    (* whitespace character *)
+
+    spaces   = space { space }
+    (* one or more mandatory spaces *)
+
+    ws       = [ spaces ]
+    (* optional spaces *)
+
+    nat      = digit { digit }
+    (* natural number. allowing leading zeros *)
+
+Tokens
+------
+
+Non-terminals representing tokens are defined here.
+
+::
+
+    ident   = letter { ( letter | digit | '_' | '-' ) }
+    (* identifier. starts with a letter. *)
+
+    op      = '+' | '-' | ...
+    (* predefined operators or functions *)
+
+    integer = [ ( '-' | '+' ) ] nat
+    (* optional - or + *)
+
+    float   = [ ( '-' | '+' ) ] nat '.' nat
+    (* floating point number. . must present *)
+
+    boolean = 'True' | 'False'
+
+    number  = integer | float
+
+    char    = "'" ? any single character ? "'"
+    (* unicode character. ' should be escaped. *)
+
+    string  = '"' ? characters with escaped '"' ? '"'
+
+    list    = '[' ws ']'
+            | '[' ws token { ',' ws token } ws ']'
+    (* comma separated tokens. enclosed by [] *)
+
+    token   = ident | op
+            | char | boolean | string | number
+            | list | expr
+
+    tokens  = token spaces token { spaces token }
+    (* space separated tokens *)
+
+    expr    = '(' ws tokens ws ')'
+
+A token is either an identifier,
+an operator, a character, a boolean, a string, a number, a list
+, or an expression.
+
+A brief description and a few examples of each token is given below:
+
+``ident``
+  Identifiers start with an alphabetic character, and can continue
+  with alpha-numeric characters, ``-``, or ``_``.
+  Identifiers are case sensitive.
+
+  - apple, Apple, foo1, bar-9, foo-bar_9, ...
+
+
+``op``
+  Operators start with special symbols (``:!$%&*+./<=>?@\^|-~``)
+  and continue with one of special symbols.
+
+  - ``+``, ``-``, ``*``, ``<=``, ...
+
+``char``
+  Characters are single character enclosed in ``'``.
+  Escaped characters, such as newline, tab, ... etc, are supported.
+
+  - ``'a'``, ``'B'``, ``'\n'``, ``'\t'``, ...
+
+``boolean``
+  Booleans are either True or False. They start with capital letter.
+
+  - True, False
+
+``string``
+  Strings are sequence of characters enclosed in ``"``.
+  A string can continue after newline.
+  ``"`` inside a string can be escaped as ``\"``.
+
+  - ``"hello world!"``, ``"double quote: \""``, ...
+
+``number``
+  Numbers are either integers or floats.
+  Integers don't have decimal point, ``.``, while
+  floats must have a decimal point with leading zero.
+  For example, ``0.1`` is a valid float while ``.1`` is not.
+  Both integers and floats can start with ``-`` that makes them negative.
+
+  - ``1``, ``-0``, ``002``, ``0.353``, ``-23.532``, ...
+
+``list``
+  Lists are enclosed in ``[]``.
+  Elements in a list are separated by ``,``. (This is redundant).
+  Optional whitespaces around ``,`` are allowed.
+  Each element in a list is a token.
+
+  - ``[1,2,3]``, ``[1, "hello", 3, 'a']``, ``[True, (== 1 2), abc]``, ...
+  - Note that ``[True, == 1 2, abc]``
+    is not a valid list because ``== 1 2``
+    is not a token while ``(== 1 2)`` is.
+
+``expr``
+  Expressions are enclosed in ``()``.
+  Tokens in an expression are separated by whitespaces.
+  So, expressions are very similar to lists except that they are
+  enclosed in parenthesis (instead of brackets)
+  and elements are separated by whitespaces (instead of commas).
+
+  - ``(+ 1 2)``, ``(== (+ 1 0.34) (- 1 (+ -1 3)))``
+
+Special Forms
+-------------
+
+Some expressions are considered to be in special form.
+Special forms are treated differently from normal expressions.
+
+Syntax for special forms are given here.
+
+::
+
+    fun-def    = '(' ws 'def' spaces
+                        ident spaces
+                        ident-list spaces token ws ')'
+    ident-list = '(' idents ')'
+    idents     = ident { spaces ident }
+
+    if         = '(' ws 'if' spaces
+                        token spaces
+                        token spaces token ws ')'
+
+    let        = '(' ws 'let' spaces dict spaces token ws ')'
+    dict       = '{' ws key-vals ws '}'
+    key-vals   = key-val { ws ',' ws key-val }
+    key-val    = ident spaces '=' spaces token
+
+    lambda     = '(' ws 'lambda' spaces
+                         ident-list spaces token ws ')'
+
+A brief description of special forms and examples are given below:
+
+``fun-def``
+  Function definition starts with keyword ``def``
+  followed by an identifier, parameters, and function body.
+
+  - ``(def id (x) x)`` defines a function ``id`` that
+    takes a parameter, ``x``, and returns it.
+  - ``(def add (x y) (+ x y))`` defines a function ``add``
+    that takes two parameters and adds them.
+
+``if``
+  If conditional starts with keyword ``if`` followed by
+  a boolean expression and two expressions from which only one will be
+  evaluated.
+
+  - ``(if (== 1 2) "same" False)`` returns ``False`` when
+    ``(== 1 2)`` is False. It returns ``"same"`` otherwise.
+
+``let``
+  Let special form starts with keyword ``let`` followed by
+  a dictionary and an expression.
+  A dictionary has the form ``{v1 = b1, v2 = b2, ..., vN = bN}``,
+  where ``v``'s are identifiers and ``b``'s are tokens (including
+  expressions).
+
+  - ``(let {a = 1, b = 2} (+ a b))`` evaluates to the value
+    returned by ``(+ 1 2)``.
+
+``lambda``
+  Lambda special form starts with keyword ``lambda`` followed
+  by variables in the lambda expression
+  and body of the lambda expression.
+
+  - ``(lambda (x y) (+ x y))`` evaluates to a function
+    that takes two parameters and evaluates ``(+ x y)``.
+
+Informal Semantics
+==================
+
+Literals
+--------
+
+Simple literal tokens (characters, strings, numbers, and booleans)
+evaluate to themselves.
+For example, a character ``'a'`` and a string ``"hello"``
+evaluate to the character ``'a'`` and the string ``"hello"``
+respectively.
+Numbers evaluate to base 10 integers or floating point numbers.
+The boolean ``True`` evaluates to a value that denotes true
+and ``False`` evaluates to false.
+
+Lists are the only complex literal tokens.
+Evaluation of a list results in a list of values of original elements.
+For example, a list ``[True, (== 1 2)]`` is evaluated to
+``[True, False]`` given that ``(== 1 2)`` evaluates to ``False``.
+
+Identifiers
+-----------
+
+Identifiers or operators evaluate to the value bound to them.
+If an identifier or an operator does not have a bound value,
+error occurs.
+For example, if an identifier ``foo`` is bound to ``True``
+while ``bar`` is not bound, evaluation of ``foo`` results in ``True``
+while evaluation of ``bar`` is error.
+
+
+Expressions
+-----------
+
+An expression ``(f p1 p2 ... pN)`` denotes an application of function
+``f`` to parameters ``p1 p2 ... pN``,
+unless the expression is a special form.
+First token in a normal expression should evaluate to a function.
+Otherwise, it results in an error.
+
+Function application (normal expressions) is actually curryed.
+So, ``(f p1 p2 ... pN)`` is same as ``(...((f p1) p2) ... pN)``
+where ``(f p1)``, ``((f p1) p2)``, ..., ``(...((f p1) p2) ... pi)``
+are functions taking ``N - 1``, ``N - 2``, and ``N - i`` parameters
+respectively.
+For example, when the function ``sum-of-3`` takes 3 parameters and
+calculates the sum of all 3 parameters,
+``(sum-of-3 p1)`` evaluates to a function that takes 2 parameters
+and ``((sum-of-3 p1) p2)``, which is same as ``(sum-of-3 p1 p2)``,
+becomes a function that takes 1 parameter.
+
+Informal semantics of special forms are given below:
+
+``fun-def``
+  ``(def fun-name (p1 p2 ... pN) body)``
+  expands current environment with key-value pair
+  (``fun-name``,
+  function that takes p1 p2 ... pN as arguments and evaluates body).
+  The function bound to ``fun-name`` evaluates ``body`` in an environment
+  where ``p1 p2 ... pN`` are bound to actual parameters passed.
+
+``if``
+  ``(if bool-expr when-true when-false)``
+  evaluates ``bool-expr`` first. If the evaluation results in ``False``,
+  ``when-false`` is evaluated. Otherwise, ``when-true`` is evaluated.
+  ``if`` special form will consider anything other than
+  the boolean literal ``False`` to be ``True``.
+
+``let``
+  ``(let {v1 = b1, v2 = b2, ..., vN = bN} body)``
+  evaluates ``body`` in an environment where
+  ``v1 v2 ... vN`` are bound to ``b1 b2 ... bN`` respectively.
+
+  vj can't appear in bi for ``i <= j``.
+  For example, behavior of ``(let {v1 = (+ v2 1), v2 = 1} (+ v1 v2))``
+  is undefined because ``v1`` is bound to an expression that uses
+  ``v2``, which appears after ``v1``.
+
+  Also, behavior of recursive definition is undefined.
+  For example, ``(let {f = (g 1), g = (f 1)} (f (g 1)))``
+  can be an error.
+
+``lambda``
+  ``(lambda (v1 v2 ... vN) body)``
+  evaluates to a function that takes parameters ``v1 v2 ... vN``
+  and evaluates ``body`` in the environment where the parameters
+  are bound to actual parameters taken.
+
+Builtin Functions
+=================
+
+Some functions are predefined and ready to be used.
+
+Arithmetic Operators
+--------------------
+
+``+``
+  ``(+ num1 num2)`` returns addition of num1 and num2.
+  Both num1 and num2 should be numbers (integer or float).
+
+``-``
+  ``(- num1 num2)`` subtracts num2 from num1.
+  Both num1 and num2 should be either integer or float.
+
+``*``
+  ``(* num1 num2)`` multiplies num1 by num2.
+  Both num1 and num2 should be either integer or float.
+
+``/``
+  ``(* float1 float2)`` divides float1 by float2 by performing
+  floating point division. When one of the parameters is integer,
+  it is coerced into a float.
+
+``div``
+  ``(div int1 int2)`` divides int1 by int2 by performing
+  integer division. When one of the parameters is float,
+  it is coerced into an int.
+
+Boolean Operators
+-----------------
+
+``&&``
+  is boolean AND operator. ``(&& bool1 bool2)`` is ``True``
+  when both bool1 and bool2 are ``True``.
+  When either of bool1 or bool2 is ``False``, it is ``False``.
+  Passing a non boolean value to ``&&`` results in an error.
+
+``||``
+  is boolean OR operator. ``(|| bool1 bool2)`` is ``True``
+  when one of bool1 and bool2 is ``True``. When both are ``True``,
+  it is also ``True``.
+  Passing a non boolean value to ``||`` results in an error.
+
+``not``
+  is boolean NOT operator. ``(not bool1)`` is ``True``
+  when bool1 is ``True``. It is ``False`` when bool1 is ``False``.
+  Passing a non boolean value to ``not`` results in an error.
+
+Comparison Operators
+--------------------
+
+``==``
+  ``(== v1 v2)`` is ``True`` when v1 and v2 evaluate to same value.
+  It is ``False`` otherwise.
+  ``(== [1, (== 0 0)] [(+ 2 -1), True])`` is ``True`` because
+  the two lists evaluate to the same list, ``[1, True]``.
+
+``!=``
+  ``(!= v1 v2)`` is ``True`` when v1 and v2 evaluate to different values.
+  Otherwise, it is ``True``.
+
+``<``
+  ``(< v1 v2)`` is ``True`` when the value v1 evaluates two is strictly
+  less than the value v2 evaluates to.
+  ``(< "Abc" "a")`` is ``True`` because strings are compared
+  alphabetically ('A' is less than 'a').
+
+``<=``
+  ``(<= v1 v2)`` is ``True`` when v1 is less than or equal to v2.
+
+``>``
+  ``(> v1 v2)`` is ``True`` when v1 is strictly greater than v2.
+
+``>=``
+  ``(>= v1 v2)`` is ``True`` when v1 is greater than or equal to v2.
+
+List Functions
+--------------
+
+These functions only work for lists or strings
+(strings are converted to lists of characters when passed to
+these functions).
+
+length
+  ``(length [v1, v2, ..., vN])`` is N.
+
+head
+  is first element of the list. ``(head "abc")`` is ``'a'``.
+  ``(head [])`` is an error.
+
+tail
+  is a list without the first element. ``(tail [1,2,3])`` is ``[2,3]``.
+  ``(tail [1])`` is ``[]`` while ``(tail [])`` is an error.
+
+cons
+  ``(cons x [x1, x2, ..., xN])`` is ``[x, x1, x2, ..., xN]``.
+  It constructs a list by adding the first parameter to the second
+  parameter.
+  When the second parameter is not a list nor a string, it is an error.
+
+isEmpty
+  ``(isEmpty l)`` is ``True`` if ``l`` is ``[]`` or ``""``.
+  When ``l`` is not a list nor a string, it is an error.
+
+Miscellaneous Functions
+-----------------------
+
+show
+  ``(show x)`` is string representation of x.
+
+println
+  ``(println s)`` prints string ``s`` and newline to stdout.
+  When ``s`` is not a string, it is error.
+
+print
+  ``(print s)`` prints the string ``s`` to stdout.
+  When ``s`` is not a string, it is error.
+
+printVarLn
+  ``(printVarLn v)`` converts ``v`` to string and prints it to
+  stdout with newline.
+
+printVar
+  ``(printVar v)`` converts ``v`` to string and prints it.
+
+
+Examples
+========
+
+A few examples are given below.
+Some of the functions are from prelude library, which is
+a collection of useful functions written in LIPL.
+
+::
+
+    (def compose (f g x) (f (g x)))
+
+defines a function called ``compose``
+that takes two unary functions, f and g, and a value.
+``compose`` function will make a composition of functions f and g.
+For example, ``(compose (lambda (x) (+ x 1)) (lambda (x) (- x 1)))``
+is numeric identity function that takes a number and returns it
+(x - 1 + 1 == x).
+
+::
+
+    (def map (f l) (if (isEmpty l)
+                       l
+                       (let {x = (head l), xs = (tail l)}
+                            (cons (f x) (map f xs)))))
+
+defines a function ``map`` that takes
+a unary function, f, and a list. ``(map f [v1,v2, ...,vN])``
+applies f on each element in the list:
+``[(f v1), (f v2), ..., (f vN)]``.
+It is defined recursively.
+First, when l is an empty list, it just returns l itself.
+Otherwise, it constructs a list whose first element is
+result of application of f to the first element of l.
+And the rest of the elements are evaluated by recursively
+applying ``map`` to the rest of l.
+
+::
+
+    (def concat (l1 l2) (if (isEmpty l1)
+                            l2
+                            (let {x = (head l1), xs = (tail l1)}
+                                 (cons x (concat xs l2)))))
+
+defines a function ``concat`` that takes two lists and concatenates
+them. Since strings are converted into lists,
+``(concat "abcd" [1,2,3])`` returns ``['a', 'b', 'c', 'd', 1, 2, 3]``.
+
+::
+
+    (def filter (f l)
+         (if (isEmpty l)
+             l
+             (let {
+                    x  = (head l)
+                  , xs = (filter f (tail l))
+                  }
+                  (if (f x)
+                      (cons x xs)
+                      xs))))
+
+defines a function ``filter`` that takes a unary function, f, and a list.
+It applies the unary function to each element
+in the list. When the result is ``False``, the element is omitted.
+Otherwise, the element becomes part of the result list.
+For example ``(filter (lambda (a) (<= a 2)) [1,2,3])`` is
+``[1,2]`` because 1 and 2 are less than equal to 2.
+
+::
+
+    (def quick-sort (l) (if (isEmpty l)
+        l
+        (let {     x       = (head l)
+                 , xs      = (tail l)
+                 , lesser  = (filter (lambda (a) (< a x))  xs)
+                 , greater = (filter (lambda (a) (>= a x)) xs)
+             }
+             (concat (concat (quick-sort lesser)
+                             (cons x []))
+                     (quick-sort greater)))))
+
+defines a function ``quick-sort`` that takes a list
+and returns the sorted list.
+The list is partitioned along the pivot point, which is always
+the first element of the list.
+The ``lesser`` list has elements less than the pivot point
+while ``greater`` list has elements greater than or equal to the pivot
+point.
+Then, recursively those lists are sorted and concatenated to form
+a sorted list.
+
+::
+
+    (def succ (x) (+ x 1))
+    (def twice (f x) (f (f x)))
+
+defines ``succ`` functon that adds 1 to the parameter.
+Also, ``twice`` function is defined such that the first parameter,
+a unary function, is applied twice (composed to itself).
+Evaluation of ``(twice twice succ 0)`` is::
+
+    twice twice succ 0           # parenthesis obmitted
+    ==> (twice twice) succ 0     # currying
+        # twice f == f . f where . is composition
+        # so, (twice twice) == (twice . twice)
+    ==> (twice . twice) succ 0
+        # (twice . twice) f == twice (twice f)
+    ==> (twice (twice succ)) 0
+    ==> (twice (succ . succ)) 0
+    ==> ((succ . succ) . (succ . succ)) 0
+        # composition is associative
+    ==> (succ . succ . succ . succ) 0
+    ==> (succ (succ (succ (succ 0))))
+    ==> (succ (succ (succ 1)))
+    ==> (succ (succ 2))
+    ==> (succ 3)
+    ==> 4
+
+Installation and Running
+========================
+
+Haskell Compiler
+----------------
+
+The interpreter is tested with GHC_ version ``6.8.*``.
+
+.. _GHC: http://haskell.org/ghc
+
+Windows installer can be downloaded from
+`here <http://haskell.org/ghc/download_ghc_682.html#windows>`_.
+
+After installing GHC_, make sure the bin directory
+(probably ``C:\ghc\ghc-6.8.2\bin`` for Windows) is included
+in PATH environment variable so that ghc executable can be
+invoked from anywhere.
+
+GHC_ comes with several executables:
+
+ghc
+  compiles Haskell code to native binary.
+  Example usage: ``ghc --make Main.hs``
+
+ghci
+  is an interactive Haskell interpreter.
+
+runghc
+  interprets Haskell source code.
+  Example usage: ``runghc Main.hs``
+
+Source Code for LIPL Interpreter
+--------------------------------
+
+If you have release zip file, you can skip to the next section.
+
+Otherwise, you can check out source code for LIPL interpreter
+from the svn repository using an svn client.
+
+If you don't have an svn client,
+`TortoiseSVN <http://tortoisesvn.tigris.org/>`_ is recommended for
+Windows.
+
+::
+
+    svn co http://svn2.assembla.com/svn/cs731/lipl/trunk lipl
+
+will check out latest version of LIPL interpreter to folder ``lipl``.
+
+Project Structure
+-----------------
+
+When you unzip the release or check out svn repository,
+you should have the following directory structure::
+
+    lipl/
+        doc/
+        src/
+
+- ``lipl`` is project root.
+- ``doc`` contains documentations.
+- ``src`` contains Haskell source code for the interpreter.
+
+Building the Interpreter
+------------------------
+
+To build the interpreter, go to ``lipl/src`` directory
+and call::
+
+    make
+
+If you have GNU Make installed, and GHC_ can be found in your PATH
+environment variable, it should build the interpreter, ``Main.exe``.
+
+Otherwise, compile the interpreter manually by typing the following
+in the console::
+
+    cd lipl/src
+    ghc --make Main.hs
+
+Running the Interpreter
+-----------------------
+
+After build, you can run the interpreter by invoking Main.exe.
+Or, you can use runghc to interpret the interpreter without compiling::
+
+    cd lipl/src
+    runghc Main.hs
+
+When the interpreter starts, it loads ``core.lipl``
+that defines useful functions.
+Then, it gives the prompt::
+
+    lipl>
+
+At the prompt, you can type LIPL expressions to evaluate them.
+
+Navigating the Source
+=====================
+
+The interpreter source code is in ``lipl/src`` directory.
+In the directory, there are Haskell source codes (ends with .hs)
+that make up the LIPL interpreter.
+Source files are named after the module they implement.
+For example, Parser.hs implements Parser module.
+
+Explanation of each module is given here.
+
+Main
+  this is entry point of the compiled LIPL interpreter.
+  This implements read-eval-print loop.
+
+LangData
+  this module contains various data structured used accross
+  the interpreter. The module also implements useful functions
+  to access those data and how the data
+  are represented as string.
+
+  Type ``Val`` represents LIPL literals, expressions, special
+  forms, and other values used internally in the interpreter.
+
+  Type ``Err`` defines various errors that can be thrown
+  in the interpreter.
+
+  Type ``Wrap Val`` represents wrapped values.
+  ``Wrap`` is a monad that holds various extra informations
+  such as errors raised, environment
+  (variable bindings) for the evaluator...etc.
+
+CoreLib
+  this module implements various builtin functions.
+
+Parser
+  this module implements parsing functions that turns strings to
+  values used in the interpreter.
+
+  Parsing is done using `Parsec <http://legacy.cs.uu.nl/daan/parsec.html>`_
+  library, which is included with GHC_.
+
+Evaluator
+  this module is responsible for evaluating LIPL expressions.
+  Literals are returned as they are.
+  And, special forms are treated differently so that they can have
+  desired behavior: expanding environment for function definitions,
+  evaluating only one branch for if conditionals ...etc.
+  Normal expressions are treated as curried function application.
+
+Utils
+  this module contains useful utility functions used in other modules.
+

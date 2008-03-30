@@ -82,3 +82,6 @@
 ==> (succ (succ 2))
 ==> 4
 -}
+
+(def hello (s) (println (concat "hello
+                         world" (show s))))
