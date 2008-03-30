@@ -7,4 +7,4 @@ all:
 	$(HSC) $(HSFLAGS) Main.hs
 
 clean:
-	rm -rf $(OBJDIR)
+	rm -rf $(OBJDIR)/*

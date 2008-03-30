@@ -23,283 +23,12 @@ This document is status report for the term project.
 
 It describes:
 
+- syntax and semantics of LIPL
 - usage of the interpreter
 - structure of the interpreter
-- syntax and semantics of LIPL
 
-Installation and Running
-========================
-
-Haskell Compiler
-----------------
-
-The interpreter is tested with GHC_ version ``6.8.*``.
-
-.. _GHC: http://haskell.org/ghc
-
-Windows installer can be downloaded from
-`here <http://haskell.org/ghc/download_ghc_682.html#windows>`_.
-
-After installing GHC_, make sure the bin directory
-(probably ``C:\ghc\ghc-6.8.2\bin`` for Windows) is included
-in PATH environment variable so that ghc executable can be
-invoked from anywhere.
-
-GHC_ comes with several executables:
-
-ghc
-  compiles Haskell code to native binary.
-  Example usage: ``ghc --make Main.hs``
-
-ghci
-  is an interactive Haskell interpreter.
-
-runghc
-  interprets Haskell source code.
-  Example usage: ``runghc Main.hs``
-
-Source Code for LIPL Interpreter
---------------------------------
-
-If you have release zip file, you can skip to the next section.
-
-Otherwise, you can check out source code for LIPL interpreter
-from the svn repository using an svn client.
-
-If you don't have an svn client,
-`TortoiseSVN <http://tortoisesvn.tigris.org/>`_ is recommended for
-Windows.
-
-::
-
-    svn co http://svn2.assembla.com/svn/cs731/lipl/trunk lipl
-
-will check out latest version of LIPL interpreter to folder ``lipl``.
-
-Project Structure
------------------
-
-When you unzip the release or check out svn repository,
-you should have the following directory structure::
-
-    lipl/
-        doc/
-        src/
-
-- ``lipl`` is project root.
-- ``doc`` contains documentations.
-- ``src`` contains Haskell source code for the interpreter.
-
-Building the Interpreter
-------------------------
-
-To build the interpreter, go to ``lipl/src`` directory
-and call::
-
-    make
-
-If you have GNU Make installed, and GHC_ is found in your PATH
-environment variable, it should build the interpreter, ``Main.exe``.
-
-Otherwise, compile the interpreter manually by typing the following
-in the console::
-
-    cd lipl/src
-    ghc --make Main.hs
-
-Running the Interpreter
------------------------
-
-After build, you can run the interpreter by invoking ``Main.exe``.
-Or, you can use runghc to interpret the interpreter without compiling::
-
-    cd lipl/src
-    runghc Main.hs
-
-When the interpreter starts, it loads ``core.lipl``
-that defines useful functions.
-Then, it gives the prompt::
-
-    lipl>
-
-At the prompt, you can type LIPL expressions to evaluate them.
-
-Navigating the Source
-=====================
-
-The interpreter source code is in ``lipl/src`` directory.
-In the directory, there are Haskell source codes (ends with .hs)
-that make up the LIPL interpreter.
-Source files are named after the modules they implement.
-For example, ``Parser.hs`` implements ``Parser`` module.
-
-Explanation of each module is given here.
-
-Main
-  this is entry point of the compiled LIPL interpreter.
-  This implements read-eval-print loop.
-
-LangData
-  this module contains various data structured used accross
-  the interpreter. The module also implements useful functions
-  to access those data and how the data
-  are represented as string.
-
-  Type ``Val`` represents LIPL literals, expressions, special
-  forms, and other values used internally in the interpreter.
-
-  Type ``Err`` defines various errors that can be thrown
-  in the interpreter.
-
-  Type ``Wrap Val`` represents wrapped values.
-  ``Wrap`` is a monad that holds various extra informations
-  such as errors raised, environment
-  (variable bindings) for the evaluator...etc.
-
-CoreLib
-  this module implements various builtin functions.
-
-Parser
-  this module implements parsing functions that turns strings to
-  values used in the interpreter.
-
-  Parsing is done using Parsec_
-  library, which is included with GHC_.
-
-.. _Parsec: http://legacy.cs.uu.nl/daan/parsec.html
-
-Evaluator
-  this module is responsible for evaluating LIPL expressions.
-  Literals are returned as they are.
-  And, special forms are treated differently so that they can have
-  desired behavior: expanding environment for function definitions,
-  evaluating only one branch for if conditionals ...etc.
-  Normal expressions are treated as curried function application.
-
-Utils
-  this module contains useful utility functions used in other modules.
-
-core.lipl
-  this is not a Haskell module. But this file is LIPL source code
-  that implements frequently used functions.
-  This file is loaded automatically whenever the interpreter starts.
-
-Implementation Detail
-=====================
-
-The interpreter is written in fairly straight forward way.
-However, description about the interpreter is given here
-to facilitate understanding of the source code.
-
-Values and Overview
--------------------
-
-Values used inside the interpreter are defined in ``LangData`` module.
-Type ``Val`` can represent various special form expressions, normal
-expressions, literals, closures used in the interpreter interally, ...etc.
-
-``Val`` type is also used to represent evaluated values.
-A LIPL expression, which is of type ``Val``, is turned
-to ``Val``, usually into literals.
-Another type could have been created to represent evaluated values.
-However, the same type, ``Val``, is used for simplicity.
-
-So, the interpreter basically has three parts:
-
-- Parser turns ``String`` into ``Val``.
-- Evaluator turns ``Val`` into another ``Val`` that is put inside
-  ``Wrap`` monad (explained in `Keeping State and Flagging Error`_).
-- Main entry point connects outside world (user input and output)
-  to the parser and the evaluator.
-
-Keeping State and Flagging Error
---------------------------------
-
-In ``LangData`` module, newtype [#newtype]_ ``Wrap`` is defined using
-monad transformers [#transformers]_.
-Each monad transformer can be thought of as a layer of an onion
-[#onion]_, where each layer can function as different monads.
-
-.. [#newtype] newtypinig monads constructed with monad transformers
-   is described in
-   http://cale.yi.org/index.php/How_To_Use_Monad_Transformers
-
-.. [#transformers] using monad transformers is described in
-   http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html
-
-.. [#onion] onion analogy is from
-   http://sigfpe.blogspot.com/2006/05/grok-haskell-monad-transformers.html
-
-
-For example, Haskell provides ``State`` monad that lets users
-put arbitrary state (integers, strings, records...etc)
-and access it via ``get`` command and modify it via ``put`` command.
-Haskell also provides ``Error`` monad that lets users
-``throwError`` during computation and ``catchError`` to deal with error.
-
-``Wrap`` combines those two monads into a new monad by using
-monad transformers (``StateT`` and ``ErrorT`` respectively).
-Actual state being kept inside ``Wrap`` monad is ``EnvStack``, which
-is a list of maps that stores mapping of ``String`` and ``Val``
-(values used in the interpreter internally).
-So, the interpreter can retrive and store key value pairs
-and throw and catch errors inside ``Wrap`` monad any time.
-
-Alternative way of keeping environment would be make the environment
-formal parameter of the functions that need the environment.
-Using monad, this unecessary function parameter can be omitted.
-
-Parsing
--------
-
-Parsing is done using Parsec_ library.
-The library provides useful combinators to build
-parsers very easily.
-
-For example, ``Parsec.sepEndBy parseToken mustSpaces``
-is using ``sepEndBy`` combinator from Parsec library
-that parses zero or more occurrence of LIPL tokens
-(user defined ``parseToken`` combinator)
-separated by whitespaces (user defined ``mustSpaces`` combinator).
-
-Parsing turns ``String`` into ``Val`` with possible errors.
-
-Evaluation
-----------
-
-Evaluation is implemented in ``eval`` function inside ``Evaluator``
-module.
-``eval`` function takes ``Val``, which is possibly returned
-from the parser, and evaluates it in ``Wrap`` monad.
-Result of the evaluation (still ``Val`` type) is put in ``Wrap`` monad.
-
-``eval`` function is defined case by case fashion:
-
-- Various special forms are handled differently from normal expressions.
-- Normal expressions (function application) is curried by consuming
-  the next argument and returning a function object that holds
-  the consumed argument and remaining argument.
-- Literals are returned without modification.
-- Identifiers make use of ``State`` monad, which is a layer of
-  ``Wrap`` monad used in evaluation, to query for the bound value.
-
-In the presence of error condition, error is thrown.
-The error will get stored in ``Error`` monad, which is
-another layer of ``Wrap`` monad, and get handled accordingly.
-
-Talking to the World
---------------------
-
-Since evaluation is done inside the ``Wrap`` monad and
-puts the result inside the monad,
-most of the computation has to be done in ``Wrap`` monad.
-So, ``Main`` module defines user interaction, filesystem
-access, and other ``IO`` related actions inside ``Wrap`` monad.
-
-When the evaluation is done in ``Wrap`` monad and the result is
-put in there,
-outputting the result has to unwrap the value from the monad.
-``run`` function defined in ``Main`` module does the unwrapping.
+If you want to just try out the interpreter, you can skip to
+`Installation and Running`_ section.
 
 LIPL: a Little Idiotic Programming Language
 ===========================================
@@ -313,7 +42,7 @@ the rest of tokens.
 Hence, a LIPL expression is very similar to a LISP list (or s-expression).
 
 In the following sections, syntax and semantics of LIPL is described
-in detail, including useful special constructs.
+in detail, including implementation of useful functions.
 
 Informal Syntax
 ===============
@@ -357,6 +86,19 @@ sections.
     nat      = digit { digit }
     (* natural number. allowing leading zeros *)
 
+    comment  = line-comment | block-comment
+    line-comment = '#' ? sequence of char until newline ?
+    block-comment = '{-' ? sequence of char until -} ? '-}'
+
+Anything after ``#`` until newline is ignored.
+And, anything inside ``{- -}`` is ignored.
+For example, the followings are comments and ignored::
+
+    # this is a line comment
+    {-
+        this is a block comment
+    -}
+
 Tokens
 ------
 
@@ -381,9 +123,10 @@ Non-terminals representing tokens are defined here.
     number  = integer | float
 
     char    = "'" ? any single character ? "'"
-    (* unicode character. ' should be escaped. *)
+    (* ' should be escaped as in: '\'' *)
 
-    string  = '"' ? characters with escaped '"' ? '"'
+    string  = '"' ? sequence of characters that are not " ? '"'
+    (* " should be escaped as in: "\"" *)
 
     list    = '[' ws ']'
             | '[' ws token { ',' ws token } ws ']'
@@ -397,6 +140,7 @@ Non-terminals representing tokens are defined here.
     (* space separated tokens *)
 
     expr    = '(' ws tokens ws ')'
+    (* space separated tokens enclosed in () *)
 
 A token is either an identifier,
 an operator, a character, a boolean, a string, a number, a list
@@ -463,12 +207,12 @@ A brief description and a few examples of each token is given below:
   enclosed in parenthesis (instead of brackets)
   and elements are separated by whitespaces (instead of commas).
 
-  - ``(+ 1 2)``, ``(== (+ 1 0.34) (- 1 (+ -1 3)))``
+  - ``(+ 1 2)``, ``(== (+ 1 0.34) (- 1 (+ -1 3)))``, ...
 
 Special Forms
 -------------
 
-Some expressions are considered to be in special form.
+Some expressions are considered to be special forms.
 Special forms are treated differently from normal expressions.
 
 Syntax for special forms are given here.
@@ -519,8 +263,8 @@ A brief description of special forms and examples are given below:
   where ``v``'s are identifiers and ``b``'s are tokens (including
   expressions).
 
-  - ``(let {a = 1, b = 2} (+ a b))`` evaluates to the value
-    returned by ``(+ 1 2)``.
+  - ``(let {a = 1, b = (+ a 2)} (+ a b))`` evaluates to the value
+    returned by ``(+ 1 (+ 1 2))``.
 
 ``lambda``
   Lambda special form starts with keyword ``lambda`` followed
@@ -529,6 +273,7 @@ A brief description of special forms and examples are given below:
 
   - ``(lambda (x y) (+ x y))`` evaluates to a function
     that takes two parameters and evaluates ``(+ x y)``.
+
 
 Informal Semantics
 ==================
@@ -546,7 +291,8 @@ The boolean ``True`` evaluates to a value that denotes true
 and ``False`` evaluates to false.
 
 Lists are the only complex literal tokens.
-Evaluation of a list results in a list of values of original elements.
+Evaluation of a list results in a list of values that are
+result of evaluation of each original element.
 For example, a list ``[True, (== 1 2)]`` is evaluated to
 ``[True, False]`` given that ``(== 1 2)`` evaluates to ``False``.
 
@@ -587,7 +333,8 @@ Informal semantics of special forms are given below:
   ``(def fun-name (p1 p2 ... pN) body)``
   expands current environment with key-value pair
   (``fun-name``,
-  function that takes p1 p2 ... pN as arguments and evaluates body).
+  function that takes p1 p2 ... pN as arguments and whose body
+  is ``body``).
   The function bound to ``fun-name`` evaluates ``body`` in an environment
   where ``p1 p2 ... pN`` are bound to actual parameters passed.
 
@@ -610,7 +357,7 @@ Informal semantics of special forms are given below:
 
   Also, behavior of recursive definition is undefined.
   For example, ``(let {f = (g 1), g = (f 1)} (f (g 1)))``
-  can be an error.
+  can be an error or bottom (non terminating computation).
 
 ``lambda``
   ``(lambda (v1 v2 ... vN) body)``
@@ -750,7 +497,7 @@ Examples
 ========
 
 A few examples are given below.
-Some of the functions are from prelude library, which is
+Some of the functions are from core library (`core.lipl`_), which is
 a collection of useful functions written in LIPL.
 
 ::
@@ -763,6 +510,14 @@ that takes two unary functions, f and g, and a value.
 For example, ``(compose (lambda (x) (+ x 1)) (lambda (x) (- x 1)))``
 is numeric identity function that takes a number and returns it
 (x - 1 + 1 == x).
+
+
+::
+
+    lipl> ((compose (lambda (x) (+ x 1)) (lambda (x) (- x 1))) 42)
+    42
+
+Type the above in the interpreter and you'll see the result
 
 ::
 
@@ -848,11 +603,12 @@ Evaluation of ``(twice twice succ 0)`` is::
 
     twice twice succ 0           # parenthesis obmitted
     ==> (twice twice) succ 0     # currying
-        # twice f == f . f where . is composition
-        # so, (twice twice) == (twice . twice)
+        # twice f == f . f where . is composition (not LIPL)
+        # so, twice twice == twice . twice
     ==> (twice . twice) succ 0
         # (twice . twice) f == twice (twice f)
     ==> (twice (twice succ)) 0
+        # twice succ == succ . succ
     ==> (twice (succ . succ)) 0
     ==> ((succ . succ) . (succ . succ)) 0
         # composition is associative
@@ -863,4 +619,307 @@ Evaluation of ``(twice twice succ 0)`` is::
     ==> (succ 3)
     ==> 4
 
+Future of LIPL
+==============
+
+Since LIPL is dynamically typed, programming errors can not be caught
+early on: one has to run the program to see the errors.
+So, static type checking and inference is planned for the future.
+
+Also, LIPL lacks pattern matching making function definitions lengthy.
+For example, ``filter`` function, which is around 10 lines of code,
+can be shortened with pattern matching::
+
+    (def filter (f []) [])             # matches empty list
+    (def filter (f (cons x xs))        # matches non empty list
+         (let { rest = (filter f xs) }
+              (if (f x) (cons x rest)
+                        rest)))
+
+So, pattern matching is planned for the future.
+
+
+Installation and Running
+========================
+
+Haskell Compiler
+----------------
+
+The interpreter is tested with GHC_ version ``6.8.*``.
+
+.. _GHC: http://haskell.org/ghc
+
+Windows installer can be downloaded from
+`here <http://haskell.org/ghc/download_ghc_682.html#windows>`_.
+
+After installing GHC_, make sure the bin directory
+(probably ``C:\ghc\ghc-6.8.2\bin`` for Windows) is included
+in PATH environment variable so that ghc executable can be
+invoked from anywhere.
+
+GHC_ comes with several executables:
+
+ghc
+  compiles Haskell code to native binary.
+  Example usage: ``ghc --make Main.hs``
+
+ghci
+  is an interactive Haskell interpreter.
+
+runghc
+  interprets Haskell source code.
+  Example usage: ``runghc Main.hs``
+
+Source Code for LIPL Interpreter
+--------------------------------
+
+If you have release zip file, you can skip to the next section.
+
+Otherwise, you can check out source code for LIPL interpreter
+from the svn repository using an svn client.
+
+If you don't have an svn client,
+`TortoiseSVN <http://tortoisesvn.tigris.org/>`_ is recommended for
+Windows.
+
+::
+
+    svn co http://svn2.assembla.com/svn/cs731/lipl/trunk lipl
+
+will check out latest version of LIPL interpreter to directory ``lipl``.
+
+Project Structure
+-----------------
+
+When you unzip the release or check out from the svn repository,
+you should have the following directory structure::
+
+    lipl/
+        doc/
+        src/
+
+- ``lipl`` is project root.
+- ``doc`` contains documentations.
+- ``src`` contains Haskell source code for the interpreter.
+
+Building the Interpreter
+------------------------
+
+To build the interpreter, go to ``lipl/src`` directory
+and call::
+
+    make
+
+If you have GNU Make installed, and GHC_ is found in your PATH
+environment variable, it should build the interpreter, ``Main.exe``.
+If it fails, try to invoke ``mkdir tmp_obj_dir`` in ``lipl/src``.
+
+Otherwise, compile the interpreter manually by typing the following
+in the console::
+
+    cd lipl/src
+    ghc --make Main.hs
+
+Running the Interpreter
+-----------------------
+
+After build, you can run the interpreter by invoking ``Main.exe``.
+Or, you can use runghc to interpret the interpreter without compiling::
+
+    cd lipl/src
+    runghc Main.hs
+
+When the interpreter starts, it loads ``core.lipl``
+that defines useful functions.
+Then, it gives the prompt::
+
+    lipl>
+
+At the prompt, you can type LIPL expressions to evaluate them.
+
+Navigating the Source
+=====================
+
+The interpreter source code is in ``lipl/src`` directory.
+In the directory, there are Haskell source codes (ends with .hs)
+that make up the LIPL interpreter.
+Source files are named after the modules they implement.
+For example, ``Parser.hs`` implements ``Parser`` module.
+
+Explanation of each module is given here.
+
+Main
+  this is the entry point of the compiled LIPL interpreter.
+  This implements read-eval-print loop.
+
+LangData
+  this module contains various data structures used accross
+  the interpreter. The module also implements useful functions
+  to access those data and how the data
+  are represented as string.
+
+  Type ``Val`` represents LIPL literals, expressions, special
+  forms, and other values used internally in the interpreter.
+
+  Type ``Err`` defines various errors that can be thrown
+  in the interpreter.
+
+  Type ``Wrap Val`` represents wrapped values.
+  ``Wrap`` is a monad that holds various extra informations
+  such as errors raised, environment
+  (variable bindings) for the evaluator...etc.
+
+CoreLib
+  this module implements various builtin functions.
+
+Parser
+  this module implements parsing functions that turns strings to
+  values used in the interpreter.
+
+  Parsing is done using Parsec_
+  library, which is included in GHC_.
+
+.. _Parsec: http://legacy.cs.uu.nl/daan/parsec.html
+
+Evaluator
+  this module is responsible for evaluating LIPL expressions.
+  Literals are returned as they are.
+  And, special forms are treated differently so that they can have
+  desired behavior: expanding environment for function definitions,
+  evaluating only one branch for if conditionals ...etc.
+  Normal expressions are treated as curried function application.
+
+Utils
+  this module contains useful utility functions used in other modules.
+
+.. _`core.lipl`:
+
+core.lipl
+  this is not a Haskell module. But this file is LIPL source code
+  that implements frequently used functions.
+  This file is loaded automatically whenever the interpreter starts.
+
+Implementation Detail
+=====================
+
+Description about the interpreter is given here
+to facilitate understanding of the source code.
+
+Values and Overview
+-------------------
+
+Values used inside the interpreter are defined in ``LangData`` module.
+Type ``Val`` can represent various special form expressions, normal
+expressions, literals, closures used in the interpreter interally, ...etc.
+
+``Val`` type is also used to represent evaluated values.
+A LIPL expression, which is of type ``Val``, is turned
+to ``Val``, usually into literals.
+Another type could have been created to represent evaluated values.
+However, the same type, ``Val``, is used for simplicity.
+
+So, the interpreter basically has three parts:
+
+- Parser turns ``String`` into ``Val``.
+- Evaluator turns ``Val`` into another ``Val`` that is put inside
+  ``Wrap`` monad (explained in `Keeping State and Flagging Error`_).
+- Main entry point connects outside world (user input and output)
+  to the parser and the evaluator.
+
+Keeping State and Flagging Error
+--------------------------------
+
+In ``LangData`` module, newtype [#newtype]_ ``Wrap`` is defined using
+monad transformers [#transformers]_.
+Each monad transformer can be thought of as a layer of an onion
+[#onion]_, where each layer can function as different monads.
+
+.. [#newtype] newtypinig monads constructed with monad transformers
+   is described in
+   http://cale.yi.org/index.php/How_To_Use_Monad_Transformers
+
+.. [#transformers] using monad transformers is described in
+   http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html
+
+.. [#onion] onion analogy is from
+   http://sigfpe.blogspot.com/2006/05/grok-haskell-monad-transformers.html
+
+
+For example, Haskell provides ``State`` monad that lets users
+put arbitrary state (integers, strings, records...etc)
+and access it via ``get`` command and modify it via ``put`` command.
+Haskell also provides ``Error`` monad that lets users
+``throwError`` during computation and ``catchError`` to deal with error.
+
+``Wrap`` combines those two monads into a new monad by using
+monad transformers (``StateT`` and ``ErrorT`` respectively).
+Actual state being kept inside ``Wrap`` monad is ``EnvStack``, which
+is a list of maps that stores mapping of ``String`` and ``Val``
+(values used in the interpreter internally).
+So, the interpreter can retrive and store key value pairs
+and throw and catch errors inside ``Wrap`` monad any time.
+
+Alternative way of keeping environment would be to make the environment
+formal parameter of the functions that need the environment.
+Using monad, this unecessary function parameter is omitted.
+
+Parsing
+-------
+
+Parsing is done using Parsec_ library.
+The library provides useful combinators to build
+parsers very easily.
+
+For example, ``Parsec.sepEndBy parseToken mustSpaces``
+is using ``sepEndBy`` combinator from Parsec library
+that parses zero or more occurrence of LIPL tokens
+(user defined ``parseToken`` combinator)
+separated by whitespaces (user defined ``mustSpaces`` combinator).
+
+Parsing turns ``String`` into ``Val`` with possible errors.
+
+Evaluation
+----------
+
+Evaluation is implemented in ``eval`` function inside ``Evaluator``
+module.
+``eval`` function takes ``Val``, which is possibly returned
+from the parser, and evaluates it in ``Wrap`` monad.
+Result of the evaluation (still ``Val`` type) is put in ``Wrap`` monad.
+
+``eval`` function is defined case by case fashion:
+
+- Various special forms are handled differently from normal expressions.
+- Normal expressions (function application) is curried by consuming
+  the next argument and returning a function object that holds
+  the consumed argument and remaining arguments.
+- Literals are returned without modification.
+- Identifiers make use of ``State`` monad, which is a layer of
+  ``Wrap`` monad used in evaluation, to query for the bound value.
+
+In the presence of error condition, error is thrown.
+The error will get stored in ``Error`` monad, which is
+another layer of ``Wrap`` monad, and get handled accordingly.
+
+Talking to the World
+--------------------
+
+Since evaluation is done inside the ``Wrap`` monad and
+the result is put inside the monad,
+most of the computation has to be done in ``Wrap`` monad
+(it's easy to get to the values inside ``Wrap`` monad when you're in
+the monad. Once you're outside the monad, it's difficult or impossible
+to get to the values).
+
+To print the evaluated value to the console,
+even action of printing has to be in ``Wrap`` monad
+(otherwise, it can't get to the value to be printed).
+So, in the core of ``Wrap`` monad is ``IO`` monad, where
+action of printing and other IO actions are lifted up to above layers.
+
+Because all Haskell programs run in ``IO`` monad,
+``Main`` module defines ``run`` function that takes
+a computation in ``Wrap`` monad and runs it in ``IO`` monad.
+In doing so, lifted IO actions
+are actually performed in ``IO`` monad.
 
