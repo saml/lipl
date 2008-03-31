@@ -51,7 +51,7 @@ primitives = Map.fromList [
     , ("getLine", Builtin 0 $ readFrom stdin)
     , ("show", Builtin 1 showVar)
     , ("env", Builtin 1 showEnvironment)
-    , ("free-vars", Builtin 1 getFreeVars)
+--    , ("free-vars", Builtin 1 getFreeVars)
     , ("from-str", Builtin 1 strToList)
     , ("from-list", Builtin 1 listToStr)
     ]
@@ -244,7 +244,8 @@ showEnvironment [Str key] = do
             return $ Dict env
         else
             do
-                val <- Map.lookup key env
+                --val <- Map.lookup key env
+                val <- getVal key
                 return val
 
 strToList [Str s] = return (List $ map Char s)

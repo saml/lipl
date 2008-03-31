@@ -4,7 +4,7 @@ module LangData ( Val (..)
     , Err (..)
     , Wrap, runWrap, putVal, updateVal, getVal
     , getEnv, getEnvFor
-    , pushEnv, popEnv, clearEnv, showEnv
+    , pushEnv, popEnv, clearEnv, showEnv, extendPushEnv
     , nullEnv, emptyEnv
     , EnvStack
     , Stack, pop, push
@@ -32,6 +32,20 @@ type Key = String
 type KeyVal = (Key, Val)
 type EnvList = [KeyVal]
 type Env = Map.Map Key Val
+
+type EnvStack = Stack Env
+
+{-
+data EnvStack = EnvStack {
+    globalEnv :: Env
+    , envStack :: Stack Env
+    } deriving (Show)
+
+ppEnvStack (EnvStack _ (x:xs)) = ppEnv env
+
+instance Show EnvStack where
+    show e = PP.render $ ppEnvStack e
+-}
 
 emptyEnv = Map.empty
 nullEnv = [emptyEnv]
@@ -159,7 +173,6 @@ instance E.Error Err where
     noMsg = DefaultErr "Error"
     strMsg = DefaultErr
 
-type EnvStack = Stack Env
 
 getEnv :: Wrap Env
 getEnv = do
@@ -168,9 +181,12 @@ getEnv = do
 
 getEnvFor :: [Key] -> Wrap Env
 getEnvFor keys = do
-    env <- getEnv
-    let keysEnv = Map.fromList $ map (\k -> (k, Null)) keys
-    return $ env `Map.intersection` keysEnv
+    vals <- mapM getVal keys
+    let env = Map.fromList $ zip keys vals
+    return env
+    --env <- getEnv
+    --let keysEnv = Map.fromList $ map (\k -> (k, Null)) keys
+    --return $ env `Map.intersection` keysEnv
 
 newtype Wrap a = Wrap {
     runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
@@ -224,21 +240,17 @@ clearEnv :: Wrap ()
 clearEnv = do
     S.put nullEnv
 
-{-
 extendPushEnv :: Env -> Wrap ()
 extendPushEnv env = do
-    st <- S.get
-    if isEmpty st
+    envs <- S.get
+    if isEmpty envs
         then
-            S.put (push env st)
+            S.put (push env envs)
         else
             do
-                let st' = head st
-                let env' = push ((trace ("arg1: " ++ show env) env) `Map.union` (trace ("arg2: " ++ show st') st')) st
-                S.put (trace ("result: " ++ show (head env')) env')
-            -- ^ do I have to check for duplicates??
-            --
--}
+                let currEnv = head envs
+                let newEnvs = push (env `Map.union` currEnv) envs
+                S.put newEnvs
 
 type Stack a = [a]
 type Queue a = [a]
