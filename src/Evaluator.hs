@@ -46,13 +46,12 @@ eval (Prim name 0 []) = funcall name []
 eval (Lambda [] body) = eval body
 
 eval e@(Lambda args body) = do
-    env <- getEnvFor (freeVars e)
+    env <- getEnvFor (unboundVars e)
     let fun = Fun env args body
     return fun
 
-
 eval e@(FunDef name args body) = do
-    env <- getEnvFor (freeVars e)
+    env <- getEnvFor (unboundVars e)
     putVal name (Fun env args body) -- for recursive definition ??
     env' <- getEnv
     let fun = Fun env' args body
@@ -65,11 +64,19 @@ eval (If pred ifCase elseCase) = do
         Bool False -> eval elseCase
         otherwise -> eval ifCase
 
+{-
 eval (Let env body) = do
-    --currEnv <- getEnvFor (freeVars body)
-    --currEnv <- getEnv
+    withEnv newEnv (eval body)
+    where
+        newEnv =
+-}
+
+eval e@(Let env body) = do
+    currEnv <- getEnvFor (unboundVars e)
     --env' <- evalEnv (env `Map.union` (trace (":" ++ show currEnv) currEnv))
-    env' <- evalEnv env
+    --currEnv <- getEnv
+    env' <- evalEnv (env `Map.union` currEnv)
+            -- (trace ("currEnv: " ++ showEnv currEnv) currEnv))
     withEnv env' (eval body)
 
 eval (Fun env [] body) = withEnv env (eval body)
@@ -77,13 +84,20 @@ eval (Fun env [] body) = withEnv env (eval body)
 eval (Closure env body) = withEnv env (eval $ body)
 
 eval (Expr []) = return Null
+
 eval (Expr [e]) = eval e -- unwrap outer parens
+
 eval (Expr [Ident "=", Ident name, body]) = do
     putVal name body
-    env <- getEnvFor (freeVars body)
+    env <- getEnvFor (unboundVars body)
     return $ Fun env [] body
+
 eval (Expr (Ident "free-vars" : e)) = do
-    return $ List (map Ident (freeVars (Expr e)))
+    return $ List (map Ident (unboundVars (Expr e)))
+
+eval (Expr (Ident "f-v" : e)) = do
+    e' <- eval $ Expr e
+    return $ List (map Ident (unboundVars e'))
 
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let firstArg = head e
@@ -137,11 +151,14 @@ apply (Fun env (arg:rst) body) e = do
             return $ Fun env' rst body
 apply e _ = E.throwError $ NotFunErr "not function" (show e)
 
+evalWith env val = withEnv env (eval val)
+
 evalEnv env = do
     let list = Map.toList env
     let keys = Map.keys env
+    --let vals = Map.elems env
     result <- withEnv env (do
-        vals <- mapM (eval . snd) list
+        vals <- mapM (evalWith env . snd) list
         let env' = Map.fromList $ zip keys vals
         return env')
     return result
@@ -150,8 +167,8 @@ evalEnv env = do
     --return env'
 
 toClosure e = do
-    env <- getEnvFor (freeVars e)
+    env <- getEnvFor (unboundVars e)
     return $ Closure env e
 
 test s = case parseSingle s of
-    Right val -> freeVars val
+    Right val -> unboundVars val

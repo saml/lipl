@@ -2,23 +2,23 @@
 
 (def map (f l) (if (isEmpty l)
                    l
-                   (let {xMap = (head l), xsMap = (tail l)}
-                        (cons (f xMap) (map f xsMap)))))
+                   (let {x = (head l), xs = (tail l)}
+                        (cons (f x) (map f xs)))))
 
 (def concat (l1 l2) (if (isEmpty l1)
                         l2
-                        (let {xcc = (head l1), xscc = (tail l1)}
-                             (cons xcc (concat xscc l2)))))
+                        (let {x = (head l1), xs = (tail l1)}
+                             (cons x (concat xs l2)))))
 (def filter (f l)
      (if (isEmpty l)
          l
          (let {
-                xf  = (head l)
-              , xsf = (filter f (tail l))
+                x  = (head l)
+              , xs = (filter f (tail l))
               }
-              (if (f xf)
-                  (cons xf xsf)
-                  xsf))))
+              (if (f x)
+                  (cons x xs)
+                  xs))))
 
 # simple quick sort
 (def quick-sort (l) (if (isEmpty l) # is the list empty?
@@ -59,6 +59,8 @@
 
 (def trace (msg x) (if (println msg) x x))
 
+(def t (x) (if (printVarLn x) x x))
+
 (def fac (n) (if (<= n 1) 1 (* n (fac (- n 1)))))
 
 (def fib (n)
@@ -93,6 +95,18 @@
 ==> (succ (succ 2))
 ==> 4
 -}
+
+(def test (l)
+     ((lambda (l)
+            (let {   x = (head l)
+                  , xs = (filter (lambda (a) (< a x)) l)} xs)) l))
+
+(def test1 (l) (let {
+                x = (head l)
+                , xs = (map (lambda (a) (+ a x)) (tail l))
+                }
+                (cons x xs)))
+
 
 (def hello (s) (println (concat "hello
                          world" (show s))))

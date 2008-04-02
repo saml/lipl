@@ -261,7 +261,7 @@ listToStr [List l] = do
 listToStr [x] = E.throwError $ TypeErr "need list" x
 listToStr x = E.throwError $ ArityErr 1 x
 
-getFreeVars [x] = return $ List (map Ident (freeVars x))
+--getFreeVars [x] = return $ List (map Ident (unboundVars x))
 
 readFrom handle [] = do
     s <- T.liftIO $ hGetLine handle

@@ -1,34 +1,59 @@
-module Utils (freeVars) where
+module Utils (unboundVars, unboundVarsEnv) where
 
 import qualified Data.Map as Map
 import qualified Data.List as List
 import qualified Data.Set as Set
-import Data.List ((\\))
+import Data.Set ((\\), union)
 import LangData
 
-elim = Set.toList . Set.fromList
+import Debug.Trace (trace)
 
-freeVars (Ident a) = [a]
-freeVars (Let env body) =  elim (freeVarsEnv env `List.union`
-    (freeVars body \\ Map.keys env))
-freeVars (Lambda params body) = elim (freeVars body \\ params)
-freeVars (Fun env params body) =elim (freeVarsEnv env `List.union`
-    (freeVars body \\ params))
-freeVars (Closure env body) = elim (freeVarsEnv env `List.union`
-    freeVars body)
-freeVars (FunDef name params body) = elim (freeVars body \\
-    (name : params))
-freeVars (Prim _ _ []) = []
-freeVars (Prim _ _ (x:xs)) = elim (freeVars x `List.union`
-    freeVars (Expr xs))
-freeVars (Expr (x:xs)) = elim (freeVars x `List.union` freeVars (Expr xs))
-freeVars (Expr []) = []
-freeVars x = []
+toSet l = Set.fromList l
 
-freeVarsEnv env = concat $ map freeVars (Map.elems env)
+--elim = Set.toList . Set.fromList
+reserved = toSet ["def", "if", "let", "lambda", "filter", "map"]
 
+unboundVars x = Set.toList (freeVars x \\ reserved)
+unboundVarsEnv = freeVarsEnv
 
+freeVars (Ident a) = Set.singleton a
+freeVars (Let env body) = (freeVarsEnv env `union` freeVars body) \\ keys
+    where
+        keys = toSet $ Map.keys env
+freeVars (Lambda params body) = freeVars body \\ toSet params
+{-let
+    fvBody = elim $ freeVars body
+    result = (fvBody \\ params)
+                   --((trace ("fvBody: " ++ show fvBody) fvBody) \\
+                    --(trace ("params: " ++ show params) params))
+    in
+        result
+        --(trace ("fv: " ++ show fvBody) fvBody) \\
+        --(trace ("fv-: " ++ show params) params)
+    -}
+freeVars (Fun env params body) = ((freeVarsEnv env `union` freeVars body)
+    \\ params') \\ keys
+    where
+        params' = toSet params
+        keys = toSet $ Map.keys env
+--freeVars (Closure env body) = -- freeVarsEnv env `List.union`
+--    freeVars body \\ Map.keys env
+freeVars (FunDef name params body) = freeVars body \\
+    toSet (name : params)
+--freeVars (Prim _ _ []) = []
+--freeVars (Prim _ _ x) = concat $ map freeVars x
+    -- freeVars x `List.union`
+    -- freeVars (Expr xs)
+freeVars (Expr (x:xs)) = freeVars x `union` freeVars (Expr xs)
+freeVars (Expr []) = Set.empty
+freeVars x = Set.empty
 
-test = freeVars (Let
-    (Map.fromList [("x", Expr [PrimFun "head", Ident "l"])])
-    (Expr [Ident "x"]))
+freeVarsEnv env = -- Map.keys env `List.union`
+    Set.unions (map freeVars (Map.elems env)) \\ toSet (Map.keys env)
+
+substitute key val (x:xs) = if x == key
+    then
+        val : substitute key val xs
+    else
+        x : substitute key val xs
+substitute key val [] = []
