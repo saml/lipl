@@ -80,10 +80,9 @@ eval e@(Let env body) = do
             (Map.fromList $ map (\ (k, v) -> (k, Closure newEnv v)) envList)
         envList = Map.toList env
 -}
-
+{-
 eval e@(Let env body) = do
-    let keys = getKeys env
-    let vals = getVals env
+    let (keys, vals) = unzip env
     currEnv <- getEnv --For (unboundVars e)
     --let newEnv = Map.fromList env `Map.union` currEnv
     vals' <- mapM
@@ -98,14 +97,11 @@ eval e@(Let env body) = do
     --let envMap = Map.fromList env
     --env' <- evalEnv (envMap `Map.union` currEnv)
     --withEnv env' (eval body)
-
-{-
-eval e@(Let env body) = do
-    let (keys,vals) = unzip env
-    prev <- S.get
-    vals' <- mapM eval vals
-    S.put prev
 -}
+
+eval e@(Let env body) = do
+    env' <- runLocally (keyValToEnv env)
+    withEnv env' (eval body)
 
 eval (Fun env [] body) = withEnv env (eval body)
 
@@ -141,6 +137,21 @@ eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
         otherwise -> E.throwError $ NotFunErr "" (show f)
 
 eval x = return x
+
+runLocally action = do
+    prev <- S.get
+    result <- action
+    S.put prev
+    return result
+
+keyValToEnv ((k,v):xs) = do
+    v' <- eval v
+    putVal k v'
+    keyValToEnv xs
+keyValToEnv [] = do
+    env <- getEnv
+    return env
+
 
 evalFun env fun arg1 restArgs = do
     withEnv env (do
@@ -181,6 +192,7 @@ apply e _ = E.throwError $ NotFunErr "not function" (show e)
 
 evalWith env val = withEnv env (eval val)
 
+{-
 evalEnv env = do
     let list = Map.toList env
     let keys = Map.keys env
@@ -193,6 +205,7 @@ evalEnv env = do
     --mapM (\ (k,v) -> (k, eval v)) list
     --env' <- withEnv env (traverse eval env)
     --return env'
+-}
 
 {-
 toClosure e = do
