@@ -7,6 +7,7 @@ module LangData ( Val (..)
     , pushEnv, popEnv, clearEnv, showEnv, extendPushEnv
     , nullEnv, emptyEnv
     , EnvStack
+    , KeyValList, Key
     , Stack, pop, push
     , Queue, front ) where
 
@@ -30,7 +31,7 @@ import Debug.Trace (trace)
 
 type Key = String
 type KeyVal = (Key, Val)
-type EnvList = [KeyVal]
+type KeyValList = [KeyVal]
 type Env = Map.Map Key Val
 
 type EnvStack = Stack Env
@@ -52,12 +53,6 @@ nullEnv = [emptyEnv]
 
 showEnv env = show $ ppEnv env
 
-ppKeyVal (k, v) = ppVal (Ident k)
-    <+> PP.text "="
-    <+> ppVal v
-
-ppKeyValList = map ((PP.empty $$) . ppKeyVal)
-
 type Name = String
 type Params = [Name]
 type RemainingArgs = Int
@@ -72,18 +67,27 @@ data Val = Comment String
     | Str { unpackStr :: String }
     | FunDef Name Params Val
     | Lambda Params Val
-    | Fun Env Params Val
+    | Fun Env Params Val  -- parser don't generate this
     | PrimFun Name
-    | Prim Name RemainingArgs [Val]
+    | Prim Name RemainingArgs [Val] -- parser don't generate this
     | List [Val]
-    | Dict Env
+    | Dict KeyValList
     | Expr [Val]
-    | Let Env Val
+    | Let KeyValList Val
     | Closure Env Val
     | If Val Val Val -- pred, if case, else case
     deriving (Ord, Eq)
 
 instance Show Val where show = PP.render . ppVal
+
+ppKeyVal (k, v) = ppVal (Ident k)
+    <+> PP.text "="
+    <+> ppVal v
+
+ppKeyValList :: KeyValList -> PP.Doc
+ppKeyValList l = ppDict $ map ((PP.empty $$) . ppKeyVal) l
+
+ppDict l = PP.braces $ PP.fsep $ PP.punctuate PP.comma l
 
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
@@ -108,7 +112,7 @@ ppVal (Prim name remaining params) = PP.parens
 --ppVal (Prim name _ _) = PP.text name
 ppVal (List xs) = PP.brackets
     (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
-ppVal (Dict xs) = ppEnv xs
+ppVal (Dict xs) = ppKeyValList xs
 --ppVal (Dict xs) = PP.braces
 --    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList (Map.toList xs)))
 ppVal (Expr xs) = PP.parens (PP.fsep $ ppValList xs)
@@ -119,20 +123,16 @@ ppVal (FunDef name args body) = PP.parens
         , ppArgs args
         , ppVal body]
 ppVal (Let env val) = PP.parens
-    $ PP.fsep [PP.text "let", ppEnv env, ppVal val]
-ppVal (Closure env val) = PP.parens
-    $ PP.fsep [PP.text "closure", ppEnv env, ppVal val]
+    $ PP.fsep [PP.text "let", ppKeyValList env, ppVal val]
+--ppVal (Closure env val) = PP.parens
+--    $ PP.fsep [PP.text "closure", ppEnv env, ppVal val]
 
-ppEnv env = PP.braces
-    $ PP.fsep $ PP.punctuate PP.comma (ppKeyValList $ Map.toList env)
+ppEnv :: Env -> PP.Doc
+ppEnv env = ppKeyValList  $ Map.toList env
+
 ppValList = map ppVal
 ppStrList = map PP.text
 ppArgs args = PP.parens $ PP.fsep $ ppStrList args
-
-example = List [Ident "foo", Int 42, Char 'a'
-    , List [Bool True, Str "Hello World", Float (-242.53)]
-    , List [Ident "d"
-        , Dict $ Map.fromList [("bar", Int 24), ("f", Char 'c')]]]
 
 data Err = ArityErr Int [Val]
     | TypeErr String Val

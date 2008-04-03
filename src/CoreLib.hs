@@ -241,7 +241,7 @@ showEnvironment [Str key] = do
     env <- getEnv
     if key == ""
         then
-            return $ Dict env
+            return $ Dict (Map.toList env)
         else
             do
                 --val <- Map.lookup key env

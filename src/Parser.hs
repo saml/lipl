@@ -193,7 +193,7 @@ parseDict = do
     lbrace
     l <- P.sepBy parseKeyVal (P.try comma)
     rbrace
-    return $ Dict (Map.fromList l)
+    return $ Dict l
 
 parseKeyVal = do
     Ident key <- parseIdent

@@ -19,14 +19,15 @@ import Utils
 
 import Debug.Trace (trace)
 
-eval e@(Ident var) = do
-    val <- getVal var
-    eval val
 eval e@(Int _) = return e
 eval e@(Float _) = return e
 eval e@(Bool _) = return e
 eval e@(Char _) = return e
 eval e@(Str _) = return e
+
+eval e@(Ident var) = do
+    val <- getVal var
+    eval val
 
 eval (List xs) = do          -- eager evaluation
     elems <- mapM eval xs
@@ -65,18 +66,25 @@ eval (If pred ifCase elseCase) = do
         otherwise -> eval ifCase
 
 {-
-eval (Let env body) = do
-    withEnv newEnv (eval body)
-    where
-        newEnv =
--}
-
 eval e@(Let env body) = do
     currEnv <- getEnvFor (unboundVars e)
     --env' <- evalEnv (env `Map.union` (trace (":" ++ show currEnv) currEnv))
     --currEnv <- getEnv
-    env' <- evalEnv (env `Map.union` currEnv)
+    --let env' = (env `Map.union` currEnv)
+    --env' <- evalEnv (env `Map.union` currEnv)
             -- (trace ("currEnv: " ++ showEnv currEnv) currEnv))
+    let env' = newEnv `Map.union` currEnv
+    withEnv (trace ("env': " ++ showEnv env') env') (eval body)
+    where
+        newEnv = env `Map.union`
+            (Map.fromList $ map (\ (k, v) -> (k, Closure newEnv v)) envList)
+        envList = Map.toList env
+-}
+
+eval e@(Let env body) = do
+    currEnv <- getEnvFor (unboundVars e)
+    let envMap = Map.fromList env
+    env' <- evalEnv (envMap `Map.union` currEnv)
     withEnv env' (eval body)
 
 eval (Fun env [] body) = withEnv env (eval body)
