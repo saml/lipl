@@ -1,4 +1,6 @@
 #!/bin/bash
 
-rst2html.py lipl.txt > lipl.html
+fn="$1"
+name="${fn%.}"
+rst2html.py "$fn" > "$name.html"
 
