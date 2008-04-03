@@ -82,14 +82,26 @@ eval e@(Let env body) = do
 -}
 
 eval e@(Let env body) = do
-    currEnv <- getEnvFor (unboundVars e)
-    let envMap = Map.fromList env
-    env' <- evalEnv (envMap `Map.union` currEnv)
+    let keys = getKeys env
+    let vals = getVals env
+    currEnv <- getEnv --For (unboundVars e)
+    --let newEnv = Map.fromList env `Map.union` currEnv
+    vals' <- mapM
+        (\ v ->
+            withEnv (Map.fromList newEnv `Map.union` currEnv) (eval v))
+        vals
+    let env' = Map.fromList $ zip keys vals'
     withEnv env' (eval body)
+    where
+        newEnv = map (\(k,v) -> (k, Closure newEnv v)) env
+    --currEnv <- getEnvFor (unboundVars e)
+    --let envMap = Map.fromList env
+    --env' <- evalEnv (envMap `Map.union` currEnv)
+    --withEnv env' (eval body)
 
 eval (Fun env [] body) = withEnv env (eval body)
 
-eval (Closure env body) = withEnv env (eval $ body)
+eval (Closure env body) = withEnv (Map.fromList env) (eval $ body)
 
 eval (Expr []) = return Null
 
@@ -174,9 +186,11 @@ evalEnv env = do
     --env' <- withEnv env (traverse eval env)
     --return env'
 
+{-
 toClosure e = do
     env <- getEnvFor (unboundVars e)
     return $ Closure env e
+-}
 
 test s = case parseSingle s of
     Right val -> unboundVars val

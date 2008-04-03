@@ -74,7 +74,7 @@ data Val = Comment String
     | Dict KeyValList
     | Expr [Val]
     | Let KeyValList Val
-    | Closure Env Val
+    | Closure KeyValList Val
     | If Val Val Val -- pred, if case, else case
     deriving (Ord, Eq)
 

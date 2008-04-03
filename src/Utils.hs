@@ -1,4 +1,4 @@
-module Utils (unboundVars, unboundVarsEnv) where
+module Utils where
 
 import qualified Data.Map as Map
 import qualified Data.List as List
