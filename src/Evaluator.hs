@@ -99,6 +99,14 @@ eval e@(Let env body) = do
     --env' <- evalEnv (envMap `Map.union` currEnv)
     --withEnv env' (eval body)
 
+{-
+eval e@(Let env body) = do
+    let (keys,vals) = unzip env
+    prev <- S.get
+    vals' <- mapM eval vals
+    S.put prev
+-}
+
 eval (Fun env [] body) = withEnv env (eval body)
 
 eval (Closure env body) = withEnv (Map.fromList env) (eval $ body)
