@@ -4,22 +4,43 @@ import qualified Data.List as List
 import Data.List ((\\))
 import qualified Control.Monad as M
 
+import LangData
+
 type Id = String
 
 data Kind = Star | KFun Kind Kind
     deriving (Show, Eq)
 
-
 data Type = TVar TyVar
     | TConst TyConst
     | TApp Type Type
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Type where
+    show = ppType
+
+ppType (TVar v) = show v
+ppType (TConst c) = show c
+ppType (TApp f a) = case kind f of
+    KFun _ _ -> ppType f ++ ppType a
+
 
 data TyVar = TyVar Id Kind
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show TyVar where
+    show = ppTyVar
+
+ppTyVar (TyVar v _) = v
 
 data TyConst = TyConst Id Kind
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show TyConst where
+    show = ppTyConst
+
+ppTyConst (TyConst "(->)" _) = "->"
+ppTyConst (TyConst c _) = c
 
 tUnit = TConst $ TyConst "()" Star
 tChar = TConst $ TyConst "Char" Star
@@ -108,3 +129,9 @@ match (TVar u) t
 match (TConst c1) (TConst c2)
     | c1 == c2 = return nullSubst
 match _ _ = fail "types do not match"
+
+valToType (Int _) = tInt
+valToType (Char _) = tChar
+valToType (Float _) = tFloat
+valToType (List [x]) = TApp tList (valToType x)
+
