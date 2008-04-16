@@ -3,8 +3,10 @@ module TCheck where
 import qualified Data.List as List
 import Data.List ((\\))
 import qualified Control.Monad as M
+import qualified Control.Monad.Identity as I
 
 import LangData
+import Parser
 
 type Id = String
 
@@ -21,9 +23,9 @@ instance Show Type where
 
 ppType (TVar v) = show v
 ppType (TConst c) = show c
-ppType (TApp f a) = case kind f of
-    KFun _ _ -> ppType f ++ ppType a
-
+ppType (TApp (TConst (TyConst "[]" _)) a) = "[" ++ show a ++ "]"
+ppType (TApp (TConst (TyConst "(->)" _)) a) = show a ++ " -> "
+ppType (TApp a b) = show a ++ " " ++ show b
 
 data TyVar = TyVar Id Kind
     deriving (Eq)
@@ -39,8 +41,9 @@ data TyConst = TyConst Id Kind
 instance Show TyConst where
     show = ppTyConst
 
-ppTyConst (TyConst "(->)" _) = "->"
+--ppTyConst (TyConst "(->)" _) = "->"
 ppTyConst (TyConst c _) = c
+
 
 tUnit = TConst $ TyConst "()" Star
 tChar = TConst $ TyConst "Char" Star
@@ -56,6 +59,8 @@ a `fn` b = TApp (TApp tArrow a) b
 list = TApp tList
 
 pair a b = TApp (TApp tTuple2 a) b
+
+tyvar s = TVar (TyVar s Star)
 
 class HasKind t where
     kind :: t -> Kind
@@ -91,6 +96,7 @@ instance Types Type where
 
     tv (TVar u) = [u]
     tv (TApp f a) = tv f `List.union` tv a
+    tv _ = []
 
 instance (Types a) => Types [a] where
     apply s = map (apply s)
@@ -130,8 +136,62 @@ match (TConst c1) (TConst c2)
     | c1 == c2 = return nullSubst
 match _ _ = fail "types do not match"
 
-valToType (Int _) = tInt
-valToType (Char _) = tChar
-valToType (Float _) = tFloat
-valToType (List [x]) = TApp tList (valToType x)
+{-
+instance Eq (m Type) where
+    (_ t1) == (_ t2) = t1 == t2
+-}
+
+newtype TI a = TI (Subst -> Int -> (Subst, Int, a))
+
+--instance (Show a) => Show (Subst -> Int -> (Subst, Int, a)) where
+--    show f =
+
+instance Monad TI where
+    return x = TI (\s n -> (s, n, x))
+    TI f >>= g = TI (\s n -> case f s n of
+        (s', n', x) -> let TI gx = g x in gx s' n')
+
+runTI (TI f) = x
+    where
+        (s, n, x) = f nullSubst 0
+
+getSubst = TI (\s n -> (s, n, s))
+
+unify t1 t2 = do
+    s <- getSubst
+    u <- mgu (apply s t1) (apply s t2)
+    extendSubst u
+
+extendSubst s' = TI (\s n -> (s' @@ s, n, ()))
+
+newTVar k = TI (\s n -> let
+    v = TyVar ("v" ++ show n) k
+    in
+        (s, n + 1, TVar v))
+
+testNewTVar = runTI $ sequence [newTVar Star, newTVar Star, newTVar Star]
+
+valToType :: Val -> I.Identity Type
+valToType (Int _) = return tInt
+valToType (Float _) = return tFloat
+valToType (Char _) = return tChar
+valToType (Str _) = return $ TApp tList tChar
+valToType (List [x]) = do
+    t <- valToType x
+    return $ TApp tList t
+valToType (List l@(x:_)) = if allSameType l
+    then
+        valToType x >>= (\t -> return $ TApp tList t)
+    else
+        fail "not homogeneous list"
+
+allSameType l = and $
+    zipWith (\a b -> I.runIdentity (valToType a)
+        == I.runIdentity (valToType b)) l (tail l)
+
+
+t s = case parseSingle s of
+    Right v -> I.runIdentity $ valToType v
+    otherwise -> error "ill-typed"
+
 
