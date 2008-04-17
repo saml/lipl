@@ -177,14 +177,14 @@ w s (Expr [f, x]) = do
     (s2, tX) <- w (s1 @@ s) x
     v <- newTVar
     result <- mgu (apply s2 tF) (tX `fn` v)
-    return (s2 @@ s1 @@ s {- @@ (getId v +-> result) -} , apply result v)
+    return (result @@ s2 @@ s1 @@ s {- @@ (getId v +-> result) -} , apply result v)
 
 w s (Expr (f:x:xs)) = do
     (s1, tF) <- w s f -- (trace (show (runTI $ w s f)) (w s f))
     (s2, tX) <- w (s1 @@ s) x -- (trace (show (runTI $ w (s1 @@ s) x)) (w (s1 @@ s) x))
     v <- newTVar
     result <- mgu (apply s2 tF) (tX `fn` v)
-    w (s2 @@ s1 @@ s) (Expr xs)
+    w (result @@ s2 @@ s1 @@ s) (Expr xs)
     -- return (s2 @@ s1 @@ s, apply result v)
 
 
