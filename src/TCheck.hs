@@ -4,6 +4,8 @@ import qualified Data.List as List
 import Data.List ((\\))
 import qualified Control.Monad as M
 import qualified Control.Monad.Identity as I
+import qualified Control.Monad.Error as E
+import qualified Control.Monad.State as S
 
 import LangData
 import Parser
@@ -49,9 +51,13 @@ tUnit = TConst $ TyConst "()" Star
 tChar = TConst $ TyConst "Char" Star
 tInt = TConst $ TyConst "Int" Star
 tFloat = TConst $ TyConst "Float" Star
-tList = TConst $ TyConst "[]" (KFun Star Star)
-tArrow = TConst $ TyConst "(->)" (KFun Star (KFun Star Star))
-tTuple2 = TConst $ TyConst "(,)" (KFun Star (KFun Star Star))
+tBool = TConst $ TyConst "Bool" Star
+tList = TConst $ TyConst "[]" Star
+tArrow = TConst $ TyConst "(->)" Star
+tTuple2 = TConst $ TyConst "(,)" Star
+--tList = TConst $ TyConst "[]" (KFun Star Star)
+--tArrow = TConst $ TyConst "(->)" (KFun Star (KFun Star Star))
+--tTuple2 = TConst $ TyConst "(,)" (KFun Star (KFun Star Star))
 
 infix 4 `fn`
 a `fn` b = TApp (TApp tArrow a) b
@@ -60,7 +66,9 @@ list = TApp tList
 
 pair a b = TApp (TApp tTuple2 a) b
 
-tyvar s = TVar (TyVar s Star)
+mkTVar s = TVar $ mkTyVar s
+
+mkTyVar s = TyVar s Star
 
 class HasKind t where
     kind :: t -> Kind
@@ -120,6 +128,8 @@ mgu (TConst c1) (TConst c2)
     | c1 == c2 = return nullSubst
 mgu _ _ = fail "types do not unify"
 
+testMgu = I.runIdentity $ mgu (mkTVar "a" `fn` tInt) (tChar `fn` mkTVar "b")
+
 varBind u t
     | t == TVar u = return nullSubst
     | u `elem` tv t = fail "occurs check fails"
@@ -151,6 +161,9 @@ instance Monad TI where
     TI f >>= g = TI (\s n -> case f s n of
         (s', n', x) -> let TI gx = g x in gx s' n')
 
+
+
+
 runTI (TI f) = x
     where
         (s, n, x) = f nullSubst 0
@@ -171,10 +184,24 @@ newTVar k = TI (\s n -> let
 
 testNewTVar = runTI $ sequence [newTVar Star, newTVar Star, newTVar Star]
 
-valToType :: Val -> I.Identity Type
+{-
+newtype TC a = TC {
+    runTC :: E.ErrorT String (S.StateT (Integer, Subst)
+-}
+
+{-
+newtype Wrap a = Wrap {
+    runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
+} deriving (
+    Functor, Monad, F.MonadFix
+    , E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
+-}
+
+--valToType :: Val -> I.Identity Type
 valToType (Int _) = return tInt
 valToType (Float _) = return tFloat
 valToType (Char _) = return tChar
+valToType (Bool _) = return tBool
 valToType (Str _) = return $ TApp tList tChar
 valToType (List [x]) = do
     t <- valToType x
@@ -185,13 +212,89 @@ valToType (List l@(x:_)) = if allSameType l
     else
         fail "not homogeneous list"
 
+
+--find :: Id -> Assumptions -> Either String Type
+find x assumptions = case lookup x assumptions of
+    Just t -> return t
+    otherwise -> fail $ "unbound type variable: " ++ x
+
+{-
+--genTVar :: (Monad m, S.MonadState Integer m) =>  s Type
+genTVar = do
+    i <- S.get
+    S.put (i+ (1 :: Integer))
+    return $ mkTVar ("v" ++ show i)
+-}
+
+type Assumptions = Subst
+
+defaultSubst :: Subst
+defaultSubst = [
+    (mkTyVar "+", tInt `fn` tInt)
+    ]
+
+w :: Subst -> Val -> TI (Subst, Type)
+w s (Int _) = return (s, tInt)
+w s (Bool _) = return (s, tBool)
+--w s (Ident "+") = return (s, tInt `fn` tInt)
+w s (PrimFun x) = do
+    let Just t = lookup (mkTyVar x) s
+    return (s, t)
+
+w s (Ident x) = case lookup (mkTyVar x) s of
+    Just t -> return (nullSubst, t)
+    otherwise -> do
+        t <- newTVar Star
+        return (nullSubst, t)
+
+w s (If pred trueCase falseCase) = do
+    (s1, t1) <- w s pred
+    s2 <- mgu t1 tBool
+    let s2_1 = s2 @@ s1
+    (s3, t2) <- w (s2_1 @@ s) trueCase
+    let s3_1 = s3 @@ s2_1
+    (s4, t3) <- w (s3_1 @@ s) falseCase
+    s5 <- mgu (apply s4 t2) t3
+    return (s5 @@ s4 @@ s3_1 , apply s5 t3)
+
+w s (Lambda [p] e) = do
+    v <- newTVar Star
+    (r, t) <- w (s ++ (mkTyVar p +-> v)) e
+    return (r, apply r v `fn` t)
+
+w s (Expr (f:g:xs)) = do
+    (s1, t1) <- w s f
+    (s2, t2) <- w (s1 @@ s) g
+    v <- newTVar Star
+    u <- mgu (apply s2 t1) (t2 `fn` v)
+    return (u @@ s1 @@ s, apply u v)
+
+w s (Expr [e]) = w s e
+
+{-
+w :: Assumptions -> Val -> TI Type
+w a (Ident x) = do
+    t <- case lookup x a of
+        Just t -> return t
+        otherwise -> newTVar Star
+    --t <- (find x assumpt `E.catchError` (\e -> newTVar Star))
+    return t
+
+w a (If p e1 e2) = if w a p == tBool
+    then
+
+    else
+        fail "type of predicate is not Bool"
+-}
+
 allSameType l = and $
     zipWith (\a b -> I.runIdentity (valToType a)
         == I.runIdentity (valToType b)) l (tail l)
-
 
 t s = case parseSingle s of
     Right v -> I.runIdentity $ valToType v
     otherwise -> error "ill-typed"
 
-
+ty s = case parseSingle s of
+    Right v -> runTI $ w defaultSubst v
+    otherwise -> error "parse error"
