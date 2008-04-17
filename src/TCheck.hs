@@ -6,6 +6,7 @@ import qualified Control.Monad as M
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.State as S
+import Debug.Trace (trace)
 
 import LangData
 import Parser
@@ -52,6 +53,28 @@ newTVar = TI (\s n -> (s, n+1, TVar ("v" ++ show n)))
 testNewTVar = runTI $ sequence [newTVar, newTVar, newTVar]
 
 {-
+newtype Enumerator a = Enumerator {
+    runEnumerator :: (S.StateT Integer I.Identity) a
+    }
+-}
+
+{-
+newtype Enumerator a = Enumerator a
+
+instance Monad Enumerator where
+    return x = Enumerator x
+    Enumerator a >>= g = Enumerator
+    TI f >>= g = TI (\s n -> case f s n of
+        (s', n', x) -> let TI gx = g x in gx s' n')
+-}
+
+{-
+newId = do
+    i <- S.get
+    S.put (i+1)
+    return ("v" ++ show i)
+-}
+{-
 newtype TC a = TC {
     runTC :: E.ErrorT String (S.StateT (Integer, Subst)
 -}
@@ -97,22 +120,31 @@ type Assumptions = Subst
 
 defaultSubst :: Subst
 defaultSubst = [
-    ("+", tInt `fn` tInt)
+    ("+", TVar "a" `fn` (TVar "a" `fn` TVar "a"))
+    , ("==", TVar "a" `fn` (TVar "a" `fn` tBool))
+    --, ("-", tInt `fn` (tInt `fn` tInt))
+    --, ("*", tInt `fn` (tInt `fn` tInt))
+    --, ("div", tInt `fn` (tInt `fn` tInt))
+    --, ("==", tInt `fn` (tInt `fn` tBool))
     ]
+
 
 w :: Subst -> Val -> TI (Subst, Type)
 w s (Int _) = return (s, tInt)
 w s (Bool _) = return (s, tBool)
+w s (Float _) = return (s, tFloat)
+w s (Char _) = return (s, tChar)
+w s (Str _) = return (s, list tChar)
 --w s (Ident "+") = return (s, tInt `fn` tInt)
 w s (PrimFun x) = do
     let Just t = lookup x s
     return (s, t)
 
 w s (Ident x) = case lookup x s of
-    Just t -> return (nullSubst, t)
+    Just t -> return (s, t)
     otherwise -> do
         t <- newTVar
-        return (nullSubst, t)
+        return (s, t)
 
 w s (If pred trueCase falseCase) = do
     (s1, t1) <- w s pred
@@ -129,14 +161,32 @@ w s (Lambda [p] e) = do
     (r, t) <- w (s ++ (p +-> v)) e
     return (r, apply r v `fn` t)
 
+{-
 w s (Expr (f:g:xs)) = do
     (s1, t1) <- w s f
     (s2, t2) <- w (s1 @@ s) g
     v <- newTVar
     u <- mgu (apply s2 t1) (t2 `fn` v)
     return (u @@ s1 @@ s, apply u v)
+-}
 
 w s (Expr [e]) = w s e
+
+w s (Expr [f, x]) = do
+    (s1, tF) <- w s f
+    (s2, tX) <- w (s1 @@ s) x
+    v <- newTVar
+    result <- mgu (apply s2 tF) (tX `fn` v)
+    return (s2 @@ s1 @@ s {- @@ (getId v +-> result) -} , apply result v)
+
+w s (Expr (f:x:xs)) = do
+    (s1, tF) <- w s f -- (trace (show (runTI $ w s f)) (w s f))
+    (s2, tX) <- w (s1 @@ s) x -- (trace (show (runTI $ w (s1 @@ s) x)) (w (s1 @@ s) x))
+    v <- newTVar
+    result <- mgu (apply s2 tF) (tX `fn` v)
+    w (s2 @@ s1 @@ s) (Expr xs)
+    -- return (s2 @@ s1 @@ s, apply result v)
+
 
 {-
 w :: Assumptions -> Val -> TI Type
@@ -163,5 +213,5 @@ t s = case parseSingle s of
     otherwise -> error "ill-typed"
 
 ty s = case parseSingle s of
-    Right v -> runTI $ w defaultSubst v
+    Right v -> putStrLn $ showSubstTypePair $ runTI $ w defaultSubst v
     otherwise -> error "parse error"

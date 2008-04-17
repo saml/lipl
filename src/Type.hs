@@ -1,6 +1,9 @@
 module Type where
 
 import qualified Data.List as List
+import qualified Text.PrettyPrint.HughesPJ as PP
+import Text.PrettyPrint.HughesPJ (
+    (<>), (<+>), ($$), ($+$) )
 
 type Id = String
 
@@ -14,19 +17,21 @@ data Type = TVar TyVar
     deriving (Eq)
 -}
 
-data Type = TVar Id
-    | TConst Id
+data Type = TVar { getId :: Id }
+    | TConst { getId :: Id }
     | TApp Type Type
     deriving (Eq)
 
 instance Show Type where
-    show = ppType
+    show = PP.render . ppType
 
-ppType (TVar v) = v
-ppType (TConst c) = c
-ppType (TApp (TConst "[]") a) = "[" ++ ppType a ++ "]"
-ppType (TApp (TConst "->") a) = ppType a ++ " ->"
-ppType (TApp a b) = ppType a ++ " " ++ ppType b
+ppType (TVar v) = PP.text v
+ppType (TConst c) = PP.text c
+ppType (TApp (TConst "[]") a) = PP.brackets (ppType a)
+--ppType (TApp (TConst "->") a) = PP.fsep [ppType a, PP.text "->"]
+ppType (TApp (TApp (TConst "->") a) b) =
+    PP.parens $ PP.fsep [ppType a, PP.text "->", ppType b]
+ppType (TApp a b) = ppType a <+> ppType b
 
 {-
 ppType (TVar v) = show v
@@ -110,6 +115,16 @@ instance HasKind Type where
 
 type Subst = [(Id, Type)]
 
+ppIdType (i,t) = PP.fsep [PP.text i, PP.text "=", ppType t]
+
+ppIdTypeList l = map ((PP.empty $$) . ppIdType) l
+
+ppSubst l = PP.braces $ PP.fsep $ PP.punctuate PP.comma (ppIdTypeList l)
+
+showSubst = PP.render . ppSubst
+
+showSubstTypePair (s,t) = PP.render (ppSubst s $$ ppType t)
+
 nullSubst = []
 
 (+->) :: Id -> Type -> Subst
@@ -135,7 +150,7 @@ instance (Types a) => Types [a] where
     tv = List.nub . concat . map tv
 
 infixr 4 @@
-s1 @@ s2 = [(u, apply s1 t) | (u, t) <- s2] ++ s1
+s1 @@ s2 = List.nub ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
 
 merge s1 s2 = if agree then return (s1 ++ s2) else fail "merge fails"
     where
@@ -153,6 +168,7 @@ mgu (TConst c1) (TConst c2)
 mgu _ _ = fail "types do not unify"
 
 --testMgu = I.runIdentity $ mgu (mkTVar "a" `fn` tInt) (tChar `fn` mkTVar "b")
+-- mgu (list tChar `fn` TVar "b") (TVar "a" `fn` (TVar "a" `fn` tChar))
 
 varBind u t
     | t == TVar u = return nullSubst

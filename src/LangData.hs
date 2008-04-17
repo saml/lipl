@@ -76,9 +76,9 @@ data Val = Comment String
     | Let KeyValList Val
     | Closure KeyValList Val
     | If Val Val Val -- pred, if case, else case
-    deriving (Show, Ord, Eq)
+    deriving (Ord, Eq)
 
---instance Show Val where show = PP.render . ppVal
+instance Show Val where show = PP.render . ppVal
 
 ppKeyVal (k, v) = ppVal (Ident k)
     <+> PP.text "="

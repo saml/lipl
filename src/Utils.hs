@@ -4,9 +4,12 @@ import qualified Data.Map as Map
 import qualified Data.List as List
 import qualified Data.Set as Set
 import Data.Set ((\\), union)
-import LangData
-
+import qualified Text.PrettyPrint.HughesPJ as PP
+import Text.PrettyPrint.HughesPJ (
+    (<>), (<+>), ($$), ($+$) )
 import Debug.Trace (trace)
+
+import LangData
 
 getKeys = map fst
 getVals = map snd
@@ -64,3 +67,15 @@ substitute key val (x:xs) = if x == key
     else
         x : substitute key val xs
 substitute key val [] = []
+
+{-
+ppKeyVal ppk ppv (k, v) = ppk k
+    <+> PP.text "="
+    <+> ppv v
+
+ppKeyValList :: [(k,v)] -> PP.Doc
+ppKeyValList l = ppDict $ map ((PP.empty $$) . ppKeyVal) l
+
+ppDict l = PP.braces $ PP.fsep $ PP.punctuate PP.comma l
+-}
+
