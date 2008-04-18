@@ -120,9 +120,10 @@ type Assumptions = Subst
 
 defaultSubst :: Subst
 defaultSubst = [
+    --("+", TVar "a" `fn` (TVar "a" `fn` TVar "a"))
     ("+", TVar "a" `fn` (TVar "a" `fn` TVar "a"))
     , ("==", TVar "a" `fn` (TVar "a" `fn` tBool))
-    --, ("-", tInt `fn` (tInt `fn` tInt))
+    , ("-", tInt `fn` (tInt `fn` tInt))
     --, ("*", tInt `fn` (tInt `fn` tInt))
     --, ("div", tInt `fn` (tInt `fn` tInt))
     --, ("==", tInt `fn` (tInt `fn` tBool))
