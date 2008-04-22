@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module TCheck where
 
 import qualified Data.List as List
@@ -9,8 +11,10 @@ import qualified Control.Monad.State as S
 import Debug.Trace (trace)
 
 import LangData
-import Parser
+import Parser (parseSingle)
 import Type
+import TParse
+import Trace
 
 {-
 instance Eq (m Type) where
@@ -121,9 +125,15 @@ type Assumptions = Subst
 defaultSubst :: Subst
 defaultSubst = [
     --("+", TVar "a" `fn` (TVar "a" `fn` TVar "a"))
-    ("+", TVar "a" `fn` (TVar "a" `fn` TVar "a"))
+
+    ("+", tParse "Int -> Int -> Int")
     , ("==", TVar "a" `fn` (TVar "a" `fn` tBool))
     , ("-", tInt `fn` (tInt `fn` tInt))
+    , ("Int", tInt)
+    , ("Float", tFloat)
+    , ("Bool", tBool)
+    , ("Char", tChar)
+    , ("Str", list tChar)
     --, ("*", tInt `fn` (tInt `fn` tInt))
     --, ("div", tInt `fn` (tInt `fn` tInt))
     --, ("==", tInt `fn` (tInt `fn` tBool))
@@ -141,11 +151,19 @@ w s (PrimFun x) = do
     let Just t = lookup x s
     return (s, t)
 
+{-
+w s (Ident "Int") = return (s, tInt)
+w s (Ident "Bool") = return (s, tBool)
+w s (Ident "Float") = return (s, tFloat)
+w s (Ident "Char") = return (s, tChar)
+w s (Ident "Str") = return (s, list tChar)
+-}
+
 w s (Ident x) = case lookup x s of
     Just t -> return (s, t)
-    otherwise -> do
-        t <- newTVar
-        return (s, t)
+    otherwise -> error (x ++ " not found in assumptions")
+--        t <- newTVar
+--        return (s, t)
 
 w s (If pred trueCase falseCase) = do
     (s1, t1) <- w s pred
@@ -157,10 +175,14 @@ w s (If pred trueCase falseCase) = do
     s5 <- mgu (apply s4 t2) t3
     return (s5 @@ s4 @@ s3_1 , apply s5 t3)
 
+w s (Lambda [] e) = w s e
+
 w s (Lambda [p] e) = do
     v <- newTVar
-    (r, t) <- w (s ++ (p +-> v)) e
-    return (r, apply r v `fn` t)
+    let subst = s @@ (p +-> v)
+    (r, t1) <- w subst e
+    let domain = apply r v
+    return (r, domain `fn` t1)
 
 {-
 w s (Expr (f:g:xs)) = do
@@ -178,15 +200,17 @@ w s (Expr [f, x]) = do
     (s2, tX) <- w (s1 @@ s) x
     v <- newTVar
     result <- mgu (apply s2 tF) (tX `fn` v)
-    return (result @@ s2 @@ s1 @@ s {- @@ (getId v +-> result) -} , apply result v)
+    return (result @@ s2 @@ s1, apply result v)
 
 w s (Expr (f:x:xs)) = do
-    (s1, tF) <- w s f -- (trace (show (runTI $ w s f)) (w s f))
-    (s2, tX) <- w (s1 @@ s) x -- (trace (show (runTI $ w (s1 @@ s) x)) (w (s1 @@ s) x))
+    (s1, tF) <- w s f
+    (s2, tX) <- w (s1 @@ s) x
     v <- newTVar
-    result <- mgu (apply s2 tF) (tX `fn` v)
-    w (result @@ s2 @@ s1 @@ s) (Expr xs)
-    -- return (s2 @@ s1 @@ s, apply result v)
+    let tF_orig = apply s2 tF
+    let tF_target = tX `fn` v
+    tF_result <- mgu tF_orig tF_target
+    (s3, tXs) <- w (tF_result @@ s2 @@ s1 @@ s) (Expr $(t 'xs))
+    reallyFinal <- mgu (apply s3 tF
 
 
 {-
@@ -209,9 +233,11 @@ allSameType l = and $
     zipWith (\a b -> I.runIdentity (valToType a)
         == I.runIdentity (valToType b)) l (tail l)
 
+{-
 t s = case parseSingle s of
     Right v -> I.runIdentity $ valToType v
     otherwise -> error "ill-typed"
+-}
 
 ty s = case parseSingle s of
     Right v -> putStrLn $ showSubstTypePair $ runTI $ w defaultSubst v

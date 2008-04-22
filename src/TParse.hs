@@ -16,7 +16,9 @@ parens = P.parens lexer
 reservedOp = P.reservedOp lexer
 lexeme = P.lexeme lexer
 
-tParse texpr = P.parse parseExpr "type expression" texpr
+tParse texpr = case P.parse parseExpr "type expression" texpr of
+    Right t -> t
+    otherwise -> error "type expression parse error"
 
 term = parens expr <|> lexeme parseType <?> "term"
 
@@ -92,7 +94,7 @@ parseChar = do
 
 parseList = do
     lbracket
-    t <- parseType
+    t <- term
     rbracket
     return (list t) <?> "List"
 

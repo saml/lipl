@@ -115,7 +115,7 @@ instance HasKind Type where
 
 type Subst = [(Id, Type)]
 
-ppIdType (i,t) = PP.fsep [PP.text i, PP.text "=", ppType t]
+ppIdType (i,t) = PP.fsep [PP.text i, PP.text "::", ppType t]
 
 ppIdTypeList l = map ((PP.empty $$) . ppIdType) l
 
