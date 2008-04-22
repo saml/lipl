@@ -12,15 +12,8 @@ import Data.Char ( chr )
 
 import LangData
 import CoreLib (builtinNames)
+import ParseUtils
 
-lexer  = P.makeTokenParser (P.haskellStyle {
-    P.commentLine = "#"
-    , P.identLetter = P.alphaNum <|> P.oneOf "_'-"
---    , P.reservedNames = ["def", "if", "let", "lambda"]
-    })
-
-ws = P.whiteSpace lexer
-mustSpaces = P.skipMany1 P.space >> ws
 
 {-
 lexeme = P.lexeme lexer
@@ -53,14 +46,6 @@ parseBool = do
         "False" -> False
         _ ->  True
 
-identChar = P.letter <|> P.digit <|> P.oneOf "_-"
-opChar = P.oneOf ":!$%&*+./<=>?@\\^|-~"
-
-parseHeadBody headChar bodyChar = do
-    h <- headChar
-    b <- P.many bodyChar
-    return (h : b)
-
 parseIdent = do
     ident <- parseOp <|> parseName
     return $ Ident ident
@@ -76,7 +61,6 @@ parsePrimFun = do
         else
             fail ""
 
-nat = P.many1 P.digit
 
 parseInt = do
     sign <- P.try (P.option "" (P.string "-"))
@@ -126,10 +110,6 @@ parseStr = do
     P.char '"'
     return $ Str (concat str)
 
-lbracket = P.char '[' >> P.spaces
-rbracket = P.spaces >> P.char ']'
-
-comma = (P.spaces >> P.char ',' >> P.spaces)
 
 parseList = do
     lbracket
@@ -159,8 +139,6 @@ parseDef = do
     body <- parseToken
     return $ FunDef name (getIdents args) body
 
-lparen = P.char '(' >> P.spaces
-rparen = P.spaces >> P.char ')'
 
 parseParenExpr = do
     lparen
@@ -186,8 +164,6 @@ parseLet = do
     body <- parseToken
     return $ Let env body
 
-lbrace = P.char '{' >> P.spaces
-rbrace = P.spaces >> P.char '}'
 
 parseDict = do
     lbrace
