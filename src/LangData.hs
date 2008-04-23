@@ -73,6 +73,7 @@ data Val = Comment String
     | List [Val]
     | Dict KeyValList
     | Expr [Val]
+    | App Val Val
     | Let KeyValList Val
     | Closure KeyValList Val
     | If Val Val Val -- pred, if case, else case
@@ -124,6 +125,7 @@ ppVal (FunDef name args body) = PP.parens
         , ppVal body]
 ppVal (Let env val) = PP.parens
     $ PP.fsep [PP.text "let", ppKeyValList env, ppVal val]
+ppVal (App f x) = PP.parens (PP.fsep [ppVal f, ppVal x])
 --ppVal (Closure env val) = PP.parens
 --    $ PP.fsep [PP.text "closure", ppEnv env, ppVal val]
 

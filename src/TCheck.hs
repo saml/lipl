@@ -184,6 +184,9 @@ w s (Lambda [p] e) = do
     let domain = apply r v
     return (r, domain `fn` t1)
 
+w s lam@(Lambda _ _) = w s (simplifyLambda lam)
+
+
 {-
 w s (Expr (f:g:xs)) = do
     (s1, t1) <- w s f
@@ -193,8 +196,14 @@ w s (Expr (f:g:xs)) = do
     return (u @@ s1 @@ s, apply u v)
 -}
 
+
+
 w s (Expr [e]) = w s e
 
+w s (Expr l) = w s (foldl1 App l)
+
+
+{-
 w s (Expr [f, x]) = do
     (s1, tF) <- w s f
     (s2, tX) <- w (s1 @@ s) x
@@ -209,25 +218,26 @@ w s (Expr (f:x:xs)) = do
     let tF_orig = apply s2 tF
     let tF_target = tX `fn` v
     tF_result <- mgu tF_orig tF_target
-    (s3, tXs) <- w (tF_result @@ s2 @@ s1 @@ s) (Expr $(t 'xs))
-    reallyFinal <- mgu (apply s3 tF
-
-
-{-
-w :: Assumptions -> Val -> TI Type
-w a (Ident x) = do
-    t <- case lookup x a of
-        Just t -> return t
-        otherwise -> newTVar Star
-    --t <- (find x assumpt `E.catchError` (\e -> newTVar Star))
-    return t
-
-w a (If p e1 e2) = if w a p == tBool
-    then
-
-    else
-        fail "type of predicate is not Bool"
+    (s3, tXs) <- w (tF_result @@ s2 @@ s1 @@ s) (Expr xs)
+    return (s3, tXs)
 -}
+
+w s (App f x) = do
+    (sF, tF) <- w s f
+    (sX, tX) <- w (sF @@ s) x
+    v <- newTVar
+    let tF_orig = apply sX tF
+    let tF_target = tX `fn` v
+    result <- mgu tF_orig tF_target
+    return (result @@ sX @@ sF, apply result v)
+
+--listToApp = foldl1 App
+
+simplifyLambda lam@(Lambda [] e) = lam
+simplifyLambda lam@(Lambda [x] e) = lam
+simplifyLambda lam@(Lambda (x:xs) e) =
+    Lambda [x] (simplifyLambda (Lambda xs e))
+simplifyLambda (Expr [x]) = simplifyLambda x
 
 allSameType l = and $
     zipWith (\a b -> I.runIdentity (valToType a)
