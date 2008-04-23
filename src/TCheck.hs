@@ -15,6 +15,7 @@ import Parser (parseSingle)
 import Type
 import TParse
 import Trace
+import CoreLib
 
 {-
 instance Eq (m Type) where
@@ -124,21 +125,12 @@ type Assumptions = Subst
 
 defaultSubst :: Subst
 defaultSubst = [
-    --("+", TVar "a" `fn` (TVar "a" `fn` TVar "a"))
-
-    ("+", tParse "Int -> Int -> Int")
-    , ("==", TVar "a" `fn` (TVar "a" `fn` tBool))
-    , ("-", tInt `fn` (tInt `fn` tInt))
-    , ("Int", tInt)
+    ("Int", tInt)
     , ("Float", tFloat)
     , ("Bool", tBool)
     , ("Char", tChar)
     , ("Str", list tChar)
-    --, ("*", tInt `fn` (tInt `fn` tInt))
-    --, ("div", tInt `fn` (tInt `fn` tInt))
-    --, ("==", tInt `fn` (tInt `fn` tBool))
     ]
-
 
 w :: Subst -> Val -> TI (Subst, Type)
 w s (Int _) = return (s, tInt)
@@ -146,10 +138,24 @@ w s (Bool _) = return (s, tBool)
 w s (Float _) = return (s, tFloat)
 w s (Char _) = return (s, tChar)
 w s (Str _) = return (s, list tChar)
---w s (Ident "+") = return (s, tInt `fn` tInt)
 w s (PrimFun x) = do
-    let Just t = lookup x s
-    return (s, t)
+    let Just tX = lookup x s
+    return (s, $(t 'tX))
+
+{-
+w s (List [x]) = do
+    (s1, tX) <- w s x
+    return (s1, list tX)
+-}
+
+-- TODO: should I check types of each xs?
+w s (List (x:xs)) = do
+    (s1, tX) <- w s x
+    return (s1, list tX)
+
+w s (List []) = do
+    v <- newTVar
+    return (s, list v)
 
 {-
 w s (Ident "Int") = return (s, tInt)
@@ -186,6 +192,9 @@ w s (Lambda [p] e) = do
 
 w s lam@(Lambda _ _) = w s (simplifyLambda lam)
 
+w s (FunDef name args body) = do
+    (s1, tF) <- w s (Lambda args body)
+    return ((name +-> tF) @@ s1, tF)
 
 {-
 w s (Expr (f:g:xs)) = do
@@ -250,5 +259,7 @@ t s = case parseSingle s of
 -}
 
 ty s = case parseSingle s of
-    Right v -> putStrLn $ showSubstTypePair $ runTI $ w defaultSubst v
+    Right v -> putStrLn
+        $ showSubstTypePair $ runTI
+        $ w (defaultSubst `List.union` builtinSubst) v
     otherwise -> error "parse error"

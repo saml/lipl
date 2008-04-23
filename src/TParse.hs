@@ -18,9 +18,9 @@ lexeme = P.lexeme lexer
 
 tParse texpr = case P.parse parseExpr "type expression" texpr of
     Right t -> t
-    otherwise -> error "type expression parse error"
+    Left err -> error (show err ++ ": type expression parse error")
 
-term = parens expr <|> lexeme parseType <?> "term"
+term = lexeme parseType <|> parens expr <?> "term"
 
 expr = P.buildExpressionParser table term <?> "expr"
 
@@ -98,6 +98,11 @@ parseList = do
     rbracket
     return (list t) <?> "List"
 
+parseUnit = do
+    lparen
+    rparen
+    return tUnit <?> "Unit"
+
 parseType = do
     P.try parseTVar
     <|> P.try parseList
@@ -105,6 +110,7 @@ parseType = do
     <|> P.try parseFloat
     <|> P.try parseBool
     <|> P.try parseChar
+    <|> P.try parseUnit
     -- <|> P.try parseArrow
 
 {-

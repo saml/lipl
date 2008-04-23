@@ -7,10 +7,13 @@ import System.IO
 
 import LangData
 import Utils
+import TParse
+import Type
 
 data Builtin = Builtin {
     getBuiltinArity :: Int
     , getBuiltinFun :: [Val] -> Wrap Val
+    , getBuiltinType :: Type
     }
 
 funcall :: String -> [Val] -> Wrap Val
@@ -25,35 +28,35 @@ arityOf name = case Map.lookup name primitives of
 
 --primitives :: [(String, Builtin)]
 primitives = Map.fromList [
-    ("+", Builtin 2 opAdd)
-    , ("-", Builtin 2 opSub)
-    , ("*", Builtin 2 opMult)
-    , ("/", Builtin 2 floatOpDiv)
-    , ("div", Builtin 2 intOpDiv)
-    , ("&&", Builtin 2 $ boolBinOp (&&))
-    , ("||", Builtin 2 $ boolBinOp (||))
-    , ("not", Builtin 1 boolNot)
-    , ("==", Builtin 2 compareEq)
-    , ("!=", Builtin 2 compareNeq)
-    , ("<", Builtin 2 compareLt)
-    , ("<=", Builtin 2 compareLte)
-    , (">", Builtin 2 compareGt)
-    , (">=", Builtin 2 compareGte)
-    , ("length", Builtin 1 listLength)
-    , ("head", Builtin 1 listHead)
-    , ("tail", Builtin 1 listTail)
-    , ("cons", Builtin 2 listCons)
-    , ("isEmpty", Builtin 1 listIsEmpty)
-    , ("println", Builtin 1 $ printStr True)
-    , ("print", Builtin 1 $ printStr False)
-    , ("printVarLn", Builtin 1 $ printVar True)
-    , ("printVar", Builtin 1 $ printVar False)
-    , ("getLine", Builtin 0 $ readFrom stdin)
-    , ("show", Builtin 1 showVar)
-    , ("env", Builtin 1 showEnvironment)
+    ("+", Builtin 2 opAdd (tParse "Int -> Int -> Int"))
+    , ("-", Builtin 2 opSub (tParse "Int -> Int -> Int"))
+    , ("*", Builtin 2 opMult (tParse "Int -> Int -> Int"))
+    , ("/", Builtin 2 floatOpDiv (tParse "Float -> Float -> Float"))
+    , ("div", Builtin 2 intOpDiv (tParse "Int -> Int -> Int"))
+    , ("&&", Builtin 2 (boolBinOp (&&)) (tParse "Bool -> Bool -> Bool"))
+    , ("||", Builtin 2 (boolBinOp (||)) (tParse "Bool -> Bool -> Bool"))
+    , ("not", Builtin 1 boolNot (tParse "Bool -> Bool"))
+    , ("==", Builtin 2 compareEq (tParse "a -> a -> Bool"))
+    , ("!=", Builtin 2 compareNeq (tParse "a -> a -> Bool"))
+    , ("<", Builtin 2 compareLt (tParse "a -> a -> Bool"))
+    , ("<=", Builtin 2 compareLte (tParse "a -> a -> Bool"))
+    , (">", Builtin 2 compareGt (tParse "a -> a -> Bool"))
+    , (">=", Builtin 2 compareGte (tParse "a -> a -> Bool"))
+    , ("length", Builtin 1 listLength (tParse "[a] -> Int"))
+    , ("head", Builtin 1 listHead (tParse "[a] -> a"))
+    , ("tail", Builtin 1 listTail (tParse "[a] -> [a]"))
+    , ("cons", Builtin 2 listCons (tParse "a -> [a] -> [a]"))
+    , ("isEmpty", Builtin 1 listIsEmpty (tParse "[a] -> Bool"))
+    , ("println", Builtin 1 (printStr True) (tParse "Str -> ()"))
+    , ("print", Builtin 1 (printStr False) (tParse "Str -> ()"))
+    , ("printVarLn", Builtin 1 (printVar True) (tParse "a -> ()"))
+    , ("printVar", Builtin 1 (printVar False) (tParse "a -> ()"))
+    , ("getLine", Builtin 0 (readFrom stdin) (tParse "Str"))
+    , ("show", Builtin 1 showVar (tParse "a -> Str"))
+--    , ("env", Builtin 1 showEnvironment)
 --    , ("free-vars", Builtin 1 getFreeVars)
-    , ("from-str", Builtin 1 strToList)
-    , ("from-list", Builtin 1 listToStr)
+--    , ("from-str", Builtin 1 strToList)
+--    , ("from-list", Builtin 1 listToStr)
     ]
 
 primitivesList = Map.toList primitives
@@ -61,6 +64,9 @@ primitivesList = Map.toList primitives
 builtinNames = map fst primitivesList
 builtins = map snd primitivesList
 
+builtinSubst = map mkSubst primitivesList
+    where
+        mkSubst (a, b) = (a, getBuiltinType b)
 
 compareEq = compareOp (ordBool [EQ])
 compareNeq = compareOp (ordBool [LT, GT])
