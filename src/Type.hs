@@ -1,6 +1,7 @@
 module Type where
 
 import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ (
     (<>), (<+>), ($$), ($+$) )
@@ -24,6 +25,8 @@ data Type = TVar { getId :: Id }
 
 instance Show Type where
     show = PP.render . ppType
+
+fromTVar (TVar v) = v
 
 ppType (TVar v) = PP.text v
 ppType (TConst c) = PP.text c
@@ -150,7 +153,10 @@ instance (Types a) => Types [a] where
     tv = List.nub . concat . map tv
 
 infixr 4 @@
-s1 @@ s2 = List.nub ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
+s1 @@ s2 = (Map.toList . Map.fromListWith (\x y -> y))
+    ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
+--s1 @@ s2 = (Map.toList . Map.fromList . reverse)
+--    ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
 
 merge s1 s2 = if agree then return (s1 ++ s2) else fail "merge fails"
     where

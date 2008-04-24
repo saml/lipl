@@ -65,40 +65,6 @@ eval (If pred ifCase elseCase) = do
         Bool False -> eval elseCase
         otherwise -> eval ifCase
 
-{-
-eval e@(Let env body) = do
-    currEnv <- getEnvFor (unboundVars e)
-    --env' <- evalEnv (env `Map.union` (trace (":" ++ show currEnv) currEnv))
-    --currEnv <- getEnv
-    --let env' = (env `Map.union` currEnv)
-    --env' <- evalEnv (env `Map.union` currEnv)
-            -- (trace ("currEnv: " ++ showEnv currEnv) currEnv))
-    let env' = newEnv `Map.union` currEnv
-    withEnv (trace ("env': " ++ showEnv env') env') (eval body)
-    where
-        newEnv = env `Map.union`
-            (Map.fromList $ map (\ (k, v) -> (k, Closure newEnv v)) envList)
-        envList = Map.toList env
--}
-{-
-eval e@(Let env body) = do
-    let (keys, vals) = unzip env
-    currEnv <- getEnv --For (unboundVars e)
-    --let newEnv = Map.fromList env `Map.union` currEnv
-    vals' <- mapM
-        (\ v ->
-            withEnv (Map.fromList newEnv `Map.union` currEnv) (eval v))
-        vals
-    let env' = Map.fromList $ zip keys vals'
-    withEnv env' (eval body)
-    where
-        newEnv = map (\(k,v) -> (k, Closure newEnv v)) env
-    --currEnv <- getEnvFor (unboundVars e)
-    --let envMap = Map.fromList env
-    --env' <- evalEnv (envMap `Map.union` currEnv)
-    --withEnv env' (eval body)
--}
-
 eval e@(Let env body) = do
     env' <- runLocally (keyValToEnv env)
     withEnv env' (eval body)
@@ -191,27 +157,6 @@ apply (Fun env (arg:rst) body) e = do
 apply e _ = E.throwError $ NotFunErr "not function" (show e)
 
 evalWith env val = withEnv env (eval val)
-
-{-
-evalEnv env = do
-    let list = Map.toList env
-    let keys = Map.keys env
-    --let vals = Map.elems env
-    result <- withEnv env (do
-        vals <- mapM (evalWith env . snd) list
-        let env' = Map.fromList $ zip keys vals
-        return env')
-    return result
-    --mapM (\ (k,v) -> (k, eval v)) list
-    --env' <- withEnv env (traverse eval env)
-    --return env'
--}
-
-{-
-toClosure e = do
-    env <- getEnvFor (unboundVars e)
-    return $ Closure env e
--}
 
 test s = case parseSingle s of
     Right val -> unboundVars val

@@ -140,7 +140,7 @@ w s (Char _) = return (s, tChar)
 w s (Str _) = return (s, list tChar)
 w s (PrimFun x) = do
     let Just tX = lookup x s
-    return (s, $(t 'tX))
+    return (s, tX)
 
 {-
 w s (List [x]) = do
@@ -185,51 +185,32 @@ w s (Lambda [] e) = w s e
 
 w s (Lambda [p] e) = do
     v <- newTVar
-    let subst = s @@ (p +-> v)
-    (r, t1) <- w subst e
+    --pNew <- newTVar
+    --let p' = fromTVar pNew
+    let pv = (p +-> v)
+    let subst = pv @@ s
+    (r, t1) <- w subst e -- (replaceIdent (Ident p) (Ident p') e)
     let domain = apply r v
-    return (r, domain `fn` t1)
+    return (eliminate [p] r, domain `fn` t1)
 
 w s lam@(Lambda _ _) = w s (simplifyLambda lam)
 
 w s (FunDef name args body) = do
     (s1, tF) <- w s (Lambda args body)
-    return ((name +-> tF) @@ s1, tF)
+    return ((name +-> tF) @@ eliminate args s1, tF)
 
-{-
-w s (Expr (f:g:xs)) = do
-    (s1, t1) <- w s f
-    (s2, t2) <- w (s1 @@ s) g
-    v <- newTVar
-    u <- mgu (apply s2 t1) (t2 `fn` v)
-    return (u @@ s1 @@ s, apply u v)
--}
+w s (Let [(k,v)] e) = do
+    (s1, tV) <- w s v
+    let sNew = (k +-> tV) @@ s1 @@ s
+    (s2, tE) <- w sNew e
+    return (s2 @@ s1, tE)
+-- ty "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
 
-
+w s (Let kvs e) = w s $ foldr (Let . (:[])) e kvs
 
 w s (Expr [e]) = w s e
 
 w s (Expr l) = w s (foldl1 App l)
-
-
-{-
-w s (Expr [f, x]) = do
-    (s1, tF) <- w s f
-    (s2, tX) <- w (s1 @@ s) x
-    v <- newTVar
-    result <- mgu (apply s2 tF) (tX `fn` v)
-    return (result @@ s2 @@ s1, apply result v)
-
-w s (Expr (f:x:xs)) = do
-    (s1, tF) <- w s f
-    (s2, tX) <- w (s1 @@ s) x
-    v <- newTVar
-    let tF_orig = apply s2 tF
-    let tF_target = tX `fn` v
-    tF_result <- mgu tF_orig tF_target
-    (s3, tXs) <- w (tF_result @@ s2 @@ s1 @@ s) (Expr xs)
-    return (s3, tXs)
--}
 
 w s (App f x) = do
     (sF, tF) <- w s f
@@ -241,6 +222,15 @@ w s (App f x) = do
     return (result @@ sX @@ sF, apply result v)
 
 --listToApp = foldl1 App
+
+eliminate ids = filter (\x -> fst x `notElem` ids)
+
+{-
+replaceIdent i i' e@(Ident x)
+    | x == i = Ident i'
+    | otherwise = e
+replaceIdent
+-}
 
 simplifyLambda lam@(Lambda [] e) = lam
 simplifyLambda lam@(Lambda [x] e) = lam
@@ -263,3 +253,7 @@ ty s = case parseSingle s of
         $ showSubstTypePair $ runTI
         $ w (defaultSubst `List.union` builtinSubst) v
     otherwise -> error "parse error"
+
+theta = [("X", TVar "a"), ("Y", TVar "b"), ("Z", TVar "Y")]
+eta = [("X", TApp (TVar "f") (TVar "Y")), ("Y", TVar "Z")]
+-- theta @@ eta = [("X",f b),("Z",Y)]
