@@ -6,6 +6,8 @@ import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ (
     (<>), (<+>), ($$), ($+$) )
 
+import Utils
+
 type Id = String
 
 data Type = TVar { getId :: Id }
@@ -15,6 +17,7 @@ data Type = TVar { getId :: Id }
 
 instance Show Type where
     show = PP.render . ppType
+
 
 fromTVar (TVar v) = v
 
@@ -43,7 +46,7 @@ pair a b = TApp (TApp tTuple2 a) b
 
 mkTVar = TVar
 
-type Subst = [(Id, Type)]
+type Subst = [(Id, TScheme)]
 
 ppIdType (i,t) = PP.fsep [PP.text i, PP.text "::", ppType t]
 
@@ -57,8 +60,19 @@ showSubstTypePair (s,t) = PP.render (ppSubst s $$ ppType t)
 
 nullSubst = []
 
-(+->) :: Id -> Type -> Subst
-v +-> t = [(v,t)]
+(+->) :: Id -> TScheme -> Subst
+v +-> ts = [(v, ts)]
+
+-- type abstraction
+-- ((TScheme [x,y] ([y] -> x)) Int Char) ==> [Char] -> Int
+data TScheme = TScheme [Id] Type
+    deriving (Show, Eq)
+
+replace a b e@(TVar v)
+    | a == v = TVar b
+    | otherwise = e
+replace a b e@(TConst _) = e
+replace a b (TApp t1 t2) = TApp (replace a b t1) (replace a b t2)
 
 class Types t where
     apply :: Subst -> t -> t
@@ -66,7 +80,7 @@ class Types t where
 
 instance Types Type where
     apply s v@(TVar u) = case lookup u s of
-        Just t -> t
+        Just (TScheme _ t) -> t
         Nothing -> v
     apply s (TApp f a) = TApp (apply s f) (apply s a)
     apply s t = t
@@ -78,6 +92,10 @@ instance Types Type where
 instance (Types a) => Types [a] where
     apply s = map (apply s)
     tv = List.nub . concat . map tv
+
+instance Types TScheme where
+    apply s (TScheme l e) = TScheme l $ apply (s `exclude` l) e
+    tv (TScheme l e) = tv e
 
 infixr 4 @@
 s1 @@ s2 = (Map.toList . Map.fromListWith (\x y -> y))
@@ -104,15 +122,14 @@ mgu _ _ = fail "types do not unify"
 varBind u t
     | t == TVar u = return nullSubst
     | u `elem` tv t = fail "occurs check fails"
-    | otherwise = return (u +-> t)
+    | otherwise = return (u +-> TScheme [] t)
 
 match (TApp f1 a1) (TApp f2 a2) = do
     sf <- match f1 f2
     sa <- match a1 a2
     merge sf sa
-match (TVar u) t = return (u +-> t)
+match (TVar u) t = return (u +-> TScheme [] t)
 match (TConst c1) (TConst c2)
     | c1 == c2 = return nullSubst
 match _ _ = fail "types do not match"
 
-data TScheme = TScheme Id Type

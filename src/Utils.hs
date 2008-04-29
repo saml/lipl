@@ -68,6 +68,10 @@ substitute key val (x:xs) = if x == key
         x : substitute key val xs
 substitute key val [] = []
 
+allEq l = all (== True) $ zipWith (==) l (tail l)
+
+exclude kv k = filter (not . (`elem` k) . fst) kv
+
 {-
 ppKeyVal ppk ppv (k, v) = ppk k
     <+> PP.text "="

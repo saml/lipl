@@ -92,6 +92,10 @@ parseChar = do
     P.string "Char" <?> "Char"
     return tChar
 
+parseStr = do
+    P.string "Str" <?> "Str"
+    return $ list tChar
+
 parseList = do
     lbracket
     t <- term
@@ -109,6 +113,7 @@ parseType = do
     <|> P.try parseFloat
     <|> P.try parseBool
     <|> P.try parseChar
+    <|> P.try parseStr
     <|> P.try parseUnit
     <|> P.try parseTVar
     -- <|> P.try parseArrow
