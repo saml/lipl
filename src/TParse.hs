@@ -104,13 +104,13 @@ parseUnit = do
     return tUnit <?> "Unit"
 
 parseType = do
-    P.try parseTVar
-    <|> P.try parseList
+    P.try parseList
     <|> P.try parseInt
     <|> P.try parseFloat
     <|> P.try parseBool
     <|> P.try parseChar
     <|> P.try parseUnit
+    <|> P.try parseTVar
     -- <|> P.try parseArrow
 
 {-

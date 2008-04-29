@@ -17,21 +17,12 @@ import TParse
 import Trace
 import CoreLib
 
-{-
-instance Eq (m Type) where
-    (_ t1) == (_ t2) = t1 == t2
--}
-
 newtype TI a = TI (Subst -> Int -> (Subst, Int, a))
-
---instance (Show a) => Show (Subst -> Int -> (Subst, Int, a)) where
---    show f =
 
 instance Monad TI where
     return x = TI (\s n -> (s, n, x))
     TI f >>= g = TI (\s n -> case f s n of
         (s', n', x) -> let TI gx = g x in gx s' n')
-
 
 runTI (TI f) = x
     where
@@ -46,80 +37,13 @@ unify t1 t2 = do
 
 extendSubst s' = TI (\s n -> (s' @@ s, n, ()))
 
-{-
-newTVar k = TI (\s n -> let
-    v = TyVar ("v" ++ show n) k
-    in
-        (s, n + 1, TVar v))
--}
-
 newTVar = TI (\s n -> (s, n+1, TVar ("v" ++ show n)))
 
 testNewTVar = runTI $ sequence [newTVar, newTVar, newTVar]
 
-{-
-newtype Enumerator a = Enumerator {
-    runEnumerator :: (S.StateT Integer I.Identity) a
-    }
--}
-
-{-
-newtype Enumerator a = Enumerator a
-
-instance Monad Enumerator where
-    return x = Enumerator x
-    Enumerator a >>= g = Enumerator
-    TI f >>= g = TI (\s n -> case f s n of
-        (s', n', x) -> let TI gx = g x in gx s' n')
--}
-
-{-
-newId = do
-    i <- S.get
-    S.put (i+1)
-    return ("v" ++ show i)
--}
-{-
-newtype TC a = TC {
-    runTC :: E.ErrorT String (S.StateT (Integer, Subst)
--}
-
-{-
-newtype Wrap a = Wrap {
-    runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
-} deriving (
-    Functor, Monad, F.MonadFix
-    , E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
--}
-
---valToType :: Val -> I.Identity Type
-valToType (Int _) = return tInt
-valToType (Float _) = return tFloat
-valToType (Char _) = return tChar
-valToType (Bool _) = return tBool
-valToType (Str _) = return $ TApp tList tChar
-valToType (List [x]) = do
-    t <- valToType x
-    return $ TApp tList t
-valToType (List l@(x:_)) = if allSameType l
-    then
-        valToType x >>= (\t -> return $ TApp tList t)
-    else
-        fail "not homogeneous list"
-
-
---find :: Id -> Assumptions -> Either String Type
 find x assumptions = case lookup x assumptions of
     Just t -> return t
     otherwise -> fail $ "unbound type variable: " ++ x
-
-{-
---genTVar :: (Monad m, S.MonadState Integer m) =>  s Type
-genTVar = do
-    i <- S.get
-    S.put (i+ (1 :: Integer))
-    return $ mkTVar ("v" ++ show i)
--}
 
 type Assumptions = Subst
 
@@ -132,96 +56,79 @@ defaultSubst = [
     , ("Str", list tChar)
     ]
 
-w :: Subst -> Val -> TI (Subst, Type)
-w s (Int _) = return (s, tInt)
-w s (Bool _) = return (s, tBool)
-w s (Float _) = return (s, tFloat)
-w s (Char _) = return (s, tChar)
-w s (Str _) = return (s, list tChar)
-w s (PrimFun x) = do
+
+tCheck :: Subst -> Val -> TI (Subst, Type)
+tCheck s (Int _) = return (s, tInt)
+tCheck s (Bool _) = return (s, tBool)
+tCheck s (Float _) = return (s, tFloat)
+tCheck s (Char _) = return (s, tChar)
+tCheck s (Str _) = return (s, list tChar)
+tCheck s (PrimFun x) = do
     let Just tX = lookup x s
     return (s, tX)
 
-{-
-w s (List [x]) = do
-    (s1, tX) <- w s x
-    return (s1, list tX)
--}
-
 -- TODO: should I check types of each xs?
-w s (List (x:xs)) = do
-    (s1, tX) <- w s x
+tCheck s (List (x:xs)) = do
+    (s1, tX) <- tCheck s x
     return (s1, list tX)
 
-w s (List []) = do
+tCheck s (List []) = do
     v <- newTVar
     return (s, list v)
 
-{-
-w s (Ident "Int") = return (s, tInt)
-w s (Ident "Bool") = return (s, tBool)
-w s (Ident "Float") = return (s, tFloat)
-w s (Ident "Char") = return (s, tChar)
-w s (Ident "Str") = return (s, list tChar)
--}
-
-w s (Ident x) = case lookup x s of
+tCheck s (Ident x) = case lookup x s of
     Just t -> return (s, t)
     otherwise -> error (x ++ " not found in assumptions")
 --        t <- newTVar
 --        return (s, t)
 
-w s (If pred trueCase falseCase) = do
-    (s1, t1) <- w s pred
+tCheck s (If pred trueCase falseCase) = do
+    (s1, t1) <- tCheck s pred
     s2 <- mgu t1 tBool
     let s2_1 = s2 @@ s1
-    (s3, t2) <- w (s2_1 @@ s) trueCase
+    (s3, t2) <- tCheck (s2_1 @@ s) trueCase
     let s3_1 = s3 @@ s2_1
-    (s4, t3) <- w (s3_1 @@ s) falseCase
+    (s4, t3) <- tCheck (s3_1 @@ s) falseCase
     s5 <- mgu (apply s4 t2) t3
     return (s5 @@ s4 @@ s3_1 , apply s5 t3)
 
-w s (Lambda [] e) = w s e
+tCheck s (Lambda [] e) = tCheck s e
 
-w s (Lambda [p] e) = do
+tCheck s (Lambda [p] e) = do
     v <- newTVar
-    --pNew <- newTVar
-    --let p' = fromTVar pNew
     let pv = (p +-> v)
     let subst = pv @@ s
-    (r, t1) <- w subst e -- (replaceIdent (Ident p) (Ident p') e)
+    (r, t1) <- tCheck subst e -- (replaceIdent (Ident p) (Ident p') e)
     let domain = apply r v
     return (eliminate [p] r, domain `fn` t1)
 
-w s lam@(Lambda _ _) = w s (simplifyLambda lam)
+tCheck s lam@(Lambda _ _) = tCheck s (simplifyLambda lam)
 
-w s (FunDef name args body) = do
-    (s1, tF) <- w s (Lambda args body)
+tCheck s (FunDef name args body) = do
+    (s1, tF) <- tCheck s (Lambda args body)
     return ((name +-> tF) @@ eliminate args s1, tF)
 
-w s (Let [(k,v)] e) = do
-    (s1, tV) <- w s v
+tCheck s (Let [(k,v)] e) = do
+    (s1, tV) <- tCheck s v
     let sNew = (k +-> tV) @@ s1 @@ s
-    (s2, tE) <- w sNew e
+    (s2, tE) <- tCheck sNew e
     return (s2 @@ s1, tE)
 -- ty "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
 
-w s (Let kvs e) = w s $ foldr (Let . (:[])) e kvs
+tCheck s (Let kvs e) = tCheck s $ foldr (Let . (:[])) e kvs
 
-w s (Expr [e]) = w s e
+tCheck s (Expr [e]) = tCheck s e
 
-w s (Expr l) = w s (foldl1 App l)
+tCheck s (Expr l) = tCheck s (foldl1 App l)
 
-w s (App f x) = do
-    (sF, tF) <- w s f
-    (sX, tX) <- w (sF @@ s) x
+tCheck s (App f x) = do
+    (sF, tF) <- tCheck s f
+    (sX, tX) <- tCheck (sF @@ s) x
     v <- newTVar
     let tF_orig = apply sX tF
     let tF_target = tX `fn` v
     result <- mgu tF_orig tF_target
     return (result @@ sX @@ sF, apply result v)
-
---listToApp = foldl1 App
 
 eliminate ids = filter (\x -> fst x `notElem` ids)
 
@@ -238,22 +145,19 @@ simplifyLambda lam@(Lambda (x:xs) e) =
     Lambda [x] (simplifyLambda (Lambda xs e))
 simplifyLambda (Expr [x]) = simplifyLambda x
 
+{-
 allSameType l = and $
     zipWith (\a b -> I.runIdentity (valToType a)
         == I.runIdentity (valToType b)) l (tail l)
-
-{-
-t s = case parseSingle s of
-    Right v -> I.runIdentity $ valToType v
-    otherwise -> error "ill-typed"
 -}
 
 ty s = case parseSingle s of
     Right v -> putStrLn
         $ showSubstTypePair $ runTI
-        $ w (defaultSubst `List.union` builtinSubst) v
+        $ tCheck (defaultSubst `List.union` builtinSubst) v
     otherwise -> error "parse error"
 
 theta = [("X", TVar "a"), ("Y", TVar "b"), ("Z", TVar "Y")]
 eta = [("X", TApp (TVar "f") (TVar "Y")), ("Y", TVar "Z")]
 -- theta @@ eta = [("X",f b),("Z",Y)]
+

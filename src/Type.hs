@@ -8,16 +8,6 @@ import Text.PrettyPrint.HughesPJ (
 
 type Id = String
 
-{-
-data Kind = Star | KFun Kind Kind
-    deriving (Show, Eq)
-
-data Type = TVar TyVar
-    | TConst TyConst
-    | TApp Type Type
-    deriving (Eq)
--}
-
 data Type = TVar { getId :: Id }
     | TConst { getId :: Id }
     | TApp Type Type
@@ -31,52 +21,9 @@ fromTVar (TVar v) = v
 ppType (TVar v) = PP.text v
 ppType (TConst c) = PP.text c
 ppType (TApp (TConst "[]") a) = PP.brackets (ppType a)
---ppType (TApp (TConst "->") a) = PP.fsep [ppType a, PP.text "->"]
 ppType (TApp (TApp (TConst "->") a) b) =
     PP.parens $ PP.fsep [ppType a, PP.text "->", ppType b]
 ppType (TApp a b) = ppType a <+> ppType b
-
-{-
-ppType (TVar v) = show v
-ppType (TConst c) = show c
-ppType (TApp (TConst (TyConst "[]" _)) a) = "[" ++ show a ++ "]"
-ppType (TApp (TConst (TyConst "(->)" _)) a) = show a ++ " -> "
-ppType (TApp a b) = show a ++ " " ++ show b
--}
-
-{-
-data TyVar = TyVar Id Kind
-    deriving (Eq)
-
-instance Show TyVar where
-    show = ppTyVar
-
-ppTyVar (TyVar v _) = v
-
-data TyConst = TyConst Id Kind
-    deriving (Eq)
-
-instance Show TyConst where
-    show = ppTyConst
-
---ppTyConst (TyConst "(->)" _) = "->"
-ppTyConst (TyConst c _) = c
--}
-
-{-
-tUnit = TConst $ TyConst "()" Star
-tChar = TConst $ TyConst "Char" Star
-tInt = TConst $ TyConst "Int" Star
-tFloat = TConst $ TyConst "Float" Star
-tBool = TConst $ TyConst "Bool" Star
-tList = TConst $ TyConst "[]" Star
-tArrow = TConst $ TyConst "(->)" Star
-tTuple2 = TConst $ TyConst "(,)" Star
---tList = TConst $ TyConst "[]" (KFun Star Star)
---tArrow = TConst $ TyConst "(->)" (KFun Star (KFun Star Star))
---tTuple2 = TConst $ TyConst "(,)" (KFun Star (KFun Star Star))
--}
-
 
 tUnit = TConst "()"
 tChar = TConst "Char"
@@ -95,26 +42,6 @@ list = TApp tList
 pair a b = TApp (TApp tTuple2 a) b
 
 mkTVar = TVar
---mkTVar s = TVar $ mkTyVar s
-
--- mkTyVar s = TyVar s Star
-
-{-
-class HasKind t where
-    kind :: t -> Kind
-
-instance HasKind TyVar where
-    kind (TyVar _ k) = k
-
-instance HasKind TyConst where
-    kind (TyConst _ k) = k
-
-instance HasKind Type where
-    kind (TConst c) = kind c
-    kind (TVar v) = kind v
-    kind (TApp f arg) = case kind f of
-        KFun param result | param == (kind arg) -> result
--}
 
 type Subst = [(Id, Type)]
 
@@ -155,8 +82,6 @@ instance (Types a) => Types [a] where
 infixr 4 @@
 s1 @@ s2 = (Map.toList . Map.fromListWith (\x y -> y))
     ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
---s1 @@ s2 = (Map.toList . Map.fromList . reverse)
---    ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
 
 merge s1 s2 = if agree then return (s1 ++ s2) else fail "merge fails"
     where
@@ -179,7 +104,6 @@ mgu _ _ = fail "types do not unify"
 varBind u t
     | t == TVar u = return nullSubst
     | u `elem` tv t = fail "occurs check fails"
-    -- | kind u /= kind t = fail "kinds do not match"
     | otherwise = return (u +-> t)
 
 match (TApp f1 a1) (TApp f2 a2) = do
@@ -191,3 +115,4 @@ match (TConst c1) (TConst c2)
     | c1 == c2 = return nullSubst
 match _ _ = fail "types do not match"
 
+data TScheme = TScheme Id Type
