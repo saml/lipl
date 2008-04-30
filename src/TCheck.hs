@@ -22,33 +22,38 @@ type Assumpt = Subst
 
 newtype TI a = TI { runTI :: Subst -> Int -> (Subst, Int, a) }
 
-
 instance Monad TI where
     return x = TI (\s n -> (s, n, x))
     TI f >>= g = TI (\s n -> case f s n of
         (s', n', x) -> let TI gx = g x in gx s' n')
 
 {-
-runTI (TI f) subst = x
-    where
-        (s, n, x) = f subst 0
+instance S.MonadState (TI a) a where
+    get = TI (\s n -> (s, n, (s,n)))
+    put (s,n) = TI (\_ _ -> (s, n, ()))
 -}
 
 getSubst = TI (\s n -> (s, n, s))
+
+getN = TI (\s n -> (s, n, n))
+
+putSubst s = TI (\_ n -> (s, n, ()))
+
+putN n = TI (\s _ -> (s, n, ()))
+
+extendSubst s' = TI (\s n -> (s' @@ s, n, ()))
 
 unify t1 t2 = do
     s <- getSubst
     u <- mgu (apply s t1) (apply s t2)
     extendSubst u
 
-extendSubst s' = TI (\s n -> (s' @@ s, n, ()))
 
 newId = TI (\s n -> (s, n+1, "v" ++ show n))
 
 newTVar = do
     v <- newId
     return (TVar v)
-    --TI (\s n -> (s, n+1, TVar ("v" ++ show n)))
 
 testNewTVar = runTI (sequence [newTVar, newTVar, newTVar]) nullSubst 0
 
@@ -170,8 +175,32 @@ tInfer (List l@(x:xs)) = do
 tInfer (Ident x) = do
     s <- getSubst
     case lookup x s of
-        Just ts@(TScheme _ t) -> toType ts
+        Just ts -> toType ts
         otherwise -> fail (x ++ " not found in assumptions")
+
+tInfer (Expr [e]) = tInfer e
+tInfer (Expr l) = tInfer (foldl1 App l)
+
+tInfer (App f x) = do
+    tF <- tInfer f
+    tX <- tInfer x
+    s <- getSubst
+    v <- newTVar
+    let tF_orig = apply s tF
+    let tF_target = tX `fn` v
+    result <- mgu tF_orig tF_target
+    return $ apply result v
+
+tInfer (If pred trueCase falseCase) = do
+    tPred <- tInfer pred
+    sPred <- mgu tPred tBool
+    tTrueCase <- tInfer trueCase
+    tFalseCase <- tInfer falseCase
+    sFalse <- getSubst
+    sTrueFalse <- mgu (apply sFalse tTrueCase) tFalseCase
+    return $ apply sTrueFalse tFalseCase
+
+
 
 {-
 tCheck s (If pred trueCase falseCase) = do
@@ -183,6 +212,7 @@ tCheck s (If pred trueCase falseCase) = do
     (s4, t3) <- tCheck (s3_1 @@ s) falseCase
     s5 <- mgu (apply s4 t2) t3
     return (s5 @@ s4 @@ s3_1 , apply s5 t3)
+
 
 tCheck s (Lambda [] e) = tCheck s e
 
@@ -209,18 +239,7 @@ tCheck s (Let [(k,v)] e) = do
 
 tCheck s (Let kvs e) = tCheck s $ foldr (Let . (:[])) e kvs
 
-tCheck s (Expr [e]) = tCheck s e
 
-tCheck s (Expr l) = tCheck s (foldl1 App l)
-
-tCheck s (App f x) = do
-    (sF, tF) <- tCheck s f
-    (sX, tX) <- tCheck (sF @@ s) x
-    v <- newTVar
-    let tF_orig = apply sX tF
-    let tF_target = tX `fn` v
-    result <- mgu tF_orig tF_target
-    return (result @@ sX @@ sF, apply result v)
 -}
 
 
@@ -229,6 +248,25 @@ toType (TScheme [] t) = return t
 toType (TScheme (x:xs) t) = do
     v <- newId
     toType $ TScheme xs (replace x v t)
+
+withSubst s action = do
+    n <- getN
+    sCurr <- getSubst
+    --extendSubst s
+    putSubst s
+    result <- action
+    putN n
+    putSubst sCurr
+    return result
+
+withExtendSubst s action = do
+    n <- getN
+    sCurr <- getSubst
+    extendSubst s
+    result <- action
+    putN n
+    putSubst sCurr
+    return result
 
 
 
@@ -263,7 +301,7 @@ ty s = case parseSingle s of
 
 tyi input = case parseSingle input of
     Right v -> case runTI (tInfer v) subst 0 of
-        (s,i,t) -> putStrLn $ show t
+        (s,i,t) -> putStrLn $ showSubstType s t
         where
             subst = defaultSubst `List.union` fromIdType builtinSubst
 

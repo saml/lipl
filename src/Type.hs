@@ -52,11 +52,15 @@ ppIdType (i,t) = PP.fsep [PP.text i, PP.text "::", ppType t]
 
 ppIdTypeList l = map ((PP.empty $$) . ppIdType) l
 
-ppSubst l = PP.braces $ PP.fsep $ PP.punctuate PP.comma (ppIdTypeList l)
+ppIdTScheme (i, ts) = PP.fsep [PP.text i, PP.text "::", ppTScheme ts]
+ppIdTSchemeList = map ((PP.empty $$) . ppIdTScheme)
+ppSubst l = PP.braces $ PP.fsep $ PP.punctuate PP.comma (ppIdTSchemeList l)
 
 showSubst = PP.render . ppSubst
 
 showSubstTypePair (s,t) = PP.render (ppSubst s $$ ppType t)
+
+showSubstType s t = PP.render (ppSubst s $$ ppType t)
 
 nullSubst = []
 
@@ -66,7 +70,15 @@ v +-> ts = [(v, ts)]
 -- type abstraction
 -- ((TScheme [x,y] ([y] -> x)) Int Char) ==> [Char] -> Int
 data TScheme = TScheme [Id] Type
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show TScheme where
+    show = PP.render . ppTScheme
+
+ppTScheme (TScheme l t) =
+    PP.fsep [PP.text "TScheme"
+        , PP.brackets $ PP.fsep (map PP.text l)
+        , ppType t]
 
 replace a b e@(TVar v)
     | a == v = TVar b
