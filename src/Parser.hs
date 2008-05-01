@@ -13,7 +13,7 @@ import Data.Char ( chr )
 import LangData
 import CoreLib (builtinNames)
 import ParseUtils
-
+import Utils
 
 {-
 lexeme = P.lexeme lexer
@@ -121,13 +121,32 @@ getIdents [] = []
 getIdents (Ident a:xs) = a : getIdents xs
 getIdents (_:xs) = getIdents xs
 
+getParams l = do
+    let params = getIdents l
+    if noDup params
+        then
+            return params
+        else
+            fail "Parameters can't have duplicates"
+
 parseLambda = do
     P.string "lambda"
     mustSpaces
     Expr args <- parseParenExpr
     mustSpaces
     body <- parseToken
-    return $ Lambda (getIdents args) body
+    --params <- getParams args
+    let params = getIdents args
+    return $ Lambda params body
+
+{-
+    let params = getIdents args
+    if noDup params
+        then
+            return $ Lambda params body
+        else
+            fail "Parameters can't be same"
+-}
 
 parseDef = do
     P.string "def"
@@ -179,6 +198,13 @@ parseKeyVal = do
     val <- parseToken
     return (key, val)
 
+parsePair = do
+    lparen
+    a <- parseToken
+    comma
+    b <- parseToken
+    rparen
+    return $ Pair a b
 
 parseToken =
         P.try parseIf
@@ -187,6 +213,7 @@ parseToken =
     <|> P.try parseLambda
     <|> P.try parseList
     <|> P.try parseDict
+    <|> P.try parsePair
     <|> P.try parseParenExpr
     <|> P.try parseBool
     <|> P.try parseChar

@@ -70,6 +70,8 @@ substitute key val [] = []
 
 allEq l = all (== True) $ zipWith (==) l (tail l)
 
+noDup l = length l == length (List.nub l)
+
 exclude kv k = filter (not . (`elem` k) . fst) kv
 
 {-

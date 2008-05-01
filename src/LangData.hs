@@ -72,6 +72,7 @@ data Val = Comment String
     | Prim Name RemainingArgs [Val] -- parser don't generate this
     | List [Val]
     | Dict KeyValList
+    | Pair Val Val
     | Expr [Val]
     | App Val Val
     | Let KeyValList Val
@@ -114,6 +115,7 @@ ppVal (Prim name remaining params) = PP.parens
 ppVal (List xs) = PP.brackets
     (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = ppKeyValList xs
+ppVal (Pair a b) = PP.parens (PP.fsep [ppVal a, ppVal b])
 --ppVal (Dict xs) = PP.braces
 --    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList (Map.toList xs)))
 ppVal (Expr xs) = PP.parens (PP.fsep $ ppValList xs)

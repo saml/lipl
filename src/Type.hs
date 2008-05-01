@@ -23,7 +23,10 @@ fromTVar (TVar v) = v
 
 ppType (TVar v) = PP.text v
 ppType (TConst c) = PP.text c
+ppType (TApp (TApp (TConst "(,)") a) b) =
+    PP.parens (PP.fsep [ppType a, PP.text ",", ppType b])
 ppType (TApp (TConst "[]") a) = PP.brackets (ppType a)
+ppType (TApp (TConst "{}") a) = PP.braces (ppType a)
 ppType (TApp (TApp (TConst "->") a) b) =
     PP.parens $ PP.fsep [ppType a, PP.text "->", ppType b]
 ppType (TApp a b) = ppType a <+> ppType b
@@ -35,6 +38,7 @@ tFloat = TConst "Float"
 tBool = TConst "Bool"
 tList = TConst "[]"
 tArrow = TConst "->"
+tDict = TConst "{}"
 tTuple2 = TConst "(,)"
 
 infix 4 `fn`
