@@ -13,6 +13,7 @@ import Control.Applicative ((<$>))
 import Evaluator
 import Parser
 import LangData
+import TCheck
 
 run wrap = S.runStateT (E.runErrorT (runWrap wrap)) nullEnv
 
@@ -112,7 +113,11 @@ interpret file = do
 
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
-    Right val -> eval val
+    Right val -> case tCheck val of
+        Right t -> do
+            println ("type: " ++ show t)
+            eval val
+
 
 parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> E.throwError $ ParseErr err

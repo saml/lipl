@@ -13,7 +13,7 @@ type Id = String
 data Type = TVar { getId :: Id }
     | TConst { getId :: Id }
     | TApp Type Type
-    deriving (Eq)
+    deriving (Eq, Ord)
 
 instance Show Type where
     show = PP.render . ppType
@@ -74,7 +74,7 @@ v +-> ts = [(v, ts)]
 -- type abstraction
 -- ((TScheme [x,y] ([y] -> x)) Int Char) ==> [Char] -> Int
 data TScheme = TScheme [Id] Type
-    deriving (Eq)
+    deriving (Eq, Ord)
 
 instance Show TScheme where
     show = PP.render . ppTScheme

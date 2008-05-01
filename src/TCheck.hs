@@ -21,12 +21,34 @@ import Utils
 
 type Assumpt = Subst
 
-newtype TI a = TI { runTI :: Subst -> Int -> (Subst, Int, a) }
+newtype SI a = SI { runSI :: Subst -> Int -> (Subst, Int, a) }
+data TI a = TI (Subst -> Int -> (Subst, Int, a))
+    | Fail String
 
+--newtype TI a = TI { runTI :: E.ErrorT String SI a }
+-- newtype TI a = TI { runTI :: Subst -> Int -> Either String (Subst, Int, a) }
+
+{-
 instance Monad TI where
     return x = TI (\s n -> (s, n, x))
     TI f >>= g = TI (\s n -> case f s n of
         (s', n', x) -> let TI gx = g x in gx s' n')
+    Fail msg >>= _ = Fail msg
+    fail = Fail
+-}
+instance Monad TI where
+    return x = TI (\s n -> (s, n, x))
+    TI f >>= g = TI (\s n -> case f s n of
+        (s', n', x) -> case g x of
+            TI gx -> gx s' n'
+            Fail msg -> error msg
+            {- Fail msg -> (s', n', x) -})
+    Fail msg >>= _ = Fail msg
+    fail = Fail
+
+
+runTI (TI f) s i = f s i
+-- runTI (Fail msg) s i = Fail msg
 
 {-
 instance S.MonadState (TI a) a where
@@ -74,82 +96,6 @@ defaultSubst = fromIdType [
     , ("Str", list tChar)
     ]
 
-{-
-tCheck :: Subst -> Val -> TI (Subst, Type)
-tCheck s (Int _) = return (s, tInt)
-tCheck s (Bool _) = return (s, tBool)
-tCheck s (Float _) = return (s, tFloat)
-tCheck s (Char _) = return (s, tChar)
-tCheck s (Str _) = return (s, list tChar)
-tCheck s (PrimFun x) = do
-    let Just tX = lookup x s
-    return (s, tX)
-
--- TODO: should I check types of each xs?
-tCheck s (List (x:xs)) = do
-    (s1, tX) <- tCheck s x
-    return (s1, list tX)
-
-tCheck s (List []) = do
-    v <- newTVar
-    return (s, list v)
-
-tCheck s (Ident x) = case lookup x s of
-    Just t -> return (s, t)
-    otherwise -> error (x ++ " not found in assumptions")
---        t <- newTVar
---        return (s, t)
-
-tCheck s (If pred trueCase falseCase) = do
-    (s1, t1) <- tCheck s pred
-    s2 <- mgu t1 tBool
-    let s2_1 = s2 @@ s1
-    (s3, t2) <- tCheck (s2_1 @@ s) trueCase
-    let s3_1 = s3 @@ s2_1
-    (s4, t3) <- tCheck (s3_1 @@ s) falseCase
-    s5 <- mgu (apply s4 t2) t3
-    return (s5 @@ s4 @@ s3_1 , apply s5 t3)
-
-tCheck s (Lambda [] e) = tCheck s e
-
-tCheck s (Lambda [p] e) = do
-    v <- newTVar
-    let pv = (p +-> v)
-    let subst = pv @@ s
-    (r, t1) <- tCheck subst e -- (replaceIdent (Ident p) (Ident p') e)
-    let domain = apply r v
-    return (eliminate [p] r, domain `fn` t1)
-
-tCheck s lam@(Lambda _ _) = tCheck s (simplifyLambda lam)
-
-tCheck s (FunDef name args body) = do
-    (s1, tF) <- tCheck s (Lambda args body)
-    return ((name +-> tF) @@ eliminate args s1, tF)
-
-tCheck s (Let [(k,v)] e) = do
-    (s1, tV) <- tCheck s v
-    let sNew = (k +-> tV) @@ s1 @@ s
-    (s2, tE) <- tCheck sNew e
-    return (s2 @@ s1, tE)
--- ty "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
-
-tCheck s (Let kvs e) = tCheck s $ foldr (Let . (:[])) e kvs
-
-
-tCheck s (Expr [e]) = tCheck s e
-
-tCheck s (Expr l) = tCheck s (foldl1 App l)
-
-tCheck s (App f x) = do
-    (sF, tF) <- tCheck s f
-    (sX, tX) <- tCheck (sF @@ s) x
-    v <- newTVar
-    let tF_orig = apply sX tF
-    let tF_target = tX `fn` v
-    result <- mgu tF_orig tF_target
-    return (result @@ sX @@ sF, apply result v)
--}
-
 tInfer :: Val -> TI Type
 tInfer (Int _) = return tInt
 tInfer (Bool _) = return tBool
@@ -183,9 +129,9 @@ tInfer (Ident x) = do
     s <- getSubst
     case lookup x s of
         Just ts -> do
-            traceM ("ID: ts: " ++ show ts)
+            --traceM ("ID: ts: " ++ show ts)
             t <- toType ts
-            traceM ("ID: t: " ++ show t)
+            --traceM ("ID: t: " ++ show t)
             return t
         otherwise -> fail (x ++ " not found in assumptions")
 
@@ -196,12 +142,14 @@ tInfer (Expr l) = tInfer (foldl1 App l)
 tInfer (App f x) = do
     tF <- tInfer f
     tX <- tInfer x
-    s <- getSubst
+    --s <- getSubst
     v <- newTVar
-    let tF_orig = apply s tF
+    --let tF_orig = apply s tF
     let tF_target = tX `fn` v
-    result <- mgu tF_orig tF_target
-    extendSubst result
+    unify tF tF_target
+    --result <- mgu tF_orig tF_target
+    --extendSubst result
+    result <- getSubst
     return $ apply result v
 
 tInfer (If pred trueCase falseCase) = do
@@ -240,11 +188,16 @@ tInfer lam@(Lambda params _) = if noDup params
         fail "duplicate argument"
 
 tInfer (Let [(k,v)] e) = do
+    --v' <- newTVar
+    --let kv' = (k +-> TScheme [] v')
+    --extendSubst kv'
     tV <- tInfer v
+    --s <- mgu v' tV
     extendSubst (k +-> TScheme (tv tV) tV)
+    --extendSubst (k +-> TScheme (tv tV) tV)
     tE <- tInfer e
-    s <- getSubst
-    traceM ("LET:" ++ showSubst (s \\ initialSubst))
+    --s <- getSubst
+    --traceM ("LET:" ++ showSubst (s \\ initialSubst))
     return tE
     --return (s2 @@ s1, tE)
 -- tyi "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
@@ -258,12 +211,15 @@ tInfer (FunDef name args body) = if noDup args
             v <- newTVar
             extendSubst (name +-> TScheme [] v)
             tF <- tInfer (Lambda args body)
-            extendSubst (name +-> TScheme [] tF)
+            s <- mgu v tF
+            extendSubst (name +-> TScheme [] (apply s tF))
             return tF
     else
         fail "duplicate argument"
+-- tyi "(def map (f l) (cons (f (head l)) (map f (tail l))))"
 -- tyi "(def map (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))"
 -- tyi "(lambda (f x) (f x))"
+-- tyi "(let {map = (lambda (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))} map)"
 
 {-
 tInfer (Let kvs e) = tInfer $ Expr (Lambda (keys kvs) e : vals kvs)
@@ -274,58 +230,15 @@ tInfer (Let kvs e) = tInfer $ Expr (Lambda (keys kvs) e : vals kvs)
 -- ==> Expr [Lambda [x1, x2, ..., xN] expr, e1, e2, ...]
 -}
 
+{-
 ti :: Val -> TI Type
 ti e@(Let _ _) = local (tInfer e)
 ti e@(Lambda _ _) = local (tInfer e)
 ti e = tInfer e
+-}
 
 tInferList :: [Val] -> TI [Type]
 tInferList = mapM tInfer
-
---tInferList [] = fail "no expression to type inference"
---tInferList [x] = return [tInfer x]
---tInferList (x:xs) = do
---    return (tInfer x : tInferList xs)
-
-{-
-tCheck s (If pred trueCase falseCase) = do
-    (s1, t1) <- tCheck s pred
-    s2 <- mgu t1 tBool
-    let s2_1 = s2 @@ s1
-    (s3, t2) <- tCheck (s2_1 @@ s) trueCase
-    let s3_1 = s3 @@ s2_1
-    (s4, t3) <- tCheck (s3_1 @@ s) falseCase
-    s5 <- mgu (apply s4 t2) t3
-    return (s5 @@ s4 @@ s3_1 , apply s5 t3)
-
-
-tCheck s (Lambda [] e) = tCheck s e
-
-tCheck s (Lambda [p] e) = do
-    v <- newTVar
-    let pv = (p +-> v)
-    let subst = pv @@ s
-    (r, t1) <- tCheck subst e -- (replaceIdent (Ident p) (Ident p') e)
-    let domain = apply r v
-    return (eliminate [p] r, domain `fn` t1)
-
-tCheck s lam@(Lambda _ _) = tCheck s (simplifyLambda lam)
-
-tCheck s (FunDef name args body) = do
-    (s1, tF) <- tCheck s (Lambda args body)
-    return ((name +-> tF) @@ eliminate args s1, tF)
-
-tCheck s (Let [(k,v)] e) = do
-    (s1, tV) <- tCheck s v
-    let sNew = (k +-> tV) @@ s1 @@ s
-    (s2, tE) <- tCheck sNew e
-    return (s2 @@ s1, tE)
--- ty "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
-
-tCheck s (Let kvs e) = tCheck s $ foldr (Let . (:[])) e kvs
-
-
--}
 
 
 toType (TScheme [] t) = return t
@@ -391,9 +304,12 @@ ty s = case parseSingle s of
 -}
 
 tyi input = case parseSingle input of
-    Right v -> case runTI (ti v) initialSubst 0 of
-        (s,i,t) -> putStrLn $ showSubstType (s \\ initialSubst) t
+    Right v -> case runTI (tInfer v) initialSubst 0 of
+        (s,i,t) -> putStrLn
+            $ showSubstType (prettySubst s) t
     Left err -> putStrLn (show err)
+    where
+        prettySubst s = List.sort (exclude s (map fst initialSubst))
         -- (s,i,t) -> putStrLn $ showSubstType (s \\ initialSubst) t
 
 tyim input = case parseMultiple "" input of
@@ -411,3 +327,8 @@ theta = [("X", TVar "a"), ("Y", TVar "b"), ("Z", TVar "Y")]
 eta = [("X", TApp (TVar "f") (TVar "Y")), ("Y", TVar "Z")]
 -- theta @@ eta = [("X",f b),("Z",Y)]
 
+tCheck :: Val -> Either String Type
+tCheck v = case runTI (tInfer v) initialSubst 0 of
+    (s, i, t) -> Right t
+    --Fail msg -> Left msg
+    --err -> Left (show err)
