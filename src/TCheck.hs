@@ -72,7 +72,7 @@ unify t1 t2 = do
     extendSubst u
 
 
-newId = TI (\s n -> (s, n+1, "v" ++ show n))
+newId = TI (\s n -> (s, n+1, "t" ++ show n))
 
 newTVar = do
     v <- newId
@@ -85,7 +85,7 @@ find x assumptions = case lookup x assumptions of
     otherwise -> fail $ "unbound type variable: " ++ x
 
 
-fromIdType = map (\(k,v) -> (k, TScheme [] v))
+fromIdType = map (\(k,v) -> (k, TScheme (tv v) v))
 
 defaultSubst :: Subst
 defaultSubst = fromIdType [
@@ -146,7 +146,7 @@ tInfer (App f x) = do
     v <- newTVar
     --let tF_orig = apply s tF
     let tF_target = tX `fn` v
-    unify tF tF_target
+    unify tF_target tF
     --result <- mgu tF_orig tF_target
     --extendSubst result
     result <- getSubst
@@ -154,12 +154,16 @@ tInfer (App f x) = do
 
 tInfer (If pred trueCase falseCase) = do
     tPred <- tInfer pred
-    sPred <- mgu tPred tBool
+    unify tPred tBool
+    --sPred <- mgu tPred tBool
     tTrueCase <- tInfer trueCase
     tFalseCase <- tInfer falseCase
     sFalse <- getSubst
-    sTrueFalse <- mgu (apply sFalse tTrueCase) tFalseCase
-    return $ apply sTrueFalse tFalseCase
+    unify (apply sFalse tTrueCase) tFalseCase
+    --sTrueFalse <- mgu (apply sFalse tTrueCase) tFalseCase
+    s <- getSubst
+    return $ apply s tFalseCase
+    --return $ apply sTrueFalse tFalseCase
 
 tInfer (Lambda [] e) = tInfer e
 
@@ -175,7 +179,7 @@ tInfer (Lambda [p] e) = do
     putSubst $ exclude s [p]
     let domain = apply s v
     --traceM ("LAMBDA: domain: " ++ show domain)
-    let result = domain `fn` tE
+    let result = domain `fn` (apply s tE)
     --traceM ("LAMBDA: result: " ++ show result)
     return result
 -- tyi "(let { f = (lambda (f) f) } ( (f 1), (f True)))"
@@ -208,18 +212,19 @@ tInfer (Let kvs e) = tInfer $ foldr (Let . (:[])) e kvs
 tInfer (FunDef name args body) = if noDup args
     then
         do
+            --v <- mkFunType args
             v <- newTVar
             extendSubst (name +-> TScheme [] v)
             tF <- tInfer (Lambda args body)
-            s <- mgu v tF
-            extendSubst (name +-> TScheme [] (apply s tF))
-            return tF
+            --s <- mgu v tF
+            unify tF v
+            s <- getSubst
+            --traceM ("fundef: " ++ showSubst s)
+            --extendSubst (name +-> TScheme [] (apply s tF))
+            --extendSubst (name +-> TScheme [] (tF))
+            return (apply s tF)
     else
         fail "duplicate argument"
--- tyi "(def map (f l) (cons (f (head l)) (map f (tail l))))"
--- tyi "(def map (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))"
--- tyi "(lambda (f x) (f x))"
--- tyi "(let {map = (lambda (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))} map)"
 
 {-
 tInfer (Let kvs e) = tInfer $ Expr (Lambda (keys kvs) e : vals kvs)
@@ -236,6 +241,49 @@ ti e@(Let _ _) = local (tInfer e)
 ti e@(Lambda _ _) = local (tInfer e)
 ti e = tInfer e
 -}
+
+runTests = [
+    ty "(let { f = (lambda (f) f) } ( (f 1), (f True)))"
+        == tParse "(Int,Bool)"
+    , ty "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
+        == tInt
+    , ty "(let { x = (lambda (x) (if (== 1 (head x)) 'a' 'b')), y = x} (y ))"
+        == tParse "[Int] -> Char"
+    , ty "(lambda (f x) (f x))"
+        == tParse "(t1 -> t2) -> t1 -> t2"
+    , ty "(def fac (n) (if (<= n 0) 1 (* n (fac (- n 1)))))"
+        == tParse "Int -> Int"
+    , ty "(def twice (f x) (f (f x)))"
+        == tParse "(t1 -> t1) -> t1 -> t1"
+    , ty "(def len (l) (if (isEmpty l) 0 (+ 1 (len (tail l)))))"
+        == tParse "[t1] -> Int"
+    , ty "(def filter (f l) (if (f (head l)) (cons (head l) (filter f (tail l))) (filter f (tail l))))"
+        == tParse "(t1 -> Bool) -> [t1] -> [t1]"
+    , ty "(def acc (f i l) (if (isEmpty l) i (f (head l) (acc f i (tail l)))))"
+        == tParse "(t1 -> t2 -> t2) -> t2 -> [t1] -> t2"
+    , ty "(def map (f l) (cons (f (head l)) (map f (tail l))))"
+        == tParse "(t1 -> t2) -> [t1] -> [t2]"
+    , ty "(def map (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))"
+        == tParse "(t1 -> t2) -> [t1] -> [t2]"
+    ]
+
+unifiable t1 t2 = case runTI action initialSubst 0 of
+    (_,_,result) -> result
+    where
+        action = (do
+            unify t1 t2
+            s <- getSubst
+            return (apply s t1 == apply s t2))
+
+mkFunType [] = do
+    v <- newTVar
+    return v
+
+mkFunType (_:xs) = do
+    v <- newTVar
+    rest <- mkFunType xs
+    return (v `fn` rest)
+
 
 tInferList :: [Val] -> TI [Type]
 tInferList = mapM tInfer
@@ -295,18 +343,18 @@ allSameType l = and $
         == I.runIdentity (valToType b)) l (tail l)
 -}
 
-{-
-ty s = case parseSingle s of
-    Right v -> putStrLn
-        $ showSubstTypePair $ runTI
-        $ tCheck (defaultSubst `List.union` builtinSubst) v
-    otherwise -> error "parse error"
--}
+ty input = case parseSingle input of
+    Right v -> case runTI (tInfer v) initialSubst 0 of
+        (s,i,t) -> tSanitize t
+    Left err -> error (show err)
+    where
+        prettySubst s = List.sort (exclude s (map fst initialSubst))
+
 
 tyi input = case parseSingle input of
     Right v -> case runTI (tInfer v) initialSubst 0 of
         (s,i,t) -> putStrLn
-            $ showSubstType (prettySubst s) t
+            $ showSubstType (prettySubst s) (tSanitize t)
     Left err -> putStrLn (show err)
     where
         prettySubst s = List.sort (exclude s (map fst initialSubst))
@@ -314,7 +362,7 @@ tyi input = case parseSingle input of
 
 tyim input = case parseMultiple "" input of
     Right l -> case runTI (tInferList l) initialSubst 0 of
-        (s, i, t) -> mapM_ (putStrLn . show) t
+        (s, i, t) -> mapM_ (putStrLn . show) (map tSanitize t)
     Left err -> putStrLn (show err)
 
 initialSubst = defaultSubst `List.union` fromIdType builtinSubst

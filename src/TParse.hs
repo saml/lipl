@@ -107,6 +107,14 @@ parseUnit = do
     rparen
     return tUnit <?> "Unit"
 
+parsePair = do
+    lparen
+    t1 <- parseType
+    comma
+    t2 <- parseType
+    rparen
+    return (pair t1 t2) <?> "Pair"
+
 parseType = do
     P.try parseList
     <|> P.try parseInt
@@ -114,6 +122,7 @@ parseType = do
     <|> P.try parseBool
     <|> P.try parseChar
     <|> P.try parseStr
+    <|> P.try parsePair
     <|> P.try parseUnit
     <|> P.try parseTVar
     -- <|> P.try parseArrow

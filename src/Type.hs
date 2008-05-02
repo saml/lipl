@@ -18,6 +18,20 @@ data Type = TVar { getId :: Id }
 instance Show Type where
     show = PP.render . ppType
 
+getTVars (TVar v) = [v]
+getTVars (TApp t1 t2) = getTVars t1 ++ getTVars t2
+getTVars _ = []
+
+equiv t1 t2 = tSanitize t1 == tSanitize t2
+
+tSanitize t =
+    subst [(v, "t" ++ show i) | (i,v) <- zip [1..] (getTVars t)] t
+
+subst dict (TVar v) = case lookup v dict of
+    Just v' -> TVar v'
+subst dict (TApp t1 t2) = TApp (subst dict t1) (subst dict t2)
+subst dict t = t
+
 
 fromTVar (TVar v) = v
 
@@ -131,6 +145,22 @@ mgu t (TVar v) = varBind v t
 mgu (TConst c1) (TConst c2)
     | c1 == c2 = return nullSubst
 mgu _ _ = fail "types do not unify"
+
+--unifyVar (TVar v) v'@(TVar _) = v +-> TScheme [] v')
+--unifyVar t (TVar v)
+--unifyVar _ _ = return nullSubst
+
+
+{-
+tSanify' :: [(Id, Int)] -> Int -> Type -> Type
+tSanify' dict i (TVar v) = case lookup dict v of
+    Just curr -> TVar ("t" ++ show curr)
+    Nothing -> TVar ("t" ++ show i)
+tSanify' dict i (TApp t1 (TVar v)) = case lookup dict v of
+    Just curr -> TVar ("t" ++ show curr)
+    Nothing
+    TApp (tSanify' dict i t1) (tSanify' dict i t2)
+-}
 
 --testMgu = I.runIdentity $ mgu (mkTVar "a" `fn` tInt) (tChar `fn` mkTVar "b")
 -- mgu (list tChar `fn` TVar "b") (TVar "a" `fn` (TVar "a" `fn` tChar))
