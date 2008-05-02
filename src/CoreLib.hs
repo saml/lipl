@@ -9,6 +9,8 @@ import LangData
 import Utils
 import TParse
 import Type
+import EvalMonad
+import Error
 
 data Builtin = Builtin {
     getBuiltinArity :: Int

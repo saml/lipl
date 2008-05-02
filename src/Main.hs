@@ -14,6 +14,8 @@ import Evaluator
 import Parser
 import LangData
 import TCheck
+import Error
+import EvalMonad
 
 run wrap = S.runStateT (E.runErrorT (runWrap wrap)) nullEnv
 

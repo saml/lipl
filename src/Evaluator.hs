@@ -12,10 +12,13 @@ import qualified Data.List as List
 import Data.List ((\\))
 import Data.Traversable (traverse)
 import qualified Text.ParserCombinators.Parsec as P
+
 import Parser
 import LangData
 import CoreLib
 import Utils
+import EvalMonad
+import Error
 
 import Debug.Trace (trace)
 
