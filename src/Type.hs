@@ -15,6 +15,13 @@ data Type = TVar { getId :: Id }
     | TApp Type Type
     deriving (Eq, Ord)
 
+{-
+instance Eq Type where
+    TVar a == TVar b = a == b
+    TConst a == TConst b = a == b
+    TApp t1 t2 == TApp t1' t2' =
+    t1 == t2 = tSanitize t1 == tSanitize t2
+-}
 instance Show Type where
     show = PP.render . ppType
 

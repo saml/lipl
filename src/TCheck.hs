@@ -2,6 +2,7 @@
 
 module TCheck where
 
+import qualified Data.Map as Map
 import qualified Data.List as List
 import Data.List ((\\))
 import qualified Control.Monad as M
@@ -129,6 +130,7 @@ tInfer (Pair a b) = do
     tA <- tInfer a
     tB <- tInfer b
     s <- getSubst
+    --traceM ("Pair: s:" ++ showSubst (exclude s (map fst initialSubst)))
     return $ pair (apply s tA) (apply s tB)
 
 tInfer (Ident x) = do
@@ -136,8 +138,9 @@ tInfer (Ident x) = do
     case lookup x s of
         Just ts -> do
             t <- toType ts
-            s' <- getSubst
-            return (apply s' t)
+            return t
+            --s' <- getSubst
+            --return (apply s' t)
         otherwise -> fail (x ++ " not found in assumptions")
 
 tInfer (Expr []) = return tUnit
@@ -151,9 +154,12 @@ tInfer (App f x) = do
     --traceM ("App: tX: " ++ show tX)
     v <- newTVar
     let tF' = tX `fn` v
-    unify tF' tF
+    unify tF tF'
     s <- getSubst
     let result = apply s v
+    --traceM ("App: v: " ++ show v)
+    --traceM ("App: s: " ++ showSubst (s' `exclude` map fst initialSubst))
+    --traceM ("App: result: " ++ show result)
     return result
 
 tInfer (If pred true false) = do
@@ -171,16 +177,16 @@ tInfer (Lambda [] e) = tInfer e
 tInfer (Lambda [x] e) = do
     v <- newTVar
     let sF = (x +-> TScheme [] v)
-    --tE <- localSubst sF (tInfer e)
-    extendSubst sF
-    s <- getSubst
+    tE <- localSubst sF (tInfer e)
+    --extendSubst sF
+    --s <- getSubst
     --traceM ("Lambda: s:" ++ showSubst (exclude s (map fst initialSubst)))
-    tE <- tInfer e
-    s' <- getSubst
+    --tE <- tInfer e
+    s <- getSubst
     --traceM ("Lambda: s':" ++ showSubst (exclude s' (map fst initialSubst)))
-    putSubst $ exclude s' [x]
-    let domain = apply s' v
-    let result = domain `fn` (apply s' tE)
+    --putSubst $ exclude s [x]
+    let domain = apply s v
+    let result = domain `fn` tE -- (apply s tE)
     return result
 
 tInfer lam@(Lambda params _) = if noDup params
@@ -190,19 +196,31 @@ tInfer lam@(Lambda params _) = if noDup params
         fail "duplicate argument"
 
 tInfer (Let [(k,v)] e) = do
-    --v' <- newTVar
-    --let kv' = (k +-> TScheme [] v')
-    --extendSubst kv'
     tV <- tInfer v
-    --s <- mgu v' tV
-    extendSubst (k +-> TScheme (tv tV) tV)
+    --traceM ("LET: tV: " ++ show tV)
+    s <- getSubst
+    let keys = map fst s
+    let vals = map snd s
+    let freeVs = (tv tV \\ keys) \\ tv vals
+
+    --traceM ("Let: freeVs: " ++ show freeVs)
+    --traceM ("Let: s: " ++ showSubst (exclude s (map fst initialSubst)))
+    --extendSubst (k +-> TScheme [] tV)
+    extendSubst (k +-> TScheme freeVs tV)
     --extendSubst (k +-> TScheme (tv tV) tV)
     tE <- tInfer e
+    sE <- getSubst
+    --traceM ("LET: e: " ++ show e)
+    --traceM ("LET: sE: " ++ showSubst (exclude sE (map fst initialSubst)))
+    --traceM ("LET: tE: " ++ show tE)
     tK <- tInfer (Ident k)
+    sK <- getSubst
+    --traceM ("LET: sK: " ++ showSubst (exclude sK (map fst initialSubst)))
+    --traceM ("LET: tK: " ++ show tK)
     unify tK tV
 
     s <- getSubst
-    --traceM ("LET:" ++ showSubst (s \\ initialSubst))
+    --traceM ("LET: s: " ++ showSubst (exclude s (map fst initialSubst)))
     return (apply s tE)
     --return (s2 @@ s1, tE)
 -- tyi "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
@@ -248,33 +266,33 @@ ti e = tInfer e
 
 runTests = [
     ty "(let { f = (lambda (f) f) } ( (f 1), (f True)))"
-        == tParse "(Int,Bool)"
+        `tEq` tParse "(Int,Bool)"
     , ty "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
-        == tInt
+        `tEq` tInt
     , ty "(let { x = (lambda (x) (if (== 1 (head x)) 'a' 'b')), y = x} (y ))"
-        == tParse "[Int] -> Char"
+        `tEq` tParse "[Int] -> Char"
     , ty "(lambda (f x) (f x))"
-        == tParse "(t0 -> t1) -> t0 -> t1"
+        `tEq` tParse "(t0 -> t1) -> t0 -> t1"
     , ty "(def fac (n) (if (<= n 0) 1 (* n (fac (- n 1)))))"
-        == tParse "Int -> Int"
+        `tEq` tParse "Int -> Int"
     , ty "(def twice (f x) (f (f x)))"
-        == tParse "(t0 -> t0) -> t0 -> t0"
+        `tEq` tParse "(t0 -> t0) -> t0 -> t0"
     , ty "(def len (l) (if (isEmpty l) 0 (+ 1 (len (tail l)))))"
-        == tParse "[t0] -> Int"
+        `tEq` tParse "[t0] -> Int"
     , ty "(def filter (f l) (if (f (head l)) (cons (head l) (filter f (tail l))) (filter f (tail l))))"
-        == tParse "(t0 -> Bool) -> [t0] -> [t0]"
+        `tEq` tParse "(t0 -> Bool) -> [t0] -> [t0]"
     , ty "(def acc (f i l) (if (isEmpty l) i (f (head l) (acc f i (tail l)))))"
-        == tParse "(t0 -> t1 -> t1) -> t1 -> [t0] -> t1"
+        `tEq` tParse "(t0 -> t1 -> t1) -> t1 -> [t0] -> t1"
     , ty "(def map (f l) (cons (f (head l)) (map f (tail l))))"
-        == tParse "(t0 -> t1) -> [t0] -> [t1]"
+        `tEq` tParse "(t0 -> t1) -> [t0] -> [t1]"
     , ty "(def map (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))"
-        == tParse "(t0 -> t1) -> [t0] -> [t1]"
+        `tEq` tParse "(t0 -> t1) -> [t0] -> [t1]"
     , ty "(lambda (x) (lambda (x) (+ x x)))"
-        == tParse "(t0 -> Int -> Int)"
+        `tEq` tParse "(t0 -> Int -> Int)"
     , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (cons x xs)))"
-        == tParse "[t0] -> [t0]"
+        `tEq` tParse "[t0] -> [t0]"
     , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (x,xs)))"
-        == tParse "[t0] -> (t0, [t0])"
+        `tEq` tParse "[t0] -> (t0, [t0])"
     ]
 
 unifiable t1 t2 = case runTI action initialSubst 0 of
@@ -312,11 +330,19 @@ local action = do
     return result
 
 localSubst s action = do
+    sOrig <- getSubst
+    let cache = Map.toList $ Map.intersection (Map.fromList sOrig) (Map.fromList s)
     extendSubst s
     result <- action
     s' <- getSubst
+    let cache' = map (\(k,v) -> (k, apply s' v)) cache
+    traceM ("localSubst: cache: " ++ showSubst cache)
+    traceM ("localSubst: cache': " ++ showSubst cache')
+    --traceM ("localSubst: s': " ++ showSubst (exclude s' (map fst initialSubst)))
     let ks = keys s
-    putSubst (exclude s' ks)
+    let s'' = cache' @@ exclude s' ks
+    traceM ("localSubst: s'': " ++ showSubst (exclude s'' (map fst initialSubst)))
+    putSubst s''
     return result
     where
         keys = map fst
@@ -358,6 +384,7 @@ tUpdateTVars e = do
     let vs = getTVars e
     vs' <- mapM (const newId) vs
     return $ subst (zip vs vs') e
+
 
 
 {-
@@ -403,9 +430,11 @@ allSameType l = and $
         == I.runIdentity (valToType b)) l (tail l)
 -}
 
+tEq t1 t2 = tSanitize t1 == tSanitize t2
+
 ty input = case parseSingle input of
     Right v -> case runTI (tInfer v) initialSubst 0 of
-        (s,i,t) -> tSanitize t
+        (s,i,t) -> t --tSanitize t
     Left err -> error (show err)
     where
         prettySubst s = List.sort (exclude s (map fst initialSubst))
@@ -432,7 +461,14 @@ ti val = let (_,_,t) = runTI (tInfer val) initialSubst 0
         t
 -- ti (Lambda ["x"] (Lambda ["x"] (App (App (PrimFun "+") (Ident "x")) (Ident "x"))))
 
-traceM msg = trace ('\n' : msg) (return ())
+
+traceM msg = if isDebugSet
+    then
+        trace ('\n' : msg) (return ())
+    else
+        return ()
+    where
+        isDebugSet = False
 
 printRunTIResult (s,i,t) = putStrLn $ show t
 
