@@ -30,6 +30,10 @@ runLex p input = P.parse (do
     return x) "" input
 -}
 
+parse input = case parseSingle input of
+    Right v -> v
+    Left err -> error (show err)
+
 parseSingle input = P.parse parseSingleExpr "lipl" input
 
 parseMultiple fileName input =

@@ -12,7 +12,7 @@ import qualified Control.Monad.Trans as T
 import Debug.Trace (trace)
 
 import LangData
-import Parser (parseSingle, parseMultiple)
+import Parser (parse, parseSingle, parseMultiple)
 import Type
 import TParse
 import Trace
@@ -46,6 +46,10 @@ instance Monad TI where
     Fail msg >>= _ = Fail msg
     fail = Fail
 
+
+showTI ti = let (s,_,t) = runTI ti initialSubst 0
+    in
+        showSubstTypePair (s,t)
 
 runTI (TI f) s i = f s i
 -- runTI (Fail msg) s i = Fail msg
@@ -106,13 +110,14 @@ tInfer (Str _) = return $ list tChar
 tInfer (PrimFun x) = do
     s <- getSubst
     let Just (TScheme _ tX) = lookup x s
-    return tX
+    tX' <- tUpdateTVars tX
+    return tX'
 
 tInfer (List []) = do
     v <- newTVar
     return $ list v
 
-tInfer (List l@(x:xs)) = do
+tInfer (List l) = do
     ts <- mapM tInfer l
     if allEq ts
         then
@@ -123,67 +128,60 @@ tInfer (List l@(x:xs)) = do
 tInfer (Pair a b) = do
     tA <- tInfer a
     tB <- tInfer b
-    return $ pair tA tB
+    s <- getSubst
+    return $ pair (apply s tA) (apply s tB)
 
 tInfer (Ident x) = do
     s <- getSubst
     case lookup x s of
         Just ts -> do
-            --traceM ("ID: ts: " ++ show ts)
             t <- toType ts
-            --traceM ("ID: t: " ++ show t)
-            return t
+            s' <- getSubst
+            return (apply s' t)
         otherwise -> fail (x ++ " not found in assumptions")
 
 tInfer (Expr []) = return tUnit
-tInfer (Expr [e]) = tInfer e
 tInfer (Expr l) = tInfer (foldl1 App l)
 
 tInfer (App f x) = do
     tF <- tInfer f
     tX <- tInfer x
-    --s <- getSubst
+    s' <- getSubst
+    --traceM ("App: s: " ++ showSubst (s' `exclude` map fst initialSubst))
+    --traceM ("App: tX: " ++ show tX)
     v <- newTVar
-    --let tF_orig = apply s tF
-    let tF_target = tX `fn` v
-    unify tF_target tF
-    --result <- mgu tF_orig tF_target
-    --extendSubst result
-    result <- getSubst
-    return $ apply result v
+    let tF' = tX `fn` v
+    unify tF' tF
+    s <- getSubst
+    let result = apply s v
+    return result
 
-tInfer (If pred trueCase falseCase) = do
+tInfer (If pred true false) = do
     tPred <- tInfer pred
     unify tPred tBool
-    --sPred <- mgu tPred tBool
-    tTrueCase <- tInfer trueCase
-    tFalseCase <- tInfer falseCase
-    sFalse <- getSubst
-    unify (apply sFalse tTrueCase) tFalseCase
-    --sTrueFalse <- mgu (apply sFalse tTrueCase) tFalseCase
+    tTrue <- tInfer true
+    tFalse <- tInfer false
     s <- getSubst
-    return $ apply s tFalseCase
-    --return $ apply sTrueFalse tFalseCase
+    unify (apply s tTrue) tFalse
+    s' <- getSubst
+    return $ apply s' tFalse
 
 tInfer (Lambda [] e) = tInfer e
 
-tInfer (Lambda [p] e) = do
+tInfer (Lambda [x] e) = do
     v <- newTVar
-    let sPV = (p +-> TScheme [] v)
-    --traceM ("LAMBDA: sPV: " ++ showSubst sPV)
-    extendSubst sPV
-    tE <- tInfer e
-    --traceM ("LAMBDA: tE: " ++ show tE)
+    let sF = (x +-> TScheme [] v)
+    --tE <- localSubst sF (tInfer e)
+    extendSubst sF
     s <- getSubst
-    --traceM ("LAMBDA:" ++ showSubst (s \\ initialSubst))
-    putSubst $ exclude s [p]
-    let domain = apply s v
-    --traceM ("LAMBDA: domain: " ++ show domain)
-    let result = domain `fn` (apply s tE)
-    --traceM ("LAMBDA: result: " ++ show result)
+    --traceM ("Lambda: s:" ++ showSubst (exclude s (map fst initialSubst)))
+    tE <- tInfer e
+    s' <- getSubst
+    --traceM ("Lambda: s':" ++ showSubst (exclude s' (map fst initialSubst)))
+    putSubst $ exclude s' [x]
+    let domain = apply s' v
+    let result = domain `fn` (apply s' tE)
     return result
--- tyi "(let { f = (lambda (f) f) } ( (f 1), (f True)))"
-
 
 tInfer lam@(Lambda params _) = if noDup params
     then
@@ -200,9 +198,12 @@ tInfer (Let [(k,v)] e) = do
     extendSubst (k +-> TScheme (tv tV) tV)
     --extendSubst (k +-> TScheme (tv tV) tV)
     tE <- tInfer e
-    --s <- getSubst
+    tK <- tInfer (Ident k)
+    unify tK tV
+
+    s <- getSubst
     --traceM ("LET:" ++ showSubst (s \\ initialSubst))
-    return tE
+    return (apply s tE)
     --return (s2 @@ s1, tE)
 -- tyi "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
 -- tyi "(let { x = (lambda (x) (if (== 1 (head x)) 'a' 'b')), y = x} (y ))"
@@ -215,11 +216,14 @@ tInfer (FunDef name args body) = if noDup args
             --v <- mkFunType args
             v <- newTVar
             extendSubst (name +-> TScheme [] v)
+            --sBefore <- getSubst
+            --traceM ("FunDef: before " ++ showSubst (exclude sBefore (map fst initialSubst)))
             tF <- tInfer (Lambda args body)
+            --sAfter <- getSubst
+            --traceM ("FunDef: after " ++ showSubst (exclude sAfter (map fst initialSubst)))
             --s <- mgu v tF
             unify tF v
             s <- getSubst
-            --traceM ("fundef: " ++ showSubst s)
             --extendSubst (name +-> TScheme [] (apply s tF))
             --extendSubst (name +-> TScheme [] (tF))
             return (apply s tF)
@@ -250,21 +254,27 @@ runTests = [
     , ty "(let { x = (lambda (x) (if (== 1 (head x)) 'a' 'b')), y = x} (y ))"
         == tParse "[Int] -> Char"
     , ty "(lambda (f x) (f x))"
-        == tParse "(t1 -> t2) -> t1 -> t2"
+        == tParse "(t0 -> t1) -> t0 -> t1"
     , ty "(def fac (n) (if (<= n 0) 1 (* n (fac (- n 1)))))"
         == tParse "Int -> Int"
     , ty "(def twice (f x) (f (f x)))"
-        == tParse "(t1 -> t1) -> t1 -> t1"
+        == tParse "(t0 -> t0) -> t0 -> t0"
     , ty "(def len (l) (if (isEmpty l) 0 (+ 1 (len (tail l)))))"
-        == tParse "[t1] -> Int"
+        == tParse "[t0] -> Int"
     , ty "(def filter (f l) (if (f (head l)) (cons (head l) (filter f (tail l))) (filter f (tail l))))"
-        == tParse "(t1 -> Bool) -> [t1] -> [t1]"
+        == tParse "(t0 -> Bool) -> [t0] -> [t0]"
     , ty "(def acc (f i l) (if (isEmpty l) i (f (head l) (acc f i (tail l)))))"
-        == tParse "(t1 -> t2 -> t2) -> t2 -> [t1] -> t2"
+        == tParse "(t0 -> t1 -> t1) -> t1 -> [t0] -> t1"
     , ty "(def map (f l) (cons (f (head l)) (map f (tail l))))"
-        == tParse "(t1 -> t2) -> [t1] -> [t2]"
+        == tParse "(t0 -> t1) -> [t0] -> [t1]"
     , ty "(def map (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))"
-        == tParse "(t1 -> t2) -> [t1] -> [t2]"
+        == tParse "(t0 -> t1) -> [t0] -> [t1]"
+    , ty "(lambda (x) (lambda (x) (+ x x)))"
+        == tParse "(t0 -> Int -> Int)"
+    , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (cons x xs)))"
+        == tParse "[t0] -> [t0]"
+    , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (x,xs)))"
+        == tParse "[t0] -> (t0, [t0])"
     ]
 
 unifiable t1 t2 = case runTI action initialSubst 0 of
@@ -301,6 +311,26 @@ local action = do
     putSubst sOrig
     return result
 
+localSubst s action = do
+    extendSubst s
+    result <- action
+    s' <- getSubst
+    let ks = keys s
+    putSubst (exclude s' ks)
+    return result
+    where
+        keys = map fst
+
+    {-
+    result <- action
+    s' <- getSubst
+    let ks = keys s
+    putSubst (exclude s' ks)
+    return result
+    where
+        keys = map fst
+    -}
+
 withSubst s action = do
     n <- getN
     sCurr <- getSubst
@@ -324,6 +354,12 @@ withExtendSubst s action = do
 
 eliminate ids = filter (\x -> fst x `notElem` ids)
 
+tUpdateTVars e = do
+    let vs = getTVars e
+    vs' <- mapM (const newId) vs
+    return $ subst (zip vs vs') e
+
+
 {-
 replaceIdent i i' e@(Ident x)
     | x == i = Ident i'
@@ -336,6 +372,30 @@ simplifyLambda lam@(Lambda [x] e) = lam
 simplifyLambda lam@(Lambda (x:xs) e) =
     Lambda [x] (simplifyLambda (Lambda xs e))
 simplifyLambda (Expr [x]) = simplifyLambda x
+
+{-
+substVal x y e@(Ident i) = if x == i then Ident y else e
+substVal x y (FunDef name args e) = FunDef name args (substVal x y e)
+substVal x y (Lambda args e) = Lambda args (substVal x y e)
+substVal _ _ e = e
+
+sanitizeVal (FunDef name args e) = FunDef name args (sanitizeVal e)
+sanitizeVal lam@(Lambda [] _) = lam
+sanitizeVal lam@(Lambda [x] e) = Lambda [x] (substVal x e)
+--sanitizeVal lam@(Lambda args e)
+sanitizeVal x = x
+-}
+
+substVal dict e@(Ident i) = case lookup i dict of
+    Just i' -> Ident i'
+    Nothing -> e
+substVal dict (FunDef name args e) = FunDef name args (substVal dict e)
+substVal dict (Lambda args e) = Lambda args (substVal dict e)
+substVal dict v = v
+
+sanitizeVal e =
+    substVal [(v, v ++ show i) | (i,v) <- zip [0..] (idents e)] e
+
 
 {-
 allSameType l = and $
@@ -354,7 +414,7 @@ ty input = case parseSingle input of
 tyi input = case parseSingle input of
     Right v -> case runTI (tInfer v) initialSubst 0 of
         (s,i,t) -> putStrLn
-            $ showSubstType (prettySubst s) (tSanitize t)
+            $ showSubstType (prettySubst s) t -- (tSanitize t)
     Left err -> putStrLn (show err)
     where
         prettySubst s = List.sort (exclude s (map fst initialSubst))
@@ -366,6 +426,11 @@ tyim input = case parseMultiple "" input of
     Left err -> putStrLn (show err)
 
 initialSubst = defaultSubst `List.union` fromIdType builtinSubst
+
+ti val = let (_,_,t) = runTI (tInfer val) initialSubst 0
+    in
+        t
+-- ti (Lambda ["x"] (Lambda ["x"] (App (App (PrimFun "+") (Ident "x")) (Ident "x"))))
 
 traceM msg = trace ('\n' : msg) (return ())
 

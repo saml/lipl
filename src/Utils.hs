@@ -74,6 +74,18 @@ noDup l = length l == length (List.nub l)
 
 exclude kv k = filter (not . (`elem` k) . fst) kv
 
+idents e = List.nub $ idents' e
+    where
+        idents' (Ident i) = [i]
+        idents' (FunDef _ _ e) = idents' e
+        idents' (Lambda _ e) = idents' e
+        idents' (List []) = []
+        idents' (List l@(x:xs)) = concatMap idents' l
+        idents' (Dict l) =  concatMap (\(k, v) -> k : idents' v) l
+        idents' (Expr l) = concatMap idents' l
+        idents' (App e1 e2) = idents' e1 ++ idents' e2
+        idents' x = []
+
 {-
 ppKeyVal ppk ppv (k, v) = ppk k
     <+> PP.text "="

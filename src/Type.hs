@@ -25,7 +25,7 @@ getTVars _ = []
 equiv t1 t2 = tSanitize t1 == tSanitize t2
 
 tSanitize t =
-    subst [(v, "t" ++ show i) | (i,v) <- zip [1..] (getTVars t)] t
+    subst [(v, "t" ++ show i) | (i,v) <- zip [0..] (getTVars t)] t
 
 subst dict (TVar v) = case lookup v dict of
     Just v' -> TVar v'
