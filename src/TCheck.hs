@@ -177,6 +177,8 @@ tInfer (Lambda [] e) = tInfer e
 tInfer (Lambda [x] e) = do
     v <- newTVar
     let sF = (x +-> TScheme [] v)
+    s <- getSubst
+    --tE <- withinScope (sF @@ s) (tInfer e)
     tE <- localSubst sF (tInfer e)
     --extendSubst sF
     --s <- getSubst
@@ -185,6 +187,7 @@ tInfer (Lambda [x] e) = do
     s <- getSubst
     --traceM ("Lambda: s':" ++ showSubst (exclude s' (map fst initialSubst)))
     --putSubst $ exclude s [x]
+    s <- getSubst
     let domain = apply s v
     let result = domain `fn` tE -- (apply s tE)
     return result
@@ -287,12 +290,18 @@ runTests = [
         `tEq` tParse "(t0 -> t1) -> [t0] -> [t1]"
     , ty "(def map (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))"
         `tEq` tParse "(t0 -> t1) -> [t0] -> [t1]"
-    , ty "(lambda (x) (lambda (x) (+ x x)))"
-        `tEq` tParse "(t0 -> Int -> Int)"
     , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (cons x xs)))"
         `tEq` tParse "[t0] -> [t0]"
     , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (x,xs)))"
         `tEq` tParse "[t0] -> (t0, [t0])"
+    , ty "(lambda (f x y) (f y x))"
+        `tEq` tParse "(a -> b -> c) -> b -> a -> c"
+    , ty "((lambda (f x y) (f y x)) (lambda (x) x))"
+        `tEq` tParse "b -> (b -> c) -> c"
+    , ty "(lambda (x) (let {x = 1} x))"
+        `tEq` tParse "a -> Int"
+    , ty "(lambda (x) (lambda (x) (+ x x)))"
+        `tEq` tParse "(t0 -> Int -> Int)"
     ]
 
 unifiable t1 t2 = case runTI action initialSubst 0 of
@@ -323,6 +332,13 @@ toType (TScheme (x:xs) t) = do
     v <- newId
     toType $ TScheme xs (replace x v t)
 
+withinScope s action = do
+    sOrig <- getSubst
+    putSubst s
+    result <- action
+    putSubst sOrig
+    return result
+
 local action = do
     sOrig <- getSubst
     result <- action
@@ -340,7 +356,7 @@ localSubst s action = do
     traceM ("localSubst: cache': " ++ showSubst cache')
     --traceM ("localSubst: s': " ++ showSubst (exclude s' (map fst initialSubst)))
     let ks = keys s
-    let s'' = cache' @@ exclude s' ks
+    let s'' = exclude s' ks @@ cache'
     traceM ("localSubst: s'': " ++ showSubst (exclude s'' (map fst initialSubst)))
     putSubst s''
     return result
@@ -375,8 +391,6 @@ withExtendSubst s action = do
     putN n
     putSubst sCurr
     return result
-
-
 
 eliminate ids = filter (\x -> fst x `notElem` ids)
 
@@ -481,3 +495,18 @@ tCheck v = case runTI (tInfer v) initialSubst 0 of
     (s, i, t) -> Right t
     --Fail msg -> Left msg
     --err -> Left (show err)
+{-
+rename dict e@(Ident x) = case lookup x dict of
+    Just x' -> Ident x'
+    Nothing -> e
+rename dict (FunDef _ args e) = rename dict e
+
+uniqueId = concat
+renameLambda bvs (Lambda [x] e) = if x `elem` bvs
+    then
+        let x' = uniqueId bvs in Lambda [x'] (renameLambda (x':bvs) e)
+    else
+        Lambda [x] (renameLambda (x:bvs) e)
+renameLambda bvs (Ident x) = if x `elem` bvs
+    then
+-}

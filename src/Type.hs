@@ -39,6 +39,8 @@ subst dict (TVar v) = case lookup v dict of
 subst dict (TApp t1 t2) = TApp (subst dict t1) (subst dict t2)
 subst dict t = t
 
+isFun (TApp (TApp (TConst "->") _) _) = True
+isFun _ = False
 
 fromTVar (TVar v) = v
 
@@ -49,7 +51,8 @@ ppType (TApp (TApp (TConst "(,)") a) b) =
 ppType (TApp (TConst "[]") a) = PP.brackets (ppType a)
 ppType (TApp (TConst "{}") a) = PP.braces (ppType a)
 ppType (TApp (TApp (TConst "->") a) b) =
-    PP.parens $ PP.fsep [ppType a, PP.text "->", ppType b]
+    PP.fsep [if isFun a then PP.parens (ppType a) else ppType a
+        , PP.text "->", ppType b]
 ppType (TApp a b) = ppType a <+> ppType b
 
 tUnit = TConst "()"
