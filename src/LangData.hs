@@ -63,9 +63,9 @@ data Val = Comment String
     | Let KeyValList Val
     | Closure KeyValList Val
     | If Val Val Val -- pred, if case, else case
-    deriving (Show, Ord, Eq)
+    deriving (Ord, Eq)
 
--- instance Show Val where show = PP.render . ppVal
+instance Show Val where show = PP.render . ppVal
 
 ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
