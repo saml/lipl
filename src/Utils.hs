@@ -74,6 +74,8 @@ noDup l = length l == length (List.nub l)
 
 exclude kv k = filter (not . (`elem` k) . fst) kv
 
+subtractMap kv k = foldr Map.delete kv k
+
 idents e = List.nub $ idents' e
     where
         idents' (Ident i) = [i]

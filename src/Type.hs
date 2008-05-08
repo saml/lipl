@@ -15,13 +15,6 @@ data Type = TVar { getId :: Id }
     | TApp Type Type
     deriving (Eq, Ord)
 
-{-
-instance Eq Type where
-    TVar a == TVar b = a == b
-    TConst a == TConst b = a == b
-    TApp t1 t2 == TApp t1' t2' =
-    t1 == t2 = tSanitize t1 == tSanitize t2
--}
 instance Show Type where
     show = PP.render . ppType
 
@@ -76,7 +69,8 @@ pair a b = TApp (TApp tTuple2 a) b
 
 mkTVar = TVar
 
-type Subst = [(Id, TScheme)]
+type Subst = Map.Map Id TScheme
+--type Subst = [(Id, TScheme)]
 
 ppIdType (i,t) = PP.fsep [PP.text i, PP.text "::", ppType t]
 
@@ -84,18 +78,22 @@ ppIdTypeList l = map ((PP.empty $$) . ppIdType) l
 
 ppIdTScheme (i, ts) = PP.fsep [PP.text i, PP.text "::", ppTScheme ts]
 ppIdTSchemeList = map ((PP.empty $$) . ppIdTScheme)
-ppSubst l = PP.braces $ PP.fsep $ PP.punctuate PP.comma (ppIdTSchemeList l)
-
+ppSubst l = PP.braces $ PP.fsep
+    $ PP.punctuate PP.comma (ppIdTSchemeList $ Map.toList l)
 showSubst = PP.render . ppSubst
 
 showSubstTypePair (s,t) = PP.render (ppSubst s $$ ppType t)
 
 showSubstType s t = PP.render (ppSubst s $$ ppType t)
 
-nullSubst = []
+nullSubst = Map.empty
+
+mkMonoType t = TScheme [] t
+mkPolyType t = TScheme (tv t) t
+
 
 (+->) :: Id -> TScheme -> Subst
-v +-> ts = [(v, ts)]
+v +-> ts = Map.fromList [(v, ts)]
 
 -- type abstraction
 -- ((TScheme [x,y] ([y] -> x)) Int Char) ==> [Char] -> Int
@@ -121,7 +119,7 @@ class Types t where
     tv :: t -> [Id]
 
 instance Types Type where
-    apply s v@(TVar u) = case lookup u s of
+    apply s v@(TVar u) = case Map.lookup u s of
         Just (TScheme _ t) -> apply s t
         Nothing -> v
     apply s (TApp f a) = TApp (apply s f) (apply s a)
@@ -136,19 +134,20 @@ instance (Types a) => Types [a] where
     tv = List.nub . concat . map tv
 
 instance Types TScheme where
-    apply s (TScheme l e) = TScheme l $ apply (s `exclude` l) e
+    apply s (TScheme l e) = TScheme l $ apply (s `subtractMap` l) e
     tv (TScheme l e) = tv e
 
 infixr 4 @@
-s1 @@ s2 = (Map.toList . Map.fromListWith (\x y -> y))
-    ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
+s1 @@ s2 = Map.union s2 s1
 --s1 @@ s2 = (Map.toList . Map.fromListWith (\x y -> y))
 --    ([(u, apply s1 t) | (u, t) <- s2] ++ s1)
 
+{-
 merge s1 s2 = if agree then return (s1 ++ s2) else fail "merge fails"
     where
         agree = all (\v -> apply s1 (TVar v) == apply s2 (TVar v))
                     (map fst s1 `List.intersect` map fst s2)
+-}
 
 mgu (TApp f1 a1) (TApp f2 a2) = do
     s1 <- mgu f1 f2
@@ -184,6 +183,7 @@ varBind u t
     | u `elem` tv t = fail "occurs check fails"
     | otherwise = return (u +-> TScheme [] t)
 
+{-
 match (TApp f1 a1) (TApp f2 a2) = do
     sf <- match f1 f2
     sa <- match a1 a2
@@ -192,4 +192,4 @@ match (TVar u) t = return (u +-> TScheme [] t)
 match (TConst c1) (TConst c2)
     | c1 == c2 = return nullSubst
 match _ _ = fail "types do not match"
-
+-}

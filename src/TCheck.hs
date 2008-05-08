@@ -19,89 +19,7 @@ import TParse
 import Trace
 import CoreLib
 import Utils
-
-type Assumpt = Subst
-
-newtype SI a = SI { runSI :: Subst -> Int -> (Subst, Int, a) }
-data TI a = TI (Subst -> Int -> (Subst, Int, a))
-    | Fail String
-
---newtype TI a = TI { runTI :: E.ErrorT String SI a }
--- newtype TI a = TI { runTI :: Subst -> Int -> Either String (Subst, Int, a) }
-
-{-
-instance Monad TI where
-    return x = TI (\s n -> (s, n, x))
-    TI f >>= g = TI (\s n -> case f s n of
-        (s', n', x) -> let TI gx = g x in gx s' n')
-    Fail msg >>= _ = Fail msg
-    fail = Fail
--}
-instance Monad TI where
-    return x = TI (\s n -> (s, n, x))
-    TI f >>= g = TI (\s n -> case f s n of
-        (s', n', x) -> case g x of
-            TI gx -> gx s' n'
-            Fail msg -> error msg
-            {- Fail msg -> (s', n', x) -})
-    Fail msg >>= _ = Fail msg
-    fail = Fail
-
-
-showTI ti = let (s,_,t) = runTI ti initialSubst 0
-    in
-        showSubstTypePair (s,t)
-
-runTI (TI f) s i = f s i
--- runTI (Fail msg) s i = Fail msg
-
-{-
-instance S.MonadState (TI a) a where
-    get = TI (\s n -> (s, n, (s,n)))
-    put (s,n) = TI (\_ _ -> (s, n, ()))
--}
-
-getSubst = TI (\s n -> (s, n, s))
-
-getN = TI (\s n -> (s, n, n))
-
-putSubst s = TI (\_ n -> (s, n, ()))
-
-putN n = TI (\s _ -> (s, n, ()))
-
-extendSubst s' = TI (\s n -> (s @@ s', n, ()))
--- showSubst ([("x", TScheme [] tInt)] @@ [("x", TScheme [] tChar)])
--- runTI (extendSubst [("x", TScheme [] tChar)]) [("x", TScheme [] tInt)] 0
-
-unify t1 t2 = do
-    s <- getSubst
-    u <- mgu (apply s t1) (apply s t2)
-    extendSubst u
-
-
-newId = TI (\s n -> (s, n+1, "t" ++ show n))
-
-newTVar = do
-    v <- newId
-    return (TVar v)
-
-testNewTVar = runTI (sequence [newTVar, newTVar, newTVar]) nullSubst 0
-
-find x assumptions = case lookup x assumptions of
-    Just t -> return t
-    otherwise -> fail $ "unbound type variable: " ++ x
-
-
-fromIdType = map (\(k,v) -> (k, TScheme (tv v) v))
-
-defaultSubst :: Subst
-defaultSubst = fromIdType [
-    ("Int", tInt)
-    , ("Float", tFloat)
-    , ("Bool", tBool)
-    , ("Char", tChar)
-    , ("Str", list tChar)
-    ]
+import TIMonad
 
 tInfer :: Val -> TI Type
 tInfer (Int _) = return tInt
@@ -112,7 +30,7 @@ tInfer (Str _) = return $ list tChar
 
 tInfer (PrimFun x) = do
     s <- getSubst
-    let Just (TScheme _ tX) = lookup x s
+    let Just (TScheme _ tX) = Map.lookup x s
     tX' <- tUpdateTVars tX
     return tX'
 
@@ -137,7 +55,7 @@ tInfer (Pair a b) = do
 
 tInfer (Ident x) = do
     s <- getSubst
-    case lookup x s of
+    case Map.lookup x s of
         Just ts -> do
             t <- toType ts
             return t
@@ -192,8 +110,8 @@ tInfer lam@(Lambda params _) = if noDup params
 tInfer (Let [(k,v)] e) = do
     tV <- tInfer v
     s <- getSubst
-    let keys = map fst s
-    let vals = map snd s
+    let keys = Map.keys s
+    let vals = Map.elems s
     let freeVs = (tv tV \\ keys) \\ tv vals
 
     extendSubst (k +-> TScheme freeVs tV)
@@ -232,12 +150,6 @@ tInfer (Let kvs e) = tInfer $ Expr (Lambda (keys kvs) e : vals kvs)
 -- ==> Expr [Lambda [x1, x2, ..., xN] expr, e1, e2, ...]
 -}
 
-{-
-ti :: Val -> TI Type
-ti e@(Let _ _) = local (tInfer e)
-ti e@(Lambda _ _) = local (tInfer e)
-ti e = tInfer e
--}
 
 runTests = [
     ty "(let { f = (lambda (f) f) } ( (f 1), (f True)))"
@@ -276,14 +188,6 @@ runTests = [
         `tEq` tParse "(a -> b -> c) -> b -> a -> c"
     ]
 
-unifiable t1 t2 = case runTI action initialSubst 0 of
-    (_,_,result) -> result
-    where
-        action = (do
-            unify t1 t2
-            s <- getSubst
-            return (apply s t1 == apply s t2))
-
 mkFunType [] = do
     v <- newTVar
     return v
@@ -318,31 +222,21 @@ local action = do
     return result
 
 
-onlyNew s = exclude s (map fst initialSubst)
+onlyNew s = exclude s (Map.keys initialSubst)
 
 localSubst s action = do
     sOrig <- getSubst
-    let cache = (Map.toList $ Map.intersection (Map.fromList sOrig) (Map.fromList s))
+    let cache = sOrig `Map.intersection` s
     extendSubst s
     result <- action
     s' <- getSubst
-    let cache' = map (\(k,v) -> (k, apply s' v)) cache
-    let ks = keys s
-    let s'' = exclude s' ks @@ cache
+    let cache' = Map.map (apply s') cache
+    let ks = Map.keys s
+    let s'' = subtractMap s' ks @@ cache
     putSubst s''
     return result
-    where
-        keys = map fst
 
-    {-
-    result <- action
-    s' <- getSubst
-    let ks = keys s
-    putSubst (exclude s' ks)
-    return result
-    where
-        keys = map fst
-    -}
+
 
 withSubst s action = do
     n <- getN
@@ -372,31 +266,12 @@ tUpdateTVars e = do
 
 
 
-{-
-replaceIdent i i' e@(Ident x)
-    | x == i = Ident i'
-    | otherwise = e
-replaceIdent
--}
-
 simplifyLambda lam@(Lambda [] e) = lam
 simplifyLambda lam@(Lambda [x] e) = lam
 simplifyLambda lam@(Lambda (x:xs) e) =
     Lambda [x] (simplifyLambda (Lambda xs e))
 simplifyLambda (Expr [x]) = simplifyLambda x
 
-{-
-substVal x y e@(Ident i) = if x == i then Ident y else e
-substVal x y (FunDef name args e) = FunDef name args (substVal x y e)
-substVal x y (Lambda args e) = Lambda args (substVal x y e)
-substVal _ _ e = e
-
-sanitizeVal (FunDef name args e) = FunDef name args (sanitizeVal e)
-sanitizeVal lam@(Lambda [] _) = lam
-sanitizeVal lam@(Lambda [x] e) = Lambda [x] (substVal x e)
---sanitizeVal lam@(Lambda args e)
-sanitizeVal x = x
--}
 
 substVal dict e@(Ident i) = case lookup i dict of
     Just i' -> Ident i'
@@ -409,11 +284,6 @@ sanitizeVal e =
     substVal [(v, v ++ show i) | (i,v) <- zip [0..] (idents e)] e
 
 
-{-
-allSameType l = and $
-    zipWith (\a b -> I.runIdentity (valToType a)
-        == I.runIdentity (valToType b)) l (tail l)
--}
 
 tEq t1 t2 = tSanitize t1 == tSanitize t2
 
@@ -422,7 +292,7 @@ ty input = case parseSingle input of
         (s,i,t) -> t --tSanitize t
     Left err -> error (show err)
     where
-        prettySubst s = List.sort (exclude s (map fst initialSubst))
+        prettySubst s = s `Map.difference` initialSubst
 
 
 tyi input = case parseSingle input of
@@ -431,7 +301,7 @@ tyi input = case parseSingle input of
             $ showSubstType (prettySubst s) t -- (tSanitize t)
     Left err -> putStrLn (show err)
     where
-        prettySubst s = List.sort (exclude s (map fst initialSubst))
+        prettySubst s = s `Map.difference` initialSubst
         -- (s,i,t) -> putStrLn $ showSubstType (s \\ initialSubst) t
 
 tyim input = case parseMultiple "" input of
@@ -439,7 +309,7 @@ tyim input = case parseMultiple "" input of
         (s, i, t) -> mapM_ (putStrLn . show) (map tSanitize t)
     Left err -> putStrLn (show err)
 
-initialSubst = defaultSubst `List.union` fromIdType builtinSubst
+
 
 ti val = let (_,_,t) = runTI (tInfer val) initialSubst 0
     in
@@ -464,20 +334,4 @@ eta = [("X", TApp (TVar "f") (TVar "Y")), ("Y", TVar "Z")]
 tCheck :: Val -> Either String Type
 tCheck v = case runTI (tInfer v) initialSubst 0 of
     (s, i, t) -> Right t
-    --Fail msg -> Left msg
-    --err -> Left (show err)
-{-
-rename dict e@(Ident x) = case lookup x dict of
-    Just x' -> Ident x'
-    Nothing -> e
-rename dict (FunDef _ args e) = rename dict e
 
-uniqueId = concat
-renameLambda bvs (Lambda [x] e) = if x `elem` bvs
-    then
-        let x' = uniqueId bvs in Lambda [x'] (renameLambda (x':bvs) e)
-    else
-        Lambda [x] (renameLambda (x:bvs) e)
-renameLambda bvs (Ident x) = if x `elem` bvs
-    then
--}
