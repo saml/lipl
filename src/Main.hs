@@ -113,19 +113,17 @@ interpret file = do
         else
             E.throwError $ DefaultErr $ "can't find file: " ++ file
 
-{-
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> case tCheck val of
         Right t -> do
             println ("type: " ++ show t)
             eval val
--}
-
+{-
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> eval val
-
+-}
 parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> E.throwError $ ParseErr err
     Right vals -> do

@@ -186,6 +186,8 @@ runTests = [
         `tEq` tParse "(t0 -> t1 -> t1) -> t1 -> [t0] -> t1"
     , ty "(lambda (f x y) (f y x))"
         `tEq` tParse "(a -> b -> c) -> b -> a -> c"
+    , ty "(lambda (x) (let { x = 1 } (+ x ((lambda (x) x) x))))"
+        `tEq` tParse "t0 -> Int"
     ]
 
 mkFunType [] = do
