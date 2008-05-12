@@ -21,7 +21,7 @@ import CoreLib (builtinSubst)
 import Utils
 import TIMonad
 
-tInfer :: Val -> TI Type
+tInfer :: (MonadTI m) => Val -> m Type
 tInfer (Int _) = return tInt
 tInfer (Bool _) = return tBool
 tInfer (Float _) = return tFloat

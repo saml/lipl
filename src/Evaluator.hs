@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Evaluator where
 
 import qualified Control.Monad.State as S
@@ -22,6 +24,7 @@ import Error
 
 import Debug.Trace (trace)
 
+eval :: (MonadEval m, E.MonadError Err m) => Val -> m Val
 eval e@(Int _) = return e
 eval e@(Float _) = return e
 eval e@(Bool _) = return e
@@ -108,9 +111,9 @@ eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
 eval x = return x
 
 runLocally action = do
-    prev <- S.get
+    prev <- getEnvs
     result <- action
-    S.put prev
+    putEnvs prev
     return result
 
 keyValToEnv ((k,v):xs) = do
@@ -139,7 +142,6 @@ evalPrim fname arg1 restArgs argsHave remaining = do
 withEnv env action = do
     (do
         pushEnv env
-        --extendPushEnv env
         val <- action
         popEnv
         return val)
@@ -149,7 +151,7 @@ withEnv env action = do
         E.throwError e)
 
 
-apply :: Val -> Val -> Wrap Val
+--apply :: Val -> Val -> m Val
 apply (Fun env (arg:rst) body) e = do
     let env' = Map.insert arg e env
     if null rst

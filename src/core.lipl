@@ -33,7 +33,7 @@
                  (quick-sort greater)))))
 
 # (let { x = (head l), xs = (tail l) } (filter (lambda (a) (< a x))  xs))
-
+{-
 (def filter_ (f l)
      (if (isEmpty l)
          l
@@ -50,6 +50,7 @@
                             (filter (lambda (a) (< a (head l))) (tail l)))
                        (cons (head l) []))
                 (qs (filter (lambda (a) (>= a (head l))) (tail l))))))
+-}
 
 (def compose (f g x) (f (g x)))
 
@@ -57,9 +58,11 @@
 
 (def id (a) a)
 
+{-
 (def trace (msg x) (if (println msg) x x))
 
 (def t (x) (if (printVarLn x) x x))
+-}
 
 (def fac (n) (if (<= n 1) 1 (* n (fac (- n 1)))))
 
@@ -69,6 +72,7 @@
         (let { i = (fib (- n 1)), i-1 = (fib (- n 2)) }
              (+ i i-1))))
 
+{-
 (def twice (f x) (f (f x)))
 
 (def succ (x) (+ x 1))
@@ -90,6 +94,8 @@
          [[]]
          (let { x = (head l), xs = (tail l), subsXs = (subs xs) }
               (concat subsXs (map (cons x) subsXs)))))
+-}
+
 {-
 ((twice twice succ) 0)
 ==> (twice (twice succ) 0)
@@ -113,6 +119,7 @@
 ==> 4
 -}
 
+{-
 (def test (l)
      ((lambda (l)
             (let {   x = (head l)
@@ -123,7 +130,10 @@
                 , xs = (map (lambda (a) (+ a x)) (tail l))
                 }
                 (cons x xs)))
+-}
 
 
+{-
 (def hello (s) (println (concat "hello
                          world" (show s))))
+-}

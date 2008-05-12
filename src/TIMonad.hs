@@ -2,7 +2,10 @@
     , FlexibleInstances, GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fallow-undecidable-instances #-}
 
-module TIMonad where
+module TIMonad (
+    module TIMonadClass
+    , module TIMonad
+) where
 
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -13,21 +16,15 @@ import qualified Control.Monad.Writer as W
 import qualified Control.Monad.Trans as T
 import qualified Control.Monad.Fix as F
 
+import EvalMonadClass
+import TIMonadClass
 import Type
 
 type ErrMsg = String
 
-class (Monad m) => TIMonad m where
-    getSubst :: m Subst
-    putSubst :: Subst -> m ()
-    extendSubst :: Subst -> m ()
-    newId :: m Id
-    --newTVar :: m Type
-    --unify :: Type -> Type -> m ()
-
 newtype TI a = TI { runTI :: Subst -> Int -> (Subst, Int, a) }
 
-newTVar :: (TIMonad m) => m Type
+newTVar :: (MonadTI m) => m Type
 newTVar = do
     v <- newId
     return (TVar v)
@@ -51,7 +48,7 @@ instance Functor TI where
         in
             (s', n', f x))
 
-instance TIMonad TI where
+instance MonadTI TI where
     getSubst = TI (\s n -> (s, n, s))
     putSubst s = TI (\_ n -> (s, n, ()))
     extendSubst s' = TI (\s n -> (s @@ s', n, ()))
@@ -78,7 +75,7 @@ instance T.MonadTrans TIT where
         a <- m
         return (s, n, a))
 
-instance (Monad m) => TIMonad (TIT m) where
+instance (Monad m) => MonadTI (TIT m) where
     getSubst = TIT (\s n -> return (s, n, s))
     putSubst s = TIT (\_ n -> return (s, n, ()))
     extendSubst s' = TIT (\s n -> return (s @@ s', n, ()))
@@ -101,7 +98,12 @@ instance (S.MonadState s m) => S.MonadState s (TIT m) where
     get = T.lift S.get
     put = T.lift . S.put
 
-
+instance (MonadEval m) => MonadEval (TIT m) where
+    getEnv = T.lift getEnv
+    getEnvs = T.lift getEnvs
+    putEnvs = T.lift . putEnvs
+    pushEnv = T.lift . pushEnv
+    popEnv = T.lift popEnv
 
 
 
@@ -174,7 +176,7 @@ toSubst = Map.fromList . fromIdType
 
 newtype TInfer a = TInfer {
     runTInfer :: TIT (E.ErrorT ErrMsg IO) a }
-    deriving (E.MonadError ErrMsg, Monad, TIMonad)
+    deriving (E.MonadError ErrMsg, Monad, MonadTI)
 
 {-
 test :: TInfer ()

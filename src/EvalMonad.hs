@@ -1,88 +1,94 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving
+    , FlexibleInstances, MultiParamTypeClasses #-}
+{-# OPTIONS_GHC -fallow-undecidable-instances #-}
 
-module EvalMonad where
+module EvalMonad (
+    module EvalMonadClass
+    , module EvalMonad
+) where
 
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Trans as T
 import qualified Control.Monad.State as S
+import qualified Control.Monad.Reader as R
+import qualified Control.Monad.Writer as W
 import qualified Control.Monad as M
-import qualified Control.Applicative as A
 import qualified Data.Map as Map
 import Data.Maybe (catMaybes)
 
 import LangData
 import Error
 import Stack
-import TIMonad
+import TIMonadClass
+import EvalMonadClass
 
-getEnv :: Wrap Env
-getEnv = do
-    st <- S.get
-    return $ (fst . pop) st
+{-
+newtype Eval a = Eval {
+    runEval :: E.ErrorT Err (S.StateT EnvStack I.Identity) a
+    } deriving (Functor, Monad
+        , E.MonadError Err, S.MonadState EnvStack)
 
-getEnvFor :: [Key] -> Wrap Env
+instance MonadEval Eval where
+    getEnv = do
+        envs <- S.get
+        return $ (fst . pop) envs
+
+    getEnvs = S.get
+
+    putEnvs = S.put
+
+    pushEnv env = do
+        envs <- S.get
+        S.put (push env envs)
+
+    popEnv = do
+        envs <- S.get
+        if nullEnv == envs
+            then return ()
+            else S.put $ (snd . pop) envs
+-}
+
+newtype Eval a = Eval { runEval :: EvalT I.Identity a }
+    deriving (Monad, Functor
+        ,  S.MonadState EnvStack
+        , MonadEval)
+
+getVal key = do
+    envs <- getEnvs
+    case (catMaybes $ map (Map.lookup key) envs) of
+        (x:_) -> return x
+        otherwise -> E.throwError $ UnboundIdentErr "not found" key
+
 getEnvFor keys = do
     vals <- mapM getVal keys
     let env = Map.fromList $ zip keys vals
     return env
-    --env <- getEnv
-    --let keysEnv = Map.fromList $ map (\k -> (k, Null)) keys
-    --return $ env `Map.intersection` keysEnv
 
+putVal key val = do
+    (env:envs) <- getEnvs
+    if Map.member key env
+        then
+            E.throwError $ EnvUpdateErr key
+        else
+            putEnvs (Map.insert key val env : envs)
+
+updateVal key val = do
+    (env:envs) <- getEnvs
+    putEnvs (Map.insert key val env : envs)
+
+
+clearEnv :: (MonadEval m) => m ()
+clearEnv = putEnvs nullEnv
+
+
+
+{-
 newtype Wrap a = Wrap {
     runWrap :: (E.ErrorT Err (S.StateT EnvStack IO)) a
 } deriving (
     Functor, Monad
     , E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
-
-{-
-instance A.Applicative Wrap where
-    pure = return
-    (<*>) = M.ap
--}
-
-putVal key val = do
-    (st:xs) <- S.get
-    if Map.member key st
-        then
-            E.throwError $ EnvUpdateErr key
-        else
-            S.put (Map.insert key val st:xs)
-
-updateVal key val = do
-    (env:xs) <- S.get
-    S.put (Map.insert key val env : xs)
-
-getVal key = do
-    envs <- S.get
-    case (catMaybes $ map (Map.lookup key) envs) of
-        (x:_) -> return x
-        otherwise -> E.throwError $ UnboundIdentErr "not found" key
-
-{-
-getVal key = do
-    (env:xs) <- S.get
-    case Map.lookup key env of
-        Just val -> return val
-        otherwise -> E.throwError $ UnboundIdentErr "not found" key
--}
-
-pushEnv :: Env -> Wrap ()
-pushEnv env = do
-    st <- S.get
-    S.put (push env st)
-
-popEnv :: Wrap ()
-popEnv = do
-    st <- S.get
-    if nullEnv == st
-        then return ()
-        else S.put $ (snd . pop) st
-
-clearEnv :: Wrap ()
-clearEnv = do
-    S.put nullEnv
 
 extendPushEnv :: Env -> Wrap ()
 extendPushEnv env = do
@@ -96,4 +102,54 @@ extendPushEnv env = do
                 let newEnvs = push (env `Map.union` currEnv) envs
                 S.put newEnvs
 
+-}
 
+newtype EvalT m a = EvalT {
+    runEvalT ::  (S.StateT EnvStack m) a
+    } deriving(Monad, Functor
+        ,  S.MonadState EnvStack)
+
+instance T.MonadTrans EvalT where
+    lift m = EvalT ((T.lift m))
+
+instance (Monad m) => MonadEval (EvalT m) where
+    getEnv = do
+        envs <- S.get
+        return $ (fst . pop) envs
+
+    getEnvs = S.get
+
+    putEnvs = S.put
+
+    pushEnv env = do
+        envs <- S.get
+        S.put (push env envs)
+
+    popEnv = do
+        envs <- S.get
+        if nullEnv == envs
+            then return ()
+            else S.put $ (snd . pop) envs
+
+instance (T.MonadIO m) => T.MonadIO (EvalT m) where
+    liftIO = T.lift . T.liftIO
+
+instance (R.MonadReader r m) => R.MonadReader r (EvalT m) where
+    ask =  T.lift R.ask
+    local f m = EvalT (R.local f (runEvalT m))
+
+instance (W.MonadWriter w m) => W.MonadWriter w (EvalT m) where
+    tell = T.lift . W.tell
+    listen m = EvalT (W.listen (runEvalT m))
+    pass m = EvalT (W.pass (runEvalT m))
+
+instance (MonadTI m) => MonadTI (EvalT m) where
+    getSubst = T.lift getSubst
+    putSubst = T.lift . putSubst
+    extendSubst  = T.lift . extendSubst
+    newId = T.lift newId
+
+runEvalMonad action =
+    I.runIdentity $
+        (S.runStateT $  runEvalT $ runEval action)
+        nullEnv

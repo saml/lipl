@@ -15,11 +15,17 @@ import Parser
 import LangData
 import TCheck
 import Error
+import TIMonad
 import EvalMonad
+import REPLMonad
+import Type
 
-run wrap = S.runStateT (E.runErrorT (runWrap wrap)) nullEnv
+--run wrap = runTIT (E.runErrorT (runREPL wrap)) initialSubst
+run action = S.runStateT (
+    runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
+    nullEnv
 
-prelude = "core.lipl"
+prelude = ""
 
 loadPrelude = runAndPrint (loadFile prelude)
 
@@ -42,9 +48,8 @@ main = do
 
 println s = T.liftIO $ putStrLn s
 
-repl :: Wrap ()
 repl = do
-    line <- M.liftM (unwords . words) $ T.liftIO $ prompt "lipl> "
+    line <- M.liftM (unwords . words) $ T.liftIO $ prompt "PAH> "
     if length line == 0
         then
             repl
@@ -96,12 +101,10 @@ loadFile fileName = do
     return result
 
 
-printEnv :: Wrap ()
 printEnv = do
     env <- getEnv
     T.liftIO $ putStrLn (showEnv env)
 
-interpret :: FilePath -> Wrap ()
 interpret file = do
     isValidFile <- T.liftIO $ doesFileExist file
     if isValidFile
@@ -115,10 +118,10 @@ interpret file = do
 
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
-    Right val -> case tCheck val of
-        Right t -> do
-            println ("type: " ++ show t)
-            eval val
+    Right val -> do
+        t <- tInfer val
+        println ("type: " ++ show (tSanitize t))
+        eval val
 
 {-
 parseAndEval input = case parseSingle input of
@@ -129,7 +132,7 @@ parseAndEval input = case parseSingle input of
 parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> E.throwError $ ParseErr err
     Right vals -> do
---        M.mapM tInfer vals
+        M.mapM (M.liftM tSanitize . tInfer) vals
         M.mapM eval vals
         return Null
 

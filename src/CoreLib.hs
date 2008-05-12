@@ -1,3 +1,5 @@
+{-# LANGUAGE RankNTypes, FlexibleContexts #-}
+
 module CoreLib where
 
 import qualified Control.Monad.Error as E
@@ -14,11 +16,12 @@ import Error
 
 data Builtin = Builtin {
     getBuiltinArity :: Int
-    , getBuiltinFun :: [Val] -> Wrap Val
+    --, getBuiltinFun :: [Val] -> Eval Val
+    , getBuiltinFun :: forall m . (MonadEval m, E.MonadError Err m) => [Val] -> m Val
     , getBuiltinType :: Type
     }
 
-funcall :: String -> [Val] -> Wrap Val
+funcall :: (MonadEval m, E.MonadError Err m) => String -> [Val] -> m Val
 funcall fname args = case Map.lookup fname primitives of
     Nothing -> E.throwError
         $ NotFunErr "Unrecognizable primitive function" fname
@@ -49,11 +52,11 @@ primitives = Map.fromList [
     , ("tail", Builtin 1 listTail (tParse "[a] -> [a]"))
     , ("cons", Builtin 2 listCons (tParse "a -> [a] -> [a]"))
     , ("isEmpty", Builtin 1 listIsEmpty (tParse "[a] -> Bool"))
-    , ("println", Builtin 1 (printStr True) (tParse "Str -> ()"))
-    , ("print", Builtin 1 (printStr False) (tParse "Str -> ()"))
-    , ("printVarLn", Builtin 1 (printVar True) (tParse "a -> ()"))
-    , ("printVar", Builtin 1 (printVar False) (tParse "a -> ()"))
-    , ("getLine", Builtin 0 (readFrom stdin) (tParse "Str"))
+    --, ("println", Builtin 1 (printStr True) (tParse "Str -> ()"))
+    --, ("print", Builtin 1 (printStr False) (tParse "Str -> ()"))
+    --, ("printVarLn", Builtin 1 (printVar True) (tParse "a -> ()"))
+    --, ("printVar", Builtin 1 (printVar False) (tParse "a -> ()"))
+    --, ("getLine", Builtin 0 (readFrom stdin) (tParse "Str"))
     , ("show", Builtin 1 showVar (tParse "a -> Str"))
 --    , ("env", Builtin 1 showEnvironment)
 --    , ("free-vars", Builtin 1 getFreeVars)
@@ -70,17 +73,30 @@ builtinSubst = map mkSubst primitivesList
     where
         mkSubst (a, b) = (a, getBuiltinType b)
 
+compareEq :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
 compareEq = compareOp (ordBool [EQ])
+
+compareNeq :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
 compareNeq = compareOp (ordBool [LT, GT])
+
+compareLt :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
 compareLt = compareOp (ordBool [LT])
+
+compareLte :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
 compareLte = compareOp (ordBool [LT, EQ])
+
+compareGt :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
 compareGt = compareOp (ordBool [GT])
+
+compareGte :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
 compareGte = compareOp (ordBool [GT, EQ])
 
 ordBool target x = elem x target
 
 --compareOp op [a, b] =
 --    return $ Bool $ op (unpackVal a `compare` unpackVal b)
+compareOp :: (MonadEval m, E.MonadError Err m)
+    => (Ordering -> Bool) -> [Val] -> m Val
 compareOp op [Int a, Int b] = return $ Bool $ op (compare a b)
 compareOp op [Float a, Int b] =
     return $ Bool $ op (compare a (fromIntegral b))

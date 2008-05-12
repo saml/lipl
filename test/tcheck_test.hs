@@ -43,4 +43,6 @@ runTests = [
         `tEq` tParse "(a -> b -> c) -> b -> a -> c"
     , ty "(lambda (x) (let { x = 1 } (+ x ((lambda (x) x) x))))"
         `tEq` tParse "t0 -> Int"
+    , ty "(def map (f l) (if (isEmpty l) l (let {x = (head l), xs = (tail l)} (cons (f x) (map f xs)))))"
+        `tEq` tParse "(t0 -> t1) -> [t0] -> [t1]"
     ]
