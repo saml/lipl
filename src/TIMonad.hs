@@ -1,41 +1,114 @@
-{-# LANGUAGE TypeSynonymInstances, MultiParamTypeClasses, FunctionalDependencies  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving  #-}
-
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies
+    , FlexibleInstances, GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -fallow-undecidable-instances #-}
 
 module TIMonad where
 
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Control.Monad.Error as E
+import qualified Control.Monad.State as S
+import qualified Control.Monad.Reader as R
+import qualified Control.Monad.Writer as W
+import qualified Control.Monad.Trans as T
+import qualified Control.Monad.Fix as F
 
 import Type
-import CoreLib (builtinSubst)
 
 type ErrMsg = String
 
-{-
-class (Monad m) => St s m | m -> s where
-    getSubst :: m s
--}
+class (Monad m) => TIMonad m where
+    getSubst :: m Subst
+    putSubst :: Subst -> m ()
+    extendSubst :: Subst -> m ()
+    newId :: m Id
+    --newTVar :: m Type
+    --unify :: Type -> Type -> m ()
 
 newtype TI a = TI { runTI :: Subst -> Int -> (Subst, Int, a) }
 
-newtype TInfer a = TInfer {
-    runTInfer :: E.ErrorT ErrMsg TI a }
-    deriving (E.MonadError ErrMsg, Monad, Functor)
+newTVar :: (TIMonad m) => m Type
+newTVar = do
+    v <- newId
+    return (TVar v)
 
-{- data TI a = TI (Subst -> Int -> (Subst, Int, a))
-    | Fail String
--}
+unify t1 t2 = do
+    s <- getSubst
+    u <- mgu (apply s t1) (apply s t2)
+    extendSubst u
+
+getN = TI (\s n -> (s, n, n))
+putN n = TI (\s _ -> (s, n, ()))
 
 instance Monad TI where
     return x = TI (\s n -> (s, n, x))
     TI f >>= g = TI (\s n -> case f s n of
-        (s', n', x) -> case g x of
-            TI gx -> gx s' n'
-            {- Fail msg -> (s', n', x) -})
-    --Fail msg >>= _ = E.throwError msg
-    --fail = Fail
+        (s', n', x) -> let TI gx = g x in gx s' n')
+
+instance Functor TI where
+    fmap f m = TI (\s n -> let
+        (s',n',x) = runTI m s n
+        in
+            (s', n', f x))
+
+instance TIMonad TI where
+    getSubst = TI (\s n -> (s, n, s))
+    putSubst s = TI (\_ n -> (s, n, ()))
+    extendSubst s' = TI (\s n -> (s @@ s', n, ()))
+    newId = TI (\s n -> (s, n+1, "t" ++ show n))
+
+
+
+newtype TIT m a = TIT { runTIT :: Subst -> Int -> m (Subst, Int, a) }
+
+instance (Monad m) => Monad (TIT m) where
+    return x = TIT (\s n -> return (s, n, x))
+    m >>= k = TIT (\s n -> do
+        (s', n', x) <- runTIT m s n
+        runTIT (k x) s' n')
+    fail str = TIT (\s n -> fail str)
+
+instance (Monad m) => Functor (TIT m) where
+    fmap f m = TIT (\s n -> do
+        (s', n', x) <- runTIT m s n
+        return (s', n', f x))
+
+instance T.MonadTrans TIT where
+    lift m = TIT (\s n -> do
+        a <- m
+        return (s, n, a))
+
+instance (Monad m) => TIMonad (TIT m) where
+    getSubst = TIT (\s n -> return (s, n, s))
+    putSubst s = TIT (\_ n -> return (s, n, ()))
+    extendSubst s' = TIT (\s n -> return (s @@ s', n, ()))
+    newId = TIT (\s n -> return (s, n+1, "t" ++ show n))
+
+instance (T.MonadIO m) => T.MonadIO (TIT m) where
+    liftIO = T.lift . T.liftIO
+
+instance (E.MonadError e m) => E.MonadError e (TIT m) where
+    throwError = T.lift . E.throwError
+    m `catchError` h = TIT (\s n -> runTIT m s n
+        `E.catchError`
+        \e -> runTIT (h e) s n)
+
+instance (R.MonadReader r m) => R.MonadReader r (TIT m) where
+    ask = T.lift R.ask
+    local f m = TIT (\s n -> (R.local f (runTIT m s n)))
+
+instance (S.MonadState s m) => S.MonadState s (TIT m) where
+    get = T.lift S.get
+    put = T.lift . S.put
+
+
+
+
+
+
+
+
+
 
 {-
 instance E.MonadError String TI where
@@ -43,11 +116,6 @@ instance E.MonadError String TI where
     ok@(TI _) `catchError` _ = ok
     Fail err `catchError` h = h err
 -}
-
-showTI ti = let (s,_,t) = runTI ti initialSubst 0
-    in
-        showSubstTypePair (s,t)
-
 --runTI (TI f) s i = f s i
 -- runTI (Fail msg) s i = Fail msg
 
@@ -57,6 +125,9 @@ instance S.MonadState (TI a) a where
     put (s,n) = TI (\_ _ -> (s, n, ()))
 -}
 
+
+
+{-
 getSubst = TI (\s n -> (s, n, s))
 getN = TI (\s n -> (s, n, n))
 putSubst s = TI (\_ n -> (s, n, ()))
@@ -64,11 +135,7 @@ putN n = TI (\s _ -> (s, n, ()))
 extendSubst s' = TI (\s n -> (s @@ s', n, ()))
 -- showSubst ([("x", TScheme [] tInt)] @@ [("x", TScheme [] tChar)])
 -- runTI (extendSubst [("x", TScheme [] tChar)]) [("x", TScheme [] tInt)] 0
-{-
-getSubst = do
-    s <- getSubst'
-    return s
--}
+
 unify t1 t2 = do
     s <- getSubst
     u <- mgu (apply s t1) (apply s t2)
@@ -79,6 +146,7 @@ newId = TI (\s n -> (s, n+1, "t" ++ show n))
 newTVar = do
     v <- newId
     return (TVar v)
+-}
 
 {-
 find x assumptions = case lookup x assumptions of
@@ -97,17 +165,21 @@ unifiable t1 t2 = case runTI action initialSubst 0 of
 
 
 
-defaultSubst :: Subst
-defaultSubst = toSubst [
-    ("Int", tInt)
-    , ("Float", tFloat)
-    , ("Bool", tBool)
-    , ("Char", tChar)
-    , ("Str", list tChar)
-    ]
-
 
 fromIdType = map (\(k,v) -> (k, mkPolyType v))
+
+toSubst :: [(Id, Type)] -> Subst
 toSubst = Map.fromList . fromIdType
 
-initialSubst = defaultSubst `Map.union` toSubst builtinSubst
+
+newtype TInfer a = TInfer {
+    runTInfer :: TIT (E.ErrorT ErrMsg IO) a }
+    deriving (E.MonadError ErrMsg, Monad, TIMonad)
+
+{-
+test :: TInfer ()
+test = do
+    s <- getSubst
+    E.throwError "asdf"
+    return ()
+-}

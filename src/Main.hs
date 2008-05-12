@@ -119,15 +119,18 @@ parseAndEval input = case parseSingle input of
         Right t -> do
             println ("type: " ++ show t)
             eval val
+
 {-
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> eval val
 -}
+
 parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> E.throwError $ ParseErr err
     Right vals -> do
-        evaled <- M.mapM eval vals
+--        M.mapM tInfer vals
+        M.mapM eval vals
         return Null
 
 prompt :: String -> IO String

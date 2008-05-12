@@ -17,7 +17,7 @@ import Parser (parse, parseSingle, parseMultiple)
 import Type
 import TParse
 import Trace
-import CoreLib
+import CoreLib (builtinSubst)
 import Utils
 import TIMonad
 
@@ -151,44 +151,7 @@ tInfer (Let kvs e) = tInfer $ Expr (Lambda (keys kvs) e : vals kvs)
 -}
 
 
-runTests = [
-    ty "(let { f = (lambda (f) f) } ( (f 1), (f True)))"
-        `tEq` tParse "(Int,Bool)"
-    , ty "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
-        `tEq` tInt
-    , ty "(let { x = (lambda (x) (if (== 1 (head x)) 'a' 'b')), y = x} (y ))"
-        `tEq` tParse "[Int] -> Char"
-    , ty "(lambda (f x) (f x))"
-        `tEq` tParse "(t0 -> t1) -> t0 -> t1"
-    , ty "(def fac (n) (if (<= n 0) 1 (* n (fac (- n 1)))))"
-        `tEq` tParse "Int -> Int"
-    , ty "(def twice (f x) (f (f x)))"
-        `tEq` tParse "(t0 -> t0) -> t0 -> t0"
-    , ty "(def len (l) (if (isEmpty l) 0 (+ 1 (len (tail l)))))"
-        `tEq` tParse "[t0] -> Int"
-    , ty "(def filter (f l) (if (f (head l)) (cons (head l) (filter f (tail l))) (filter f (tail l))))"
-        `tEq` tParse "(t0 -> Bool) -> [t0] -> [t0]"
-    , ty "(def map (f l) (cons (f (head l)) (map f (tail l))))"
-        `tEq` tParse "(t0 -> t1) -> [t0] -> [t1]"
-    , ty "(def map (f l) (let {x = (head l), xs = (map f (tail l))} (cons (f x) xs)))"
-        `tEq` tParse "(t0 -> t1) -> [t0] -> [t1]"
-    , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (cons x xs)))"
-        `tEq` tParse "[t0] -> [t0]"
-    , ty "(lambda (l) (let {x = (head l), xs = (tail l)} (x,xs)))"
-        `tEq` tParse "[t0] -> (t0, [t0])"
-    , ty "((lambda (f x y) (f y x)) (lambda (x) x))"
-        `tEq` tParse "b -> (b -> c) -> c"
-    , ty "(lambda (x) (let {x = 1} x))"
-        `tEq` tParse "a -> Int"
-    , ty "(lambda (x) (lambda (x) (+ x x)))"
-        `tEq` tParse "(t0 -> Int -> Int)"
-    , ty "(def acc (f i l) (if (isEmpty l) i (f (head l) (acc f i (tail l)))))"
-        `tEq` tParse "(t0 -> t1 -> t1) -> t1 -> [t0] -> t1"
-    , ty "(lambda (f x y) (f y x))"
-        `tEq` tParse "(a -> b -> c) -> b -> a -> c"
-    , ty "(lambda (x) (let { x = 1 } (+ x ((lambda (x) x) x))))"
-        `tEq` tParse "t0 -> Int"
-    ]
+
 
 mkFunType [] = do
     v <- newTVar
@@ -210,19 +173,6 @@ toType (TScheme (x:xs) t) = do
     v <- newId
     toType $ TScheme xs (replace x v t)
 
-withinScope s action = do
-    sOrig <- getSubst
-    putSubst s
-    result <- action
-    putSubst sOrig
-    return result
-
-local action = do
-    sOrig <- getSubst
-    result <- action
-    putSubst sOrig
-    return result
-
 
 onlyNew s = exclude s (Map.keys initialSubst)
 
@@ -238,29 +188,6 @@ localSubst s action = do
     putSubst s''
     return result
 
-
-
-withSubst s action = do
-    n <- getN
-    sCurr <- getSubst
-    --extendSubst s
-    putSubst s
-    result <- action
-    putN n
-    putSubst sCurr
-    return result
-
-withExtendSubst s action = do
-    n <- getN
-    sCurr <- getSubst
-    extendSubst s
-    result <- action
-    putN n
-    putSubst sCurr
-    return result
-
-eliminate ids = filter (\x -> fst x `notElem` ids)
-
 tUpdateTVars e = do
     let vs = getTVars e
     vs' <- mapM (const newId) vs
@@ -274,20 +201,6 @@ simplifyLambda lam@(Lambda (x:xs) e) =
     Lambda [x] (simplifyLambda (Lambda xs e))
 simplifyLambda (Expr [x]) = simplifyLambda x
 
-
-substVal dict e@(Ident i) = case lookup i dict of
-    Just i' -> Ident i'
-    Nothing -> e
-substVal dict (FunDef name args e) = FunDef name args (substVal dict e)
-substVal dict (Lambda args e) = Lambda args (substVal dict e)
-substVal dict v = v
-
-sanitizeVal e =
-    substVal [(v, v ++ show i) | (i,v) <- zip [0..] (idents e)] e
-
-
-
-tEq t1 t2 = tSanitize t1 == tSanitize t2
 
 ty input = case parseSingle input of
     Right v -> case runTI (tInfer v) initialSubst 0 of
@@ -336,4 +249,21 @@ eta = [("X", TApp (TVar "f") (TVar "Y")), ("Y", TVar "Z")]
 tCheck :: Val -> Either String Type
 tCheck v = case runTI (tInfer v) initialSubst 0 of
     (s, i, t) -> Right t
+
+
+defaultSubst :: Subst
+defaultSubst = toSubst [
+    ("Int", tInt)
+    , ("Float", tFloat)
+    , ("Bool", tBool)
+    , ("Char", tChar)
+    , ("Str", list tChar)
+    ]
+initialSubst = defaultSubst `Map.union` toSubst builtinSubst
+
+
+showTI ti = let (s,_,t) = runTI ti initialSubst 0
+    in
+        showSubstTypePair (s,t)
+
 

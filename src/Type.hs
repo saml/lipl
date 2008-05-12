@@ -24,10 +24,10 @@ getTVars v = List.nub (getTVars' v)
         getTVars' (TApp t1 t2) = getTVars' t1 ++ getTVars' t2
         getTVars' _ = []
 
-equiv t1 t2 = tSanitize t1 == tSanitize t2
-
 tSanitize t =
     subst [(v, "t" ++ show i) | (i,v) <- zip [0..] (getTVars t)] t
+
+tEq t1 t2 = tSanitize t1 == tSanitize t2
 
 subst dict (TVar v) = case lookup v dict of
     Just v' -> TVar v'

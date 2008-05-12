@@ -2,7 +2,6 @@
 
 module EvalMonad where
 
-import qualified Control.Monad.Fix as F
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Trans as T
@@ -15,6 +14,7 @@ import Data.Maybe (catMaybes)
 import LangData
 import Error
 import Stack
+import TIMonad
 
 getEnv :: Wrap Env
 getEnv = do
@@ -31,14 +31,16 @@ getEnvFor keys = do
     --return $ env `Map.intersection` keysEnv
 
 newtype Wrap a = Wrap {
-    runWrap :: E.ErrorT Err (S.StateT EnvStack IO) a
+    runWrap :: (E.ErrorT Err (S.StateT EnvStack IO)) a
 } deriving (
-    Functor, Monad, F.MonadFix
+    Functor, Monad
     , E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
 
+{-
 instance A.Applicative Wrap where
     pure = return
     (<*>) = M.ap
+-}
 
 putVal key val = do
     (st:xs) <- S.get
