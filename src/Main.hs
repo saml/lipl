@@ -59,7 +59,13 @@ repl = do
 processInput line =
     case (head . words) line of
         ":?" -> do
-            println "help to be written"
+            println (unlines [":? help"
+                , ":s current type environment"
+                , ":q quit"
+                , ":e current environment"
+                , ":c clear environment"
+                , ":l <file> load <file>"
+                , ":r <file> load <file> on clean environment"])
             repl
         ":s" -> do
             println "Current Type Environment"
@@ -121,7 +127,7 @@ interpret file = do
         then
             do
                 prog <- T.liftIO $ readFile file
-                parseAndEvalMultiple file prog
+                rollBackOnErr (parseAndEvalMultiple file prog)
                 return ()
         else
             E.throwError $ DefaultErr $ "can't find file: " ++ file
@@ -129,8 +135,8 @@ interpret file = do
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> do
-        t <- ti val
-        println ("type: " ++ show (tSanitize t))
+        t <- typeInfer val
+        println ("type: " ++ show t)
         eval val
 
 {-
@@ -142,7 +148,9 @@ parseAndEval input = case parseSingle input of
 parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> E.throwError $ ParseErr err
     Right vals -> do
-        M.mapM (M.liftM tSanitize . ti) vals
+        M.mapM (\val -> (do
+            t <- typeInfer val
+            return t)) vals
         M.mapM eval vals
         return Null
 

@@ -24,7 +24,8 @@ import Error
 
 import Debug.Trace (trace)
 
-eval :: (MonadEval m, E.MonadError Err m) => Val -> m Val
+--eval :: (MonadEval m, E.MonadError Err m, T.MonadIO m)
+--    => Val -> m Val
 eval e@(Int _) = return e
 eval e@(Float _) = return e
 eval e@(Bool _) = return e

@@ -18,11 +18,14 @@ import Error
 data Builtin = Builtin {
     getBuiltinArity :: Int
     --, getBuiltinFun :: [Val] -> Eval Val
-    , getBuiltinFun :: forall m . (MonadEval m, E.MonadError Err m) => [Val] -> m Val
+    , getBuiltinFun ::
+        forall m .
+            (MonadEval m, E.MonadError Err m, T.MonadIO m)
+            => [Val] -> m Val
     , getBuiltinType :: Type
     }
 
-funcall :: (MonadEval m, E.MonadError Err m) => String -> [Val] -> m Val
+--funcall :: (MonadEval m, E.MonadError Err m) => String -> [Val] -> m Val
 funcall fname args = case Map.lookup fname primitives of
     Nothing -> E.throwError
         $ NotFunErr "Unrecognizable primitive function" fname
@@ -35,10 +38,15 @@ arityOf name = case Map.lookup name primitives of
 --primitives :: [(String, Builtin)]
 primitives = Map.fromList [
     ("+", Builtin 2 opAdd (tParse "Int -> Int -> Int"))
+    , ("+.", Builtin 2 opAdd (tParse "Float -> Float -> Float"))
     , ("-", Builtin 2 opSub (tParse "Int -> Int -> Int"))
+    , ("-.", Builtin 2 opSub (tParse "Float -> Float -> Float"))
     , ("*", Builtin 2 opMult (tParse "Int -> Int -> Int"))
-    , ("/", Builtin 2 floatOpDiv (tParse "Float -> Float -> Float"))
+    , ("*.", Builtin 2 opMult (tParse "Float -> Float -> Float"))
     , ("div", Builtin 2 intOpDiv (tParse "Int -> Int -> Int"))
+    , ("/", Builtin 2 floatOpDiv (tParse "Float -> Float -> Float"))
+    , ("toInt", Builtin 1 toInt (tParse "Float -> Int"))
+    , ("toFloat", Builtin 1 toFloat (tParse "Int -> Float"))
     , ("&&", Builtin 2 (boolBinOp (&&)) (tParse "Bool -> Bool -> Bool"))
     , ("||", Builtin 2 (boolBinOp (||)) (tParse "Bool -> Bool -> Bool"))
     , ("not", Builtin 1 boolNot (tParse "Bool -> Bool"))
@@ -54,11 +62,11 @@ primitives = Map.fromList [
     , ("tail", Builtin 1 listTail (tParse "[a] -> [a]"))
     , ("cons", Builtin 2 listCons (tParse "a -> [a] -> [a]"))
     , ("isEmpty", Builtin 1 listIsEmpty (tParse "[a] -> Bool"))
-    --, ("println", Builtin 1 (printStr True) (tParse "Str -> ()"))
-    --, ("print", Builtin 1 (printStr False) (tParse "Str -> ()"))
-    --, ("printVarLn", Builtin 1 (printVar True) (tParse "a -> ()"))
-    --, ("printVar", Builtin 1 (printVar False) (tParse "a -> ()"))
-    --, ("getLine", Builtin 0 (readFrom stdin) (tParse "Str"))
+    , ("println", Builtin 1 (printStr True) (tParse "Str -> ()"))
+    , ("print", Builtin 1 (printStr False) (tParse "Str -> ()"))
+    , ("printVarLn", Builtin 1 (printVar True) (tParse "a -> ()"))
+    , ("printVar", Builtin 1 (printVar False) (tParse "a -> ()"))
+    , ("getLine", Builtin 0 (readFrom stdin) (tParse "Str"))
     , ("show", Builtin 1 showVar (tParse "a -> Str"))
 --    , ("env", Builtin 1 showEnvironment)
 --    , ("free-vars", Builtin 1 getFreeVars)
@@ -74,6 +82,9 @@ builtins = map snd primitivesList
 builtinSubst = map mkSubst primitivesList
     where
         mkSubst (a, b) = (a, getBuiltinType b)
+
+toInt [(Float f)] = return (Int $ floor f)
+toFloat [(Int i)] = return (Float $ fromIntegral i)
 
 --fixOp [Fun ] = fix f
 
@@ -161,56 +172,56 @@ opDiv args = mkOp (/) args
 
 opAdd [Int a, Int b] = return $ Int (a + b)
 opAdd [Float a, Float b] = return $ Float (a + b)
-opAdd [Int a, Float b] = return $ Float (fromIntegral a + b)
-opAdd [Float a, Int b] = return $ Float (a + fromIntegral b)
-opAdd x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
-opAdd x = E.throwError $ ArityErr 2 x
+--opAdd [Int a, Float b] = return $ Float (fromIntegral a + b)
+--opAdd [Float a, Int b] = return $ Float (a + fromIntegral b)
+--opAdd x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
+--opAdd x = E.throwError $ ArityErr 2 x
 
 opSub [Int a, Int b] = return $ Int (a - b)
 opSub [Float a, Float b] = return $ Float (a - b)
-opSub [Int a, Float b] = return $ Float (fromIntegral a - b)
-opSub [Float a, Int b] = return $ Float (a - fromIntegral b)
-opSub x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
-opSub x = E.throwError $ ArityErr 2 x
+--opSub [Int a, Float b] = return $ Float (fromIntegral a - b)
+--opSub [Float a, Int b] = return $ Float (a - fromIntegral b)
+--opSub x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
+--opSub x = E.throwError $ ArityErr 2 x
 
 opMult [Int a, Int b] = return $ Int (a * b)
 opMult [Float a, Float b] = return $ Float (a * b)
-opMult [Int a, Float b] = return $ Float (fromIntegral a * b)
-opMult [Float a, Int b] = return $ Float (a * fromIntegral b)
-opMult x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
-opMult x = E.throwError $ ArityErr 2 x
+--opMult [Int a, Float b] = return $ Float (fromIntegral a * b)
+--opMult [Float a, Int b] = return $ Float (a * fromIntegral b)
+--opMult x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
+--opMult x = E.throwError $ ArityErr 2 x
 
-floatOpDiv x@([Int a, Int b]) =
-    E.throwError $ TypeErr "2 Floats" (Expr x)
+--floatOpDiv x@([Int a, Int b]) =
+--    E.throwError $ TypeErr "2 Floats" (Expr x)
 floatOpDiv [Float a, Float b] = return $ Float (a / b)
-floatOpDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
-floatOpDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
-floatOpDiv x@([_, _]) = E.throwError $ TypeErr "Float" (Expr x)
-floatOpDiv x = E.throwError $ ArityErr 2 x
+--floatOpDiv [Int a, Float b] = return $ Float (fromIntegral a / b)
+--floatOpDiv [Float a, Int b] = return $ Float (a / fromIntegral b)
+--floatOpDiv x@([_, _]) = E.throwError $ TypeErr "Float" (Expr x)
+--floatOpDiv x = E.throwError $ ArityErr 2 x
 
 intOpDiv [Int a, Int b] = return $ Int (div a b)
-intOpDiv [Float a, Int b] = return $ Int (div (floor a) b)
-intOpDiv [Int a, Float b] = return $ Int (div a (floor b))
-intOpDiv x@([Float a, Float b]) =
-    E.throwError $ TypeErr "2 Ints" (Expr x)
-intOpDiv x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
-intOpDiv x = E.throwError $ ArityErr 2 x
+--intOpDiv [Float a, Int b] = return $ Int (div (floor a) b)
+--intOpDiv [Int a, Float b] = return $ Int (div a (floor b))
+--intOpDiv x@([Float a, Float b]) =
+--    E.throwError $ TypeErr "2 Ints" (Expr x)
+--intOpDiv x@([_, _]) = E.throwError $ TypeErr "Int" (Expr x)
+--intOpDiv x = E.throwError $ ArityErr 2 x
 
 boolBinOp op [Bool a, Bool b] = return $ Bool (a `op` b)
-boolBinOp op x@([Bool _, _]) =
-    E.throwError $ TypeErr "Bool for 2nd arg" (Expr x)
-boolBinOp op x@([_, Bool _]) =
-    E.throwError $ TypeErr "Bool for 1st arg" (Expr x)
-boolBinOp op x = E.throwError $ ArityErr 2 x
+--boolBinOp op x@([Bool _, _]) =
+--    E.throwError $ TypeErr "Bool for 2nd arg" (Expr x)
+--boolBinOp op x@([_, Bool _]) =
+--    E.throwError $ TypeErr "Bool for 1st arg" (Expr x)
+--boolBinOp op x = E.throwError $ ArityErr 2 x
 
 boolNot [Bool a] = return $ Bool (not a)
-boolNot [x] = E.throwError $ TypeErr "Bool" x
-boolNot x = E.throwError $ ArityErr 1 x
+--boolNot [x] = E.throwError $ TypeErr "Bool" x
+--boolNot x = E.throwError $ ArityErr 1 x
 
 listLength [List x] = return $ Int (toInteger $ length x)
 listLength [Str x] = return $ Int (toInteger $ length x)
-listLength [x] = E.throwError $ TypeErr "need list" x
-listLength x = E.throwError $ ArityErr 1 x
+--listLength [x] = E.throwError $ TypeErr "need list" x
+--listLength x = E.throwError $ ArityErr 1 x
 
 listHead [List (x:xs)] = return x
 listHead [e@(List [])] =
@@ -219,7 +230,7 @@ listHead [Str (x:xs)] = return $ Char x
 listHead [e@(Str "")] =
     E.throwError $ TypeErr "need non empty string" e
 listHead [x] = E.throwError $ TypeErr "need non empty list" x
-listHead x = E.throwError $ ArityErr 1 x
+--listHead x = E.throwError $ ArityErr 1 x
 
 listTail [List (x:xs)] = return $ List xs
 listTail [e@(List [])] =
@@ -228,42 +239,36 @@ listTail [Str (x:xs)] = return $ Str xs
 listTail [e@(Str [])] =
     E.throwError $ TypeErr "need non empty string" e
 listTail [x] = E.throwError $ TypeErr "need non empty list" x
-listTail x = E.throwError $ ArityErr 1 x
+--listTail x = E.throwError $ ArityErr 1 x
 
 listCons [x, List []] = return $ List [x]
 listCons [x, List xs] = return $ List (x:xs)
 listCons [Char x, Str ""] = return $ Str [x]
 listCons [Char x, Str xs] = return $ Str (x:xs)
-listCons e@([_,_]) = E.throwError $ TypeErr "need list" (List e)
-listCons x = E.throwError $ ArityErr 2 x
+--listCons e@([_,_]) = E.throwError $ TypeErr "need list" (List e)
+--listCons x = E.throwError $ ArityErr 2 x
 
 listIsEmpty [List a] = return $ Bool (null a)
 listIsEmpty [Str a] = return $ Bool (null a)
-listIsEmpty [x] = E.throwError $ TypeErr "need list" x
-listIsEmpty x = E.throwError $ ArityErr 1 x
+--listIsEmpty [x] = E.throwError $ TypeErr "need list" x
+--listIsEmpty x = E.throwError $ ArityErr 1 x
 
 printStr newLine [Str x] = do
     T.liftIO $ putStr x
     T.liftIO $ putChar (if newLine then '\n' else '\0')
     return Null
-printStr _ [x] = E.throwError $ TypeErr "need string" x
-printStr _ x = E.throwError $ ArityErr 1 x
+--printStr _ [x] = E.throwError $ TypeErr "need string" x
+--printStr _ x = E.throwError $ ArityErr 1 x
 
 printVar newLine [Str x] = do
     T.liftIO $ putStr x
     T.liftIO $ putChar (if newLine then '\n' else ' ')
     return Null
 printVar newLine [x] = printVar newLine [Str $ show x]
-printVar _ x = E.throwError $ ArityErr 1 x
-
-{-
-concatStr [Str s1, Str s2] = return $ Str (s1 ++ s2)
-concatStr x@([_, _]) = E.throwError $ TypeErr "need string" (Expr x)
-concatStr x = E.throwError $ ArityErr 2 x
--}
+--printVar _ x = E.throwError $ ArityErr 1 x
 
 showVar [x] = return $ Str (show x)
-showVar x = E.throwError $ ArityErr 1 x
+--showVar x = E.throwError $ ArityErr 1 x
 
 showEnvironment [Str key] = do
     env <- getEnv

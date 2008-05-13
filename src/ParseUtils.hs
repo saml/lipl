@@ -15,7 +15,7 @@ lexer  = P.makeTokenParser (P.haskellStyle {
 ws = P.whiteSpace lexer
 mustSpaces = P.skipMany1 P.space >> ws
 
-identChar = P.letter <|> P.digit <|> P.oneOf "_-"
+identChar = P.letter <|> P.digit <|> P.oneOf "_-.'"
 opChar = P.oneOf ":!$%&*+./<=>?@\\^|-~"
 
 parseHeadBody headChar bodyChar = do

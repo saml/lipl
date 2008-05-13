@@ -105,7 +105,8 @@ instance Show TScheme where
 
 ppTScheme (TScheme l t) =
     PP.fsep [PP.text "TScheme"
-        , PP.brackets $ PP.fsep (map PP.text l)
+        , PP.brackets
+            $ PP.fsep $ PP.punctuate PP.comma (map PP.text l)
         , ppType t]
 
 replace a b e@(TVar v)

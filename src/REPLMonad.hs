@@ -32,3 +32,14 @@ instance (MonadTI m) => MonadTI (E.ErrorT Err m) where
     newId = T.lift newId
     getN = T.lift getN
     putN = T.lift . putN
+
+rollBackOnErr action = do
+    envs <- getEnvs
+    s <- getSubst
+    n <- getN
+    result <- action `E.catchError` (\e -> do
+        putEnvs envs
+        putSubst s
+        putN n
+        E.throwError e)
+    return result

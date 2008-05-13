@@ -25,7 +25,20 @@ ppKeyValList :: KeyValList -> PP.Doc
 ppKeyValList l = ppDict $ map ((PP.empty $$) . ppKeyVal) l
 ppDict l = PP.braces $ PP.fsep $ PP.punctuate PP.comma l
 
+splitAtDot str = reverse $ map reverse $ split str [[]]
+    where
+        split [] acc = acc
+        split ('.':xs) acc = split xs ([] : acc)
+        split (x:xs) (a:as) = split xs ((x : a) : as)
 
+-- | "Foo.bar" ==> ["Foo", "bar"]
+splitOn _ [] = []
+splitOn chr l = f (break (== chr) l)
+    where
+        f (h, []) = [h]
+        f (h, (_:xs)) = h : splitOn chr xs
+
+type Namespace = Map.Map Key EnvStack
 type Env = Map.Map Key Val
 type EnvStack = Stack Env
 emptyEnv = Map.empty
@@ -42,8 +55,8 @@ type Name = String
 type Params = [Name]
 type RemainingArgs = Int
 
-data Val = Comment String
-    | Null
+data Val = -- Comment String
+    Null
     | Ident { unpackIdent :: Name }
     | Int { unpackInt :: Integer }
     | Float { unpackFloat :: Double }
@@ -67,7 +80,7 @@ data Val = Comment String
 
 instance Show Val where show = PP.render . ppVal
 
-ppVal (Comment s) = PP.text ("#" ++ s)
+-- ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
 ppVal (Ident s) = PP.text s
 ppVal (Int i) = PP.integer i

@@ -144,13 +144,27 @@ tInfer (FunDef name args body) = if noDup args
     else
         fail "duplicate argument"
 
-ti e@(FunDef name args body) = do
-    t <- locally (tInfer e)
+typeInfer e@(FunDef name args body) = do
+    t <- M.liftM tSanitize (locally (tInfer e))
     extendSubst (name +-> mkPolyType t)
-    s <- getSubst
-    traceM ("ti: " ++ showS s)
+    --s <- getSubst
+    --traceM ("ti: " ++ showS s)
     return t
-ti val = tInfer val
+
+typeInfer (Expr [e]) = typeInfer e
+typeInfer e = do
+    t <- locally (tInfer e)
+    return (tSanitize t)
+
+{-
+ti val = do
+    t <- tInfer val
+    return (tSanitize t)
+-}
+
+--sSanitize = do
+--    s <- getSubst
+
 
 
 {-
@@ -224,7 +238,7 @@ simplifyLambda (Expr [x]) = simplifyLambda x
 
 
 ty input = case parseSingle input of
-    Right v -> case runTI (ti v) initialSubst 0 of
+    Right v -> case runTI (tInfer v) initialSubst 0 of
         (s,i,t) -> t --tSanitize t
     Left err -> error (show err)
     where
