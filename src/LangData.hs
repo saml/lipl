@@ -104,19 +104,23 @@ ppVal (Float f) = PP.double f
 ppVal (Bool b) = PP.text $ show b
 ppVal (Char c) = PP.text $ show c
 ppVal (Str s) = PP.text $ show s
-ppVal (Fun env args body) = PP.parens
-    $ PP.fsep [PP.text "function"
-        , ppArgs args, ppVal body]
-ppVal (Lambda args body) = PP.parens
-    $ PP.fsep [PP.text "lambda", ppArgs args, ppVal body]
---ppVal (Fun _ _ _) = PP.text "function"
---ppVal (Lambda _ _) = PP.text "lambda"
-ppVal (PrimFun name) = PP.text name
-ppVal (Prim name remaining params) = PP.parens
-    $ PP.fsep [PP.text "builtin-function"
-        , PP.text name, PP.int remaining
-        , PP.parens $ PP.fsep $ ppValList params]
---ppVal (Prim name _ _) = PP.text name
+--ppVal (Fun env args body) = PP.parens
+--    $ PP.fsep [PP.text "function"
+--        , ppArgs args, ppVal body]
+--ppVal (Lambda args body) = PP.parens
+--    $ PP.fsep [PP.text "lambda", ppArgs args, ppVal body]
+--ppVal (PrimFun name) = PP.text name
+--    $ PP.fsep [PP.text "builtin-function"
+--        , PP.text name, PP.int remaining
+--        , PP.parens $ PP.fsep $ ppValList params]
+--ppVal (FunDef name args body) = PP.parens
+--    $ PP.fsep [PP.text "def", PP.text name
+--        , ppArgs args
+--        , ppVal body]
+ppVal (Fun _ _ _) = PP.text "<function>"
+ppVal (Lambda _ _) = PP.text "<lambda>"
+ppVal (Prim name _ _) = PP.text "<builtin>"
+ppVal (FunDef name _ _) = PP.text "<fundef>"
 ppVal (List xs) = PP.brackets
     (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = ppKeyValList xs
@@ -126,10 +130,6 @@ ppVal (Pair a b) = PP.parens (PP.fsep [ppVal a, ppVal b])
 ppVal (Expr xs) = PP.parens (PP.fsep $ ppValList xs)
 ppVal (If pred ifCase elseCase) = PP.parens
     $ PP.fsep [PP.text "if", ppVal pred, ppVal ifCase, ppVal elseCase]
-ppVal (FunDef name args body) = PP.parens
-    $ PP.fsep [PP.text "def", PP.text name
-        , ppArgs args
-        , ppVal body]
 ppVal (Let env val) = PP.parens
     $ PP.fsep [PP.text "let", ppKeyValList env, ppVal val]
 ppVal (App f x) = PP.parens (PP.fsep [ppVal f, ppVal x])

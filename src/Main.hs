@@ -99,7 +99,7 @@ processInput line =
             println result
             repl
         otherwise -> do
-            result <- (show <$> parseAndEval line)
+            result <- (show <$> rollBackOnErr (parseAndEval line))
                 `E.catchError`
                 (\e -> return (show e))
             println result

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 module Evaluator where
 
 import qualified Control.Monad.State as S
@@ -9,11 +7,6 @@ import qualified Control.Monad.Trans as T
 import qualified Control.Monad.Fix as F
 import qualified Control.Exception as Ex
 import qualified Data.Map as Map
-import Data.Maybe
-import qualified Data.List as List
-import Data.List ((\\))
-import Data.Traversable (traverse)
-import qualified Text.ParserCombinators.Parsec as P
 
 import Parser
 import LangData
@@ -36,7 +29,7 @@ eval e@(Ident var) = do
     val <- getVal var
     eval val
 
-eval (List xs) = do          -- eager evaluation
+eval (List xs) = do
     elems <- mapM eval xs
     return $ List elems
 
