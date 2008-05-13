@@ -34,7 +34,7 @@ parse input = case parseSingle input of
     Right v -> v
     Left err -> error (show err)
 
-parseSingle input = P.parse parseSingleExpr "lipl" input
+parseSingle input = P.parse parseSingleExpr "PAH REPL" input
 
 parseMultiple fileName input =
     P.parse parseMultipleExpr fileName input

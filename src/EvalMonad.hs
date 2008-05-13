@@ -148,6 +148,8 @@ instance (MonadTI m) => MonadTI (EvalT m) where
     putSubst = T.lift . putSubst
     extendSubst  = T.lift . extendSubst
     newId = T.lift newId
+    getN = T.lift getN
+    putN = T.lift . putN
 
 runEvalMonad action =
     I.runIdentity $

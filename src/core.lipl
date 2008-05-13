@@ -1,7 +1,7 @@
 # Prelude
 
 (def map (f l) (if (isEmpty l)
-                   l
+                   []
                    (let {x = (head l), xs = (tail l)}
                         (cons (f x) (map f xs)))))
 
@@ -33,7 +33,6 @@
                  (quick-sort greater)))))
 
 # (let { x = (head l), xs = (tail l) } (filter (lambda (a) (< a x))  xs))
-{-
 (def filter_ (f l)
      (if (isEmpty l)
          l
@@ -50,7 +49,6 @@
                             (filter (lambda (a) (< a (head l))) (tail l)))
                        (cons (head l) []))
                 (qs (filter (lambda (a) (>= a (head l))) (tail l))))))
--}
 
 (def compose (f g x) (f (g x)))
 
@@ -72,7 +70,6 @@
         (let { i = (fib (- n 1)), i-1 = (fib (- n 2)) }
              (+ i i-1))))
 
-{-
 (def twice (f x) (f (f x)))
 
 (def succ (x) (+ x 1))
@@ -94,7 +91,6 @@
          [[]]
          (let { x = (head l), xs = (tail l), subsXs = (subs xs) }
               (concat subsXs (map (cons x) subsXs)))))
--}
 
 {-
 ((twice twice succ) 0)

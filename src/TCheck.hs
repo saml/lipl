@@ -50,7 +50,6 @@ tInfer (Pair a b) = do
     tA <- tInfer a
     tB <- tInfer b
     s <- getSubst
-    --traceM ("Pair: s:" ++ showSubst (exclude s (map fst initialSubst)))
     return $ pair (apply s tA) (apply s tB)
 
 tInfer (Ident x) = do
@@ -58,7 +57,8 @@ tInfer (Ident x) = do
     case Map.lookup x s of
         Just ts -> do
             t <- toType ts
-            return t
+            s <- getSubst
+            return (apply s t)
         otherwise -> fail (x ++ " not found in assumptions")
 
 tInfer (Expr []) = return tUnit
@@ -67,23 +67,28 @@ tInfer (Expr l) = tInfer (foldl1 App l)
 tInfer (App f x) = do
     tF <- tInfer f
     tX <- tInfer x
-    s' <- getSubst
     v <- newTVar
     let tF' = tX `fn` v
     unify tF tF'
     s <- getSubst
-    let result = apply s v
-    return result
+    return (apply s v)
 
 tInfer (If pred true false) = do
     tPred <- tInfer pred
     unify tPred tBool
     tTrue <- tInfer true
     tFalse <- tInfer false
+    --sF <- mgu (apply s tTrue) (apply s tFalse)
     s <- getSubst
     unify (apply s tTrue) tFalse
+    s <- getSubst
+    return (apply s tFalse)
+    {-
+    s <- getSubst
+    unify (apply s tTrue) (apply s tFalse)
     s' <- getSubst
     return $ apply s' tFalse
+    -}
 
 tInfer (Lambda [] e) = tInfer e
 
@@ -94,11 +99,7 @@ tInfer lam@(Lambda [x] e) = do
     s <- getSubst
     let domain = apply s v
     let result = domain `fn` tE -- (apply s tE)
-    return result
-    where
-        getVar x s = case lookup x s of
-            Just t -> t
-            otherwise -> TScheme [] tUnit
+    return (apply s result)
 -- apply [("t0", TScheme [] (tParse "Int -> t1")), ("t1", TScheme [] (tParse "Int -> t2"))] (tParse "t0")
 
 tInfer lam@(Lambda params _) = if noDup params
@@ -135,11 +136,22 @@ tInfer (FunDef name args body) = if noDup args
             v <- newTVar
             extendSubst (name +-> TScheme [] v)
             tF <- tInfer (Lambda args body)
-            unify tF v
+            unify v tF
             s <- getSubst
-            return (apply s tF)
+            let result = apply s v
+            extendSubst (name +-> mkPolyType result)
+            return result
     else
         fail "duplicate argument"
+
+ti e@(FunDef name args body) = do
+    t <- locally (tInfer e)
+    extendSubst (name +-> mkPolyType t)
+    s <- getSubst
+    traceM ("ti: " ++ showS s)
+    return t
+ti val = tInfer val
+
 
 {-
 tInfer (Let kvs e) = tInfer $ Expr (Lambda (keys kvs) e : vals kvs)
@@ -174,7 +186,16 @@ toType (TScheme (x:xs) t) = do
     toType $ TScheme xs (replace x v t)
 
 
-onlyNew s = exclude s (Map.keys initialSubst)
+showS s = showSubst $ onlyNew s
+onlyNew s = s `Map.difference` initialSubst
+
+locally action = do
+    s <- getSubst
+    n <- getN
+    result <- action
+    putSubst s
+    putN n
+    return result
 
 localSubst s action = do
     sOrig <- getSubst
@@ -203,7 +224,7 @@ simplifyLambda (Expr [x]) = simplifyLambda x
 
 
 ty input = case parseSingle input of
-    Right v -> case runTI (tInfer v) initialSubst 0 of
+    Right v -> case runTI (ti v) initialSubst 0 of
         (s,i,t) -> t --tSanitize t
     Left err -> error (show err)
     where
@@ -226,9 +247,6 @@ tyim input = case parseMultiple "" input of
 
 
 
-ti val = let (_,_,t) = runTI (tInfer val) initialSubst 0
-    in
-        t
 -- ti (Lambda ["x"] (Lambda ["x"] (App (App (PrimFun "+") (Ident "x")) (Ident "x"))))
 
 
@@ -238,7 +256,7 @@ traceM msg = if isDebugSet
     else
         return ()
     where
-        isDebugSet = False
+        isDebugSet = True
 
 printRunTIResult (s,i,t) = putStrLn $ show t
 

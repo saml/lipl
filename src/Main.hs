@@ -25,7 +25,7 @@ run action = S.runStateT (
     runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
     nullEnv
 
-prelude = ""
+prelude = "core.pah"
 
 loadPrelude = runAndPrint (loadFile prelude)
 
@@ -58,6 +58,13 @@ repl = do
 
 processInput line =
     case (head . words) line of
+        ":?" -> do
+            println "help to be written"
+            repl
+        ":s" -> do
+            println "Current Type Environment"
+            printSubst
+            repl
         ":q" -> do
             println "bye"
             return ()
@@ -100,6 +107,9 @@ loadFile fileName = do
         --(\e -> E.throwError e)
     return result
 
+printSubst = do
+    s <- getSubst
+    T.liftIO $ putStrLn (showSubst s)
 
 printEnv = do
     env <- getEnv
@@ -119,7 +129,7 @@ interpret file = do
 parseAndEval input = case parseSingle input of
     Left err -> E.throwError $ ParseErr err
     Right val -> do
-        t <- tInfer val
+        t <- ti val
         println ("type: " ++ show (tSanitize t))
         eval val
 
@@ -132,7 +142,7 @@ parseAndEval input = case parseSingle input of
 parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> E.throwError $ ParseErr err
     Right vals -> do
-        M.mapM (M.liftM tSanitize . tInfer) vals
+        M.mapM (M.liftM tSanitize . ti) vals
         M.mapM eval vals
         return Null
 

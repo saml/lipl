@@ -34,8 +34,6 @@ unify t1 t2 = do
     u <- mgu (apply s t1) (apply s t2)
     extendSubst u
 
-getN = TI (\s n -> (s, n, n))
-putN n = TI (\s _ -> (s, n, ()))
 
 instance Monad TI where
     return x = TI (\s n -> (s, n, x))
@@ -53,6 +51,8 @@ instance MonadTI TI where
     putSubst s = TI (\_ n -> (s, n, ()))
     extendSubst s' = TI (\s n -> (s @@ s', n, ()))
     newId = TI (\s n -> (s, n+1, "t" ++ show n))
+    getN = TI (\s n -> (s, n, n))
+    putN n = TI (\s _ -> (s, n, ()))
 
 
 
@@ -80,6 +80,8 @@ instance (Monad m) => MonadTI (TIT m) where
     putSubst s = TIT (\_ n -> return (s, n, ()))
     extendSubst s' = TIT (\s n -> return (s @@ s', n, ()))
     newId = TIT (\s n -> return (s, n+1, "t" ++ show n))
+    getN = TIT (\s n -> return (s, n, n))
+    putN n = TIT (\s _ -> return (s, n, ()))
 
 instance (T.MonadIO m) => T.MonadIO (TIT m) where
     liftIO = T.lift . T.liftIO

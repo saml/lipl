@@ -6,6 +6,7 @@ import qualified Control.Monad.Error as E
 import qualified Control.Monad.Trans as T
 import qualified Data.Map as Map
 import System.IO
+import Data.Function (fix)
 
 import LangData
 import Utils
@@ -47,6 +48,7 @@ primitives = Map.fromList [
     , ("<=", Builtin 2 compareLte (tParse "a -> a -> Bool"))
     , (">", Builtin 2 compareGt (tParse "a -> a -> Bool"))
     , (">=", Builtin 2 compareGte (tParse "a -> a -> Bool"))
+    --, ("fix", Builtin 1 fixOp (tParse "(a -> a) -> a"))
     , ("length", Builtin 1 listLength (tParse "[a] -> Int"))
     , ("head", Builtin 1 listHead (tParse "[a] -> a"))
     , ("tail", Builtin 1 listTail (tParse "[a] -> [a]"))
@@ -72,6 +74,8 @@ builtins = map snd primitivesList
 builtinSubst = map mkSubst primitivesList
     where
         mkSubst (a, b) = (a, getBuiltinType b)
+
+--fixOp [Fun ] = fix f
 
 compareEq :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
 compareEq = compareOp (ordBool [EQ])
