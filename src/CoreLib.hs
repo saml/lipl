@@ -9,7 +9,6 @@ import System.IO
 import Data.Function (fix)
 
 import LangData
-import Utils
 import TParse
 import Type
 import EvalMonad

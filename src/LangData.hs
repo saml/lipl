@@ -8,6 +8,7 @@ import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ ( (<>), (<+>), ($$), ($+$) )
 import qualified Text.ParserCombinators.Parsec as P
 import qualified Data.Map as Map
+import qualified Data.List as List
 import Data.Maybe (catMaybes)
 import Debug.Trace (trace)
 
@@ -38,7 +39,22 @@ splitOn chr l = f (break (== chr) l)
         f (h, []) = [h]
         f (h, (_:xs)) = h : splitOn chr xs
 
+splitNS ident = let
+    dotIndices = List.findIndices (== '.') ident
+    in
+        if null dotIndices
+            then
+                ("", ident)
+            else
+                (\(x,y) -> (x, tail y))
+                    $ splitAt (last dotIndices) ident
+
+
+getNamespace = fst . splitNS
+getName = snd . splitNS
+
 type Namespace = Map.Map Key EnvStack
+
 type Env = Map.Map Key Val
 type EnvStack = Stack Env
 emptyEnv = Map.empty

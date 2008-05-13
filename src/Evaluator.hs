@@ -18,7 +18,7 @@ import qualified Text.ParserCombinators.Parsec as P
 import Parser
 import LangData
 import CoreLib
-import Utils
+import EvalUtils
 import EvalMonad
 import Error
 
@@ -166,3 +166,4 @@ evalWith env val = withEnv env (eval val)
 
 test s = case parseSingle s of
     Right val -> unboundVars val
+
