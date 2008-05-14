@@ -115,15 +115,22 @@ tInfer (Let [(k,v)] e) = do
     let vals = Map.elems s
     let freeVs = (tv tV \\ keys) \\ tv vals
 
-    extendSubst (k +-> TScheme freeVs tV)
-    tE <- tInfer e
-    sE <- getSubst
-    tK <- tInfer (Ident k)
-    sK <- getSubst
-    unify tK tV
-
     s <- getSubst
-    return (apply s tE)
+    localSubst s (do
+        extendSubst (k +-> TScheme freeVs tV)
+        tE <- tInfer e
+        sE <- getSubst
+        tK <- tInfer (Ident k)
+        sK <- getSubst
+        --traceM ("tK: " ++ show tK)
+        --traceM ("tV: " ++ show tV)
+        --traceM ("sK: " ++ showS sK)
+        unify tK tV
+
+        s <- getSubst
+        --traceM ("s: " ++ showS s)
+        --putSubst $ Map.delete k s
+        return (apply s tE))
     --return (s2 @@ s1, tE)
 -- tyi "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
 -- tyi "(let { x = (lambda (x) (if (== 1 (head x)) 'a' 'b')), y = x} (y ))"
@@ -148,7 +155,6 @@ typeInfer e@(FunDef name args body) = do
     t <- M.liftM tSanitize (locally (tInfer e))
     extendSubst (name +-> mkPolyType t)
     --s <- getSubst
-    --traceM ("ti: " ++ showS s)
     return t
 
 typeInfer (Expr [e]) = typeInfer e
@@ -263,14 +269,6 @@ tyim input = case parseMultiple "" input of
 
 -- ti (Lambda ["x"] (Lambda ["x"] (App (App (PrimFun "+") (Ident "x")) (Ident "x"))))
 
-
-traceM msg = if isDebugSet
-    then
-        trace ('\n' : msg) (return ())
-    else
-        return ()
-    where
-        isDebugSet = True
 
 printRunTIResult (s,i,t) = putStrLn $ show t
 

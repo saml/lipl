@@ -103,11 +103,13 @@ data TScheme = TScheme [Id] Type
 instance Show TScheme where
     show = PP.render . ppTScheme
 
-ppTScheme (TScheme l t) =
-    PP.fsep [PP.text "TScheme"
-        , PP.brackets
-            $ PP.fsep $ PP.punctuate PP.comma (map PP.text l)
-        , ppType t]
+ppTScheme (TScheme l t) = PP.fsep [ppQuantification l, ppType t]
+
+ppQuantification l =  if null l
+    then
+        PP.empty
+    else
+        PP.fsep [PP.text "forall", PP.fsep (map PP.text l), PP.text "."]
 
 replace a b e@(TVar v)
     | a == v = TVar b

@@ -104,23 +104,26 @@ ppVal (Float f) = PP.double f
 ppVal (Bool b) = PP.text $ show b
 ppVal (Char c) = PP.text $ show c
 ppVal (Str s) = PP.text $ show s
---ppVal (Fun env args body) = PP.parens
---    $ PP.fsep [PP.text "function"
---        , ppArgs args, ppVal body]
---ppVal (Lambda args body) = PP.parens
---    $ PP.fsep [PP.text "lambda", ppArgs args, ppVal body]
---ppVal (PrimFun name) = PP.text name
---    $ PP.fsep [PP.text "builtin-function"
---        , PP.text name, PP.int remaining
---        , PP.parens $ PP.fsep $ ppValList params]
---ppVal (FunDef name args body) = PP.parens
---    $ PP.fsep [PP.text "def", PP.text name
---        , ppArgs args
---        , ppVal body]
-ppVal (Fun _ _ _) = PP.text "<function>"
-ppVal (Lambda _ _) = PP.text "<lambda>"
-ppVal (Prim name _ _) = PP.text "<builtin>"
-ppVal (FunDef name _ _) = PP.text "<fundef>"
+ppVal (Fun env args body) = PP.parens
+    $ PP.fsep [PP.text "function"
+        , ppArgs args, ppVal body]
+ppVal (Lambda args body) = PP.parens
+    $ PP.fsep [PP.text "lambda", ppArgs args, ppVal body]
+ppVal (FunDef name args body) = PP.parens
+    $ PP.fsep [PP.text "def", PP.text name
+        , ppArgs args
+        , ppVal body]
+ppVal (PrimFun name) = PP.text name
+--ppVal (Fun _ _ _) = PP.text "<function>"
+--ppVal (Lambda _ _) = PP.text "<lambda>"
+--ppVal (Prim name _ _) = PP.text "<builtin>"
+--ppVal (FunDef name _ _) = PP.text "<fundef>"
+{-
+ppVal (PrimFun name) = PP.text name
+    $ PP.fsep [PP.text "builtin-function"
+        , PP.text name, PP.int remaining
+        , PP.parens $ PP.fsep $ ppValList params]
+-}
 ppVal (List xs) = PP.brackets
     (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = ppKeyValList xs

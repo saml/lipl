@@ -12,6 +12,7 @@ import Parser
 import LangData
 import CoreLib
 import EvalUtils
+import Utils
 import EvalMonad
 import Error
 
@@ -48,7 +49,12 @@ eval (Lambda [] body) = eval body
 
 eval e@(Lambda args body) = do
     env <- getEnvFor (unboundVars e)
+    env' <- getEnv
+    --traceM ("lambda: " ++ show e)
+    --traceM ("lambda env: " ++ show env)
+    --traceM ("lambda env': " ++ show env')
     let fun = Fun env args body
+    --traceM ("lambda fun: " ++ show fun)
     return fun
 
 eval e@(FunDef name args body) = do
@@ -67,9 +73,13 @@ eval (If pred ifCase elseCase) = do
 
 eval e@(Let env body) = do
     env' <- runLocally (keyValToEnv env)
+    --traceM ("let env: " ++ show env')
     withEnv env' (eval body)
 
-eval (Fun env [] body) = withEnv env (eval body)
+eval (Fun env [] body) = do
+    traceM ("fun: env: " ++ show env)
+    traceM ("fun: body: " ++ show body)
+    withEnv env (eval body)
 
 eval (Closure env body) = withEnv (Map.fromList env) (eval $ body)
 
@@ -77,6 +87,7 @@ eval (Expr []) = return Null
 
 eval (Expr [e]) = eval e -- unwrap outer parens
 
+{-
 eval (Expr [Ident "=", Ident name, body]) = do
     putVal name body
     env <- getEnvFor (unboundVars body)
@@ -88,6 +99,7 @@ eval (Expr (Ident "free-vars" : e)) = do
 eval (Expr (Ident "f-v" : e)) = do
     e' <- eval $ Expr e
     return $ List (map Ident (unboundVars e'))
+-}
 
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let firstArg = head e
@@ -104,8 +116,11 @@ eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
 
 eval x = return x
 
+
+
 runLocally action = do
     prev <- getEnvs
+    pushEnv emptyEnv
     result <- action
     putEnvs prev
     return result

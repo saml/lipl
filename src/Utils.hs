@@ -47,3 +47,12 @@ idents e = List.nub $ idents' e
         idents' x = []
 -}
 
+traceM msg = if isDebugSet
+    then
+        trace ('\n' : msg) (return ())
+    else
+        return ()
+    where
+        isDebugSet = True
+
+

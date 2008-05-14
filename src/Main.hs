@@ -19,15 +19,15 @@ import TIMonad
 import EvalMonad
 import REPLMonad
 import Type
+import Settings
 
 --run wrap = runTIT (E.runErrorT (runREPL wrap)) initialSubst
 run action = S.runStateT (
     runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
     nullEnv
 
-prelude = "core.pah"
 
-loadPrelude = runAndPrint (loadFile prelude)
+loadPrelude = runAndPrint (loadFile sPRELUDE)
 
 runAndPrint action = do
     msg <- action
@@ -49,7 +49,7 @@ main = do
 println s = T.liftIO $ putStrLn s
 
 repl = do
-    line <- M.liftM (unwords . words) $ T.liftIO $ prompt "PAH> "
+    line <- M.liftM (unwords . words) $ T.liftIO $ prompt (sLANGNAME ++ "> ")
     if length line == 0
         then
             repl
@@ -170,4 +170,13 @@ loopUntil pred prompt action = do
             do
                 action input
                 loopUntil pred prompt action
+ev input = case parseSingle input of
+    Left err -> error (show err)
+    Right v -> runEvalMonad (eval v)
 -}
+
+ev input = do
+    ((_,_,result),_) <- run (do
+        v <- parseAndEval input
+        return v)
+    return result

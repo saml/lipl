@@ -14,6 +14,7 @@ import LangData
 import CoreLib (builtinNames)
 import ParseUtils
 import Utils
+import Settings
 
 {-
 lexeme = P.lexeme lexer
@@ -34,7 +35,7 @@ parse input = case parseSingle input of
     Right v -> v
     Left err -> error (show err)
 
-parseSingle input = P.parse parseSingleExpr "PAH REPL" input
+parseSingle input = P.parse parseSingleExpr (sLANGNAME ++ " REPL") input
 
 parseMultiple fileName input =
     P.parse parseMultipleExpr fileName input
