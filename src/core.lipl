@@ -1,7 +1,9 @@
 # Prelude
 {-
+ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
 (def f (x) (((lambda (x) (let { x = (lambda (x) (+ x 1)) } x)) x) x))
 (def f (x) (((lambda (x) ((lambda (x) x) (lambda (x) (+ x 1)))) x) x))
+(lambda (x) ((let { x = (lambda (x) ((let {x = (lambda (x y) (+ x y)) } x) x 1)) } x) x))
 # f x = ((\x -> let x = (\x -> x + 1) in x) x) x
 # let f x = ((\x -> (let x = \x -> x + 1 in x)) x) x in f
 -}
