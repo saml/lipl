@@ -44,7 +44,7 @@ tInfer (List l) = do
         then
             return (list (head ts))
         else
-            fail "not homogenious list"
+            fail ("not homogenious list: " ++ show (List l))
 
 tInfer (Pair a b) = do
     tA <- tInfer a
@@ -106,7 +106,7 @@ tInfer lam@(Lambda params _) = if noDup params
     then
         tInfer (simplifyLambda lam)
     else
-        fail "duplicate argument"
+        fail $ "duplicate argument: " ++ (show lam)
 
 tInfer (Let [(k,v)] e) = do
     tV <- tInfer v
@@ -137,7 +137,7 @@ tInfer (Let [(k,v)] e) = do
 
 tInfer (Let kvs e) = tInfer $ foldr (Let . (:[])) e kvs
 
-tInfer (FunDef name args body) = if noDup args
+tInfer e@(FunDef name args body) = if noDup args
     then
         do
             v <- newTVar
@@ -149,7 +149,7 @@ tInfer (FunDef name args body) = if noDup args
             extendSubst (name +-> mkPolyType result)
             return result
     else
-        fail "duplicate argument"
+        fail $ "duplicate argument: " ++ show e
 
 typeInfer e@(FunDef name args body) = do
     t <- M.liftM tSanitize (locally (tInfer e))
