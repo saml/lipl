@@ -20,11 +20,12 @@ import EvalMonad
 import REPLMonad
 import Type
 import Settings
+import PosMonad
 
 --run wrap = runTIT (E.runErrorT (runREPL wrap)) initialSubst
-run action = S.runStateT (
+run action = S.runStateT (runPosT (S.runStateT (
     runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
-    nullEnv
+    nullEnv)) initialPos
 
 
 loadPrelude = runAndPrint (loadFile sPRELUDE)
@@ -137,10 +138,14 @@ interpret file = do
                 rollBackOnErr (parseAndEvalMultiple file prog)
                 return ()
         else
-            E.throwError $ DefaultErr $ "can't find file: " ++ file
+            do
+                pos <- getSourcePos
+                E.throwError $ Err pos ("can't find file: " ++ file)
 
 parseAndEval input = case parseSingle input of
-    Left err -> E.throwError $ ParseErr err
+    Left err -> do
+        pos <- getSourcePos
+        E.throwError $ Err pos (show err)
     Right val -> do
         t <- typeInfer val
         println ("type: " ++ show t)
@@ -153,7 +158,9 @@ parseAndEval input = case parseSingle input of
 -}
 
 parseAndEvalMultiple fn input = case parseMultiple fn input of
-    Left err -> E.throwError $ ParseErr err
+    Left err -> do
+        pos <- getSourcePos
+        E.throwError $ Err pos (show err)
     Right vals -> do
         M.mapM (\val -> (do
             t <- typeInfer val
@@ -181,9 +188,10 @@ ev input = case parseSingle input of
     Left err -> error (show err)
     Right v -> runEvalMonad (eval v)
 -}
-
+{-
 ev input = do
     ((_,_,result),_) <- run (do
         v <- parseAndEval input
         return v)
     return result
+-}

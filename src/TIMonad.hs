@@ -19,6 +19,7 @@ import qualified Control.Monad.Fix as F
 import EvalMonadClass
 import TIMonadClass
 import Type
+import PosMonadClass
 
 type ErrMsg = String
 
@@ -33,7 +34,6 @@ unify t1 t2 = do
     s <- getSubst
     u <- mgu (apply s t1) (apply s t2)
     extendSubst u
-
 
 instance Monad TI where
     return x = TI (\s n -> (s, n, x))
@@ -54,7 +54,11 @@ instance MonadTI TI where
     getN = TI (\s n -> (s, n, n))
     putN n = TI (\s _ -> (s, n, ()))
 
-
+{-
+instance MonadPos TI where
+    setSourcePos pos = TI (\s n -> (s, n, ()))
+    getSourcePos = TI (\s n -> (s, n, ()))
+-}
 
 newtype TIT m a = TIT { runTIT :: Subst -> Int -> m (Subst, Int, a) }
 
@@ -107,6 +111,9 @@ instance (MonadEval m) => MonadEval (TIT m) where
     pushEnv = T.lift . pushEnv
     popEnv = T.lift popEnv
 
+instance (MonadPos m) => MonadPos (TIT m) where
+    setSourcePos = T.lift . setSourcePos
+    getSourcePos = T.lift getSourcePos
 
 
 

@@ -22,6 +22,7 @@ import Error
 import Stack
 import TIMonadClass
 import EvalMonadClass
+import PosMonadClass
 
 {-
 newtype Eval a = Eval {
@@ -58,7 +59,9 @@ getVal key = do
     envs <- getEnvs
     case (catMaybes $ map (Map.lookup key) envs) of
         (x:_) -> return x
-        otherwise -> E.throwError $ UnboundIdentErr "not found" key
+        otherwise -> do
+            pos <- getSourcePos
+            E.throwError $ Err pos ("not found: " ++ key)
 
 getEnvFor keys = do
     vals <- mapM getVal keys
@@ -69,7 +72,10 @@ putVal key val = do
     (env:envs) <- getEnvs
     if Map.member key env
         then
-            E.throwError $ EnvUpdateErr key
+            do
+                pos <- getSourcePos
+                E.throwError
+                    $ Err pos ("destructive update: " ++ key)
         else
             putEnvs (Map.insert key val env : envs)
 
@@ -150,6 +156,10 @@ instance (MonadTI m) => MonadTI (EvalT m) where
     newId = T.lift newId
     getN = T.lift getN
     putN = T.lift . putN
+
+instance (MonadPos m) => MonadPos (EvalT m) where
+    setSourcePos = T.lift . setSourcePos
+    getSourcePos = T.lift getSourcePos
 
 runEvalMonad action =
     I.runIdentity $

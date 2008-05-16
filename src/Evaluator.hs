@@ -14,6 +14,7 @@ import CoreLib
 import EvalUtils
 import Utils
 import EvalMonad
+import PosMonad
 import Error
 
 import Debug.Trace (trace)
@@ -25,6 +26,10 @@ eval e@(Float _) = return e
 eval e@(Bool _) = return e
 eval e@(Char _) = return e
 eval e@(Str _) = return e
+
+eval (At pos e) = do
+    setSourcePos pos
+    eval e
 
 eval e@(Ident var) = do
     val <- getVal var
@@ -109,7 +114,9 @@ eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
         fun@(Prim name remaining args) -> do
             arg1 <- eval $ firstArg
             evalPrim name arg1 restArgs args remaining
-        otherwise -> E.throwError $ NotFunErr "" (show f)
+        otherwise -> do
+            pos <- getSourcePos
+            E.throwError $ Err pos ("not function: " ++ show f)
 
 eval (Pair e1 e2) = do
     v1 <- eval e1
@@ -175,7 +182,9 @@ apply (Fun env (arg:rst) body) e = do
             withEnv env'(eval body)
         else
             return $ Fun env' rst body
-apply e _ = E.throwError $ NotFunErr "not function" (show e)
+apply e _ = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("not function: " ++ show e)
 
 evalWith env val = withEnv env (eval val)
 

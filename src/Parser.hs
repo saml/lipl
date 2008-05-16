@@ -165,10 +165,11 @@ parseDef = do
 
 
 parseParenExpr = do
+    pos <- P.getPosition
     lparen
     val <- P.sepEndBy parseToken mustSpaces
     rparen
-    return $ Expr val
+    return $  (Expr val)
 
 parseIf = do
     P.string "if"

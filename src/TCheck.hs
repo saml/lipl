@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module TCheck where
 
@@ -20,8 +20,14 @@ import Trace
 import CoreLib (builtinSubst)
 import Utils
 import TIMonad
+import PosMonad
+import Error
 
-tInfer :: (MonadTI m) => Val -> m Type
+tInfer :: (MonadTI m, MonadPos m, E.MonadError Err m) => Val -> m Type
+tInfer (At pos e) = do
+    setSourcePos pos
+    tInfer e
+
 tInfer (Int _) = return tInt
 tInfer (Bool _) = return tBool
 tInfer (Float _) = return tFloat
@@ -44,7 +50,10 @@ tInfer (List l) = do
         then
             return (list (head ts))
         else
-            fail ("not homogenious list: " ++ show (List l))
+            do
+                pos <- getSourcePos
+                E.throwError
+                    $ Err pos ("not homogenious list: " ++ show (List l))
 
 tInfer (Pair a b) = do
     tA <- tInfer a
@@ -59,7 +68,9 @@ tInfer (Ident x) = do
             t <- toType ts
             s <- getSubst
             return (apply s t)
-        otherwise -> fail (x ++ " not found in assumptions")
+        otherwise -> do
+            pos <- getSourcePos
+            E.throwError $ Err pos ("not found in assumptions: " ++ x)
 
 tInfer (Expr []) = return tUnit
 tInfer (Expr l) = tInfer (foldl1 App l)
@@ -106,7 +117,9 @@ tInfer lam@(Lambda params _) = if noDup params
     then
         tInfer (simplifyLambda lam)
     else
-        fail $ "duplicate argument: " ++ (show lam)
+        do
+            pos <- getSourcePos
+            E.throwError $ Err pos ("duplicate argument: " ++ show lam)
 
 tInfer (Let [(k,v)] e) = do
     tV <- tInfer v
@@ -153,7 +166,9 @@ tInfer e@(FunDef name args body) = if noDup args
             extendSubst (name +-> mkPolyType result)
             return result
     else
-        fail $ "duplicate argument: " ++ show e
+        do
+            pos <- getSourcePos
+            E.throwError $ Err pos ("duplicate argument: " ++ show e)
 
 typeInfer e@(FunDef name args body) = do
     t <- M.liftM tSanitize (locally (tInfer e))
@@ -165,16 +180,6 @@ typeInfer (Expr [e]) = typeInfer e
 typeInfer e = do
     t <- locally (tInfer e)
     return (tSanitize t)
-
-{-
-ti val = do
-    t <- tInfer val
-    return (tSanitize t)
--}
-
---sSanitize = do
---    s <- getSubst
-
 
 
 {-
@@ -199,7 +204,7 @@ mkFunType (_:xs) = do
     return (v `fn` rest)
 
 
-tInferList :: [Val] -> TI [Type]
+tInferList :: (MonadTI m, MonadPos m, E.MonadError Err m) => [Val] -> m [Type]
 tInferList = mapM tInfer
 
 
@@ -247,13 +252,13 @@ simplifyLambda lam@(Lambda (x:xs) e) =
 simplifyLambda (Expr [x]) = simplifyLambda x
 
 
+{-
 ty input = case parseSingle input of
     Right v -> case runTI (tInfer v) initialSubst 0 of
         (s,i,t) -> t --tSanitize t
     Left err -> error (show err)
     where
         prettySubst s = s `Map.difference` initialSubst
-
 
 tyi input = case parseSingle input of
     Right v -> case runTI (tInfer v) initialSubst 0 of
@@ -269,7 +274,7 @@ tyim input = case parseMultiple "" input of
         (s, i, t) -> mapM_ (putStrLn . show) (map tSanitize t)
     Left err -> putStrLn (show err)
 
-
+-}
 
 -- ti (Lambda ["x"] (Lambda ["x"] (App (App (PrimFun "+") (Ident "x")) (Ident "x"))))
 
@@ -280,10 +285,11 @@ theta = [("X", TVar "a"), ("Y", TVar "b"), ("Z", TVar "Y")]
 eta = [("X", TApp (TVar "f") (TVar "Y")), ("Y", TVar "Z")]
 -- theta @@ eta = [("X",f b),("Z",Y)]
 
+{-
 tCheck :: Val -> Either String Type
 tCheck v = case runTI (tInfer v) initialSubst 0 of
     (s, i, t) -> Right t
-
+-}
 
 defaultSubst :: Subst
 defaultSubst = toSubst [
@@ -298,9 +304,9 @@ initialSubst = defaultSubst `Map.union` toSubst builtinSubst
 clearSubst :: (MonadTI m) => m ()
 clearSubst = putSubst initialSubst
 
-
+{-
 showTI ti = let (s,_,t) = runTI ti initialSubst 0
     in
         showSubstTypePair (s,t)
-
+-}
 

@@ -13,21 +13,24 @@ import TParse
 import Type
 import EvalMonad
 import Error
+import PosMonad
 
 data Builtin = Builtin {
     getBuiltinArity :: Int
     --, getBuiltinFun :: [Val] -> Eval Val
     , getBuiltinFun ::
         forall m .
-            (MonadEval m, E.MonadError Err m, T.MonadIO m)
+            (MonadEval m, E.MonadError Err m, T.MonadIO m, MonadPos m)
             => [Val] -> m Val
     , getBuiltinType :: Type
     }
 
 --funcall :: (MonadEval m, E.MonadError Err m) => String -> [Val] -> m Val
 funcall fname args = case Map.lookup fname primitives of
-    Nothing -> E.throwError
-        $ NotFunErr "Unrecognizable primitive function" fname
+    Nothing -> do
+        pos <- getSourcePos
+        E.throwError
+            $ Err pos ("Unrecognizable primitive function: " ++ fname)
     Just f -> (getBuiltinFun f) args
 
 arityOf name = case Map.lookup name primitives of
@@ -104,29 +107,29 @@ toFloat [(Int i)] = return (Float $ fromIntegral i)
 
 --fixOp [Fun ] = fix f
 
-compareEq :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
+compareEq :: (MonadEval m, E.MonadError Err m, MonadPos m) => [Val] -> m Val
 compareEq = compareOp (ordBool [EQ])
 
-compareNeq :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
+compareNeq :: (MonadEval m, E.MonadError Err m, MonadPos m) => [Val] -> m Val
 compareNeq = compareOp (ordBool [LT, GT])
 
-compareLt :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
+compareLt :: (MonadEval m, E.MonadError Err m, MonadPos m) => [Val] -> m Val
 compareLt = compareOp (ordBool [LT])
 
-compareLte :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
+compareLte :: (MonadEval m, E.MonadError Err m, MonadPos m) => [Val] -> m Val
 compareLte = compareOp (ordBool [LT, EQ])
 
-compareGt :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
+compareGt :: (MonadEval m, E.MonadError Err m, MonadPos m) => [Val] -> m Val
 compareGt = compareOp (ordBool [GT])
 
-compareGte :: (MonadEval m, E.MonadError Err m) => [Val] -> m Val
+compareGte :: (MonadEval m, E.MonadError Err m, MonadPos m) => [Val] -> m Val
 compareGte = compareOp (ordBool [GT, EQ])
 
 ordBool target x = elem x target
 
 --compareOp op [a, b] =
 --    return $ Bool $ op (unpackVal a `compare` unpackVal b)
-compareOp :: (MonadEval m, E.MonadError Err m)
+compareOp :: (MonadEval m, E.MonadError Err m, MonadPos m)
     => (Ordering -> Bool) -> [Val] -> m Val
 compareOp op [Int a, Int b] = return $ Bool $ op (compare a b)
 compareOp op [Float a, Int b] =
@@ -140,8 +143,9 @@ compareOp op [a@(Str _), List l] = compareOp op [a, toStr l]
 compareOp op [List l, a@(Str _)] = compareOp op [toStr l, a]
 compareOp op [Char a, Char b] = return $ Bool $ op (compare a b)
 compareOp op [List a, List b] = return $ Bool $ op (compare a b)
-compareOp op e@([a,b]) =
-    E.throwError $ TypeErr "Can't compare" $ Expr e
+compareOp op e@([a,b]) = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("Can't compare: " ++ show e)
 
 {-
 compareOp unpacker op [a,b] = do
@@ -242,21 +246,29 @@ listLength [Str x] = return $ Int (toInteger $ length x)
 --listLength x = E.throwError $ ArityErr 1 x
 
 listHead [List (x:xs)] = return x
-listHead [e@(List [])] =
-    E.throwError $ TypeErr "need non empty list" e
+listHead [e@(List [])] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need non empty list: " ++ show e)
 listHead [Str (x:xs)] = return $ Char x
-listHead [e@(Str "")] =
-    E.throwError $ TypeErr "need non empty string" e
-listHead [x] = E.throwError $ TypeErr "need non empty list" x
+listHead [e@(Str "")] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need non empty string: " ++ show e)
+listHead [x] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need non empty list: " ++ show x)
 --listHead x = E.throwError $ ArityErr 1 x
 
 listTail [List (x:xs)] = return $ List xs
-listTail [e@(List [])] =
-    E.throwError $ TypeErr "need non empty list" e
+listTail [e@(List [])] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need non empty list: " ++ show e)
 listTail [Str (x:xs)] = return $ Str xs
-listTail [e@(Str [])] =
-    E.throwError $ TypeErr "need non empty string" e
-listTail [x] = E.throwError $ TypeErr "need non empty list" x
+listTail [e@(Str [])] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need non empty string: " ++ show e)
+listTail [x] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need non empty list: " ++ show x)
 --listTail x = E.throwError $ ArityErr 1 x
 
 listCons [x, List []] = return $ List [x]
@@ -302,17 +314,27 @@ showEnvironment [Str key] = do
                 return val
 
 strToList [Str s] = return (List $ map Char s)
-strToList [x] = E.throwError $ TypeErr "need string" x
-strToList x = E.throwError $ ArityErr 1 x
+strToList [x] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need string: " ++ show x)
+strToList x = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need 1 arg: " ++ show x)
 
 listToStr [List l] = do
     s <- mapM toChar l
     return $ Str s
     where
         toChar (Char c) = return c
-        toChar x = E.throwError $ TypeErr "need list of chars" x
-listToStr [x] = E.throwError $ TypeErr "need list" x
-listToStr x = E.throwError $ ArityErr 1 x
+        toChar x = do
+            pos <- getSourcePos
+            E.throwError $ Err pos ("need list of chars: " ++ show x)
+listToStr [x] = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need list" ++ show x)
+listToStr x = do
+    pos <- getSourcePos
+    E.throwError $ Err pos ("need 1 arg: " ++ show x)
 
 --getFreeVars [x] = return $ List (map Ident (unboundVars x))
 

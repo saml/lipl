@@ -73,6 +73,7 @@ type RemainingArgs = Int
 
 data Val = -- Comment String
     Null
+    | At P.SourcePos Val
     | Seq Val Val
     | Ident { unpackIdent :: Name }
     | Int { unpackInt :: Integer }
@@ -99,6 +100,7 @@ instance Show Val where show = PP.render . ppVal
 
 -- ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
+ppVal (At _ e) = ppVal e
 ppVal (Seq e1 e2) = ppVal e1 <+> ppVal e2
 ppVal (Ident s) = PP.text s
 ppVal (Int i) = PP.integer i

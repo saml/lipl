@@ -1,6 +1,7 @@
 module Error where
 
 import qualified Text.ParserCombinators.Parsec as P
+import qualified Text.ParserCombinators.Parsec.Pos as P
 import qualified Text.PrettyPrint.HughesPJ as PP
 import Text.PrettyPrint.HughesPJ ( (<>), (<+>), ($$), ($+$) )
 import qualified Control.Monad.Error as E
@@ -8,7 +9,19 @@ import qualified Control.Monad.Error as E
 import LangData
 
 type ErrMsg = String
+data Err = Err P.SourcePos ErrMsg
 
+ppErr (Err pos msg) = PP.fsep [PP.text (show pos), PP.text msg]
+
+instance Show Err where
+    show e = PP.render $ ppErr e
+
+instance E.Error Err where
+    noMsg = Err (P.initialPos "") "Error"
+    strMsg = Err (P.initialPos "")
+
+
+{-
 data Err = ArityErr Int [Val]
     | TypeErr ErrMsg Val
     | ParseErr P.ParseError
@@ -40,11 +53,6 @@ ppErr (BadExprErr msg val) = PP.text msg
     <> PP.text ":"
     <+> ppVal val
 ppErr (DefaultErr msg) = PP.text msg
+-}
 
-instance Show Err where
-    show e = PP.render $ ppErr e
-
-instance E.Error Err where
-    noMsg = DefaultErr "Error"
-    strMsg = DefaultErr
 
