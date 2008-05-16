@@ -28,7 +28,9 @@ newtype Pos a = Pos {
 
 newtype PosT m a = PosT {
     runPosT :: (S.StateT P.SourcePos m) a
-    } deriving (Monad, Functor, S.MonadState P.SourcePos)
+    } deriving (Monad, Functor, S.MonadState P.SourcePos
+        , R.MonadReader r, W.MonadWriter w
+        , T.MonadIO)
 
 instance T.MonadTrans PosT where
     lift m = PosT (T.lift m)
@@ -37,6 +39,9 @@ instance (Monad m) => MonadPos (PosT m) where
     setSourcePos pos = S.put pos
     getSourcePos = S.get
 
+
+
+{-
 instance (T.MonadIO m) => T.MonadIO (PosT m) where
     liftIO = T.lift . T.liftIO
 
@@ -63,4 +68,6 @@ instance (MonadEval m) => MonadEval (PosT m) where
     putEnvs = T.lift . putEnvs
     pushEnv = T.lift . pushEnv
     popEnv = T.lift popEnv
+
+-}
 

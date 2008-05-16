@@ -125,10 +125,12 @@ eval (Pair e1 e2) = do
 
 eval x = return x
 
+evaluate (At _ e@(FunDef _ _ _)) = evaluate e
 evaluate e@(FunDef name args body) = do
     result <- runLocally (eval e)
     updateVal name result
     return result
+evaluate (At _ (Expr [e])) = evaluate e
 evaluate (Expr [e]) = evaluate e
 evaluate e = runLocally (eval e)
 

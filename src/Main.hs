@@ -2,6 +2,7 @@ module Main where
 
 import System.IO
 import System.Directory
+import System.FilePath
 import System.Environment (getArgs)
 import qualified Data.Map as Map
 import qualified Control.Monad.Error as E
@@ -27,8 +28,30 @@ run action = S.runStateT (runPosT (S.runStateT (
     runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
     nullEnv)) initialPos
 
+baseDir = do
+    home <- getHomeDirectory
+    return $ joinPath [home, sBASEDIR]
 
-loadPrelude = runAndPrint (loadFile sPRELUDE)
+createBaseDir = do
+    d <- baseDir
+    exists <- doesDirectoryExist d
+    if exists then return () else createDirectory d
+
+findPrelude = do
+    exists <- doesFileExist sPRELUDE
+    if exists
+        then
+            return sPRELUDE
+        else
+            do
+                d <- baseDir
+                return $ joinPath [d, sPRELUDE]
+
+loadPrelude = do
+    --fname <- findPrelude `catch` (\e -> return "")
+    let fname = sPRELUDE
+    loadFile fname
+--loadPrelude = runAndPrint (loadFile sPRELUDE)
 
 runAndPrint action = do
     msg <- action
@@ -36,6 +59,7 @@ runAndPrint action = do
 
 main = do
     hSetBuffering stdout NoBuffering
+    createBaseDir
     fn <- getArgs
     if length fn > 0
         then do
@@ -101,8 +125,7 @@ processInput line =
             println "Environment cleared"
             clearSubst
             println "Type environment cleared"
-            loadFile sPRELUDE
-            println (sPRELUDE ++ " loaded")
+            loadPrelude
             result <- loadFile $ (head . tail . words) line
             println result
             repl
@@ -113,12 +136,12 @@ processInput line =
             println result
             repl
 
+
 loadFile fileName = do
     result <- (interpret fileName >>
         return (fileName ++ " loaded"))
         `E.catchError`
         (\e -> return (show e))
-        --(\e -> E.throwError e)
     return result
 
 printSubst = do

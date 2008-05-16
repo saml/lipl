@@ -112,8 +112,8 @@ extendPushEnv env = do
 
 newtype EvalT m a = EvalT {
     runEvalT ::  (S.StateT EnvStack m) a
-    } deriving(Monad, Functor
-        ,  S.MonadState EnvStack)
+    } deriving(Monad, Functor, R.MonadReader r, W.MonadWriter w
+        ,  S.MonadState EnvStack, T.MonadIO)
 
 instance T.MonadTrans EvalT where
     lift m = EvalT ((T.lift m))
@@ -136,7 +136,7 @@ instance (Monad m) => MonadEval (EvalT m) where
         if nullEnv == envs
             then return ()
             else S.put $ (snd . pop) envs
-
+{-
 instance (T.MonadIO m) => T.MonadIO (EvalT m) where
     liftIO = T.lift . T.liftIO
 
@@ -149,6 +149,8 @@ instance (W.MonadWriter w m) => W.MonadWriter w (EvalT m) where
     listen m = EvalT (W.listen (runEvalT m))
     pass m = EvalT (W.pass (runEvalT m))
 
+
+
 instance (MonadTI m) => MonadTI (EvalT m) where
     getSubst = T.lift getSubst
     putSubst = T.lift . putSubst
@@ -156,6 +158,13 @@ instance (MonadTI m) => MonadTI (EvalT m) where
     newId = T.lift newId
     getN = T.lift getN
     putN = T.lift . putN
+
+
+-}
+instance (E.MonadError e m) => E.MonadError e (EvalT m) where
+    throwError = T.lift . E.throwError
+    m `catchError` h = EvalT (runEvalT m `E.catchError`
+        (\e -> runEvalT (h e)))
 
 instance (MonadPos m) => MonadPos (EvalT m) where
     setSourcePos = T.lift . setSourcePos

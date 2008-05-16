@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE RankNTypes, ExistentialQuantification, FlexibleContexts #-}
 
 module CoreLib where
 
@@ -19,7 +19,7 @@ data Builtin = Builtin {
     getBuiltinArity :: Int
     --, getBuiltinFun :: [Val] -> Eval Val
     , getBuiltinFun ::
-        forall m .
+        forall m.
             (MonadEval m, E.MonadError Err m, T.MonadIO m, MonadPos m)
             => [Val] -> m Val
     , getBuiltinType :: Type

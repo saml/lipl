@@ -170,12 +170,14 @@ tInfer e@(FunDef name args body) = if noDup args
             pos <- getSourcePos
             E.throwError $ Err pos ("duplicate argument: " ++ show e)
 
+typeInfer (At _ e@(FunDef _ _ _)) = typeInfer e
 typeInfer e@(FunDef name args body) = do
     t <- M.liftM tSanitize (locally (tInfer e))
     extendSubst (name +-> mkPolyType t)
     --s <- getSubst
     return t
 
+typeInfer (At _ (Expr [e])) = typeInfer e
 typeInfer (Expr [e]) = typeInfer e
 typeInfer e = do
     t <- locally (tInfer e)

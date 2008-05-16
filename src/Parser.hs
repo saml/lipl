@@ -15,6 +15,7 @@ import CoreLib (builtinNames)
 import ParseUtils
 import Utils
 import Settings
+import PosMonadClass
 
 {-
 lexeme = P.lexeme lexer
@@ -46,44 +47,50 @@ parseComment = do
     return ()
 
 parseBool = do
+    pos <- P.getPosition
     b <- P.string "True" <|> P.string "False"
-    return $ Bool $ case b of
+    return $ At pos (Bool $ case b of
         "False" -> False
-        _ ->  True
+        _ ->  True)
 
 parseIdent = do
+    pos <- P.getPosition
     ident <- parseOp <|> parseName
-    return $ Ident ident
+    return $ At pos (Ident ident)
     where
         parseOp = parseHeadBody opChar opChar
         parseName = parseHeadBody identChar identChar
 
+at val = At initialPos val
+
 parsePrimFun = do
-    (Ident ident) <- P.try parseIdent <|> return (Ident "")
+    (At pos (Ident ident)) <- P.try parseIdent <|> return (at (Ident ""))
     if ident `elem` builtinNames
         then
-            return $ PrimFun ident
+            return $ At pos (PrimFun ident)
         else
             fail ""
 
-
 parseInt = do
+    pos <- P.getPosition
     sign <- P.try (P.option "" (P.string "-"))
     val <- nat
-    return $ Int (read $ sign ++ val)
+    return $ At pos (Int (read $ sign ++ val))
 
 parseFloat = do
+    pos <- P.getPosition
     sign <- P.string "-" <|> return ""
     n <- nat
     dot <- P.string "."
     frac <- nat
-    return $ Float (read $ (sign ++ n ++ dot ++ frac))
+    return $ At pos $ Float (read $ (sign ++ n ++ dot ++ frac))
 
 parseChar = do
+    pos <- P.getPosition
     P.char '\''
     c <- P.letter <|> P.digit <|> P.space <|> escapedChar
     P.char '\''
-    return $ Char c
+    return $ At pos $ Char c
     where
         escapedChar = do
             s <- escapedChars
@@ -110,21 +117,37 @@ escapedChars = do
         otherwise -> [c]
 
 parseStr = do
+    pos <- P.getPosition
     P.char '"'
     str <- P.many $ P.many1 (P.noneOf "\"\\") <|> escapedChars
     P.char '"'
-    return $ Str (concat str)
+    return $ At pos $ Str (concat str)
 
 
 parseList = do
+    pos <- P.getPosition
     lbracket
     l <- P.sepBy parseToken (P.try comma)
     rbracket
-    return $ List l
+    return $ At pos $ List l
 
 getIdents [] = []
-getIdents (Ident a:xs) = a : getIdents xs
-getIdents (_:xs) = getIdents xs
+getIdents (At _ (Ident a) : xs) = a : getIdents xs
+getIdents (Ident a : xs) = a : getIdents xs
+getIdents (_ : xs) = getIdents xs
+
+parseParams = do
+    lparen
+    params <- P.sepEndBy parseIdent mustSpaces
+    rparen
+    return (getIdents params)
+{-
+    where
+        extractIds [] = []
+        extractIds (At _ (Ident x) : xs) = x : extractIds xs
+        extractIds (Ident x : xs) = x : extractIds xs
+        extractIds (_ : xs) = extractIds xs
+-}
 
 getParams l = do
     let params = getIdents l
@@ -135,14 +158,14 @@ getParams l = do
             fail "Parameters can't have duplicates"
 
 parseLambda = do
+    pos <- P.getPosition
     P.string "lambda"
     mustSpaces
-    Expr args <- parseParenExpr
+    args <- parseParams
     mustSpaces
     body <- parseToken
-    --params <- getParams args
-    let params = getIdents args
-    return $ Lambda params body
+    --let params = getIdents args
+    return $ At pos (Lambda args body)
 
 {-
     let params = getIdents args
@@ -154,14 +177,15 @@ parseLambda = do
 -}
 
 parseDef = do
+    pos <- P.getPosition
     P.string "def"
     mustSpaces
-    Ident name <- parseIdent
+    (At _ (Ident name)) <- parseIdent
     mustSpaces
-    Expr args <- parseParenExpr
+    args <- parseParams
     mustSpaces
     body <- parseToken
-    return $ FunDef name (getIdents args) body
+    return $ At pos (FunDef name args body)
 
 
 parseParenExpr = do
@@ -169,9 +193,10 @@ parseParenExpr = do
     lparen
     val <- P.sepEndBy parseToken mustSpaces
     rparen
-    return $  (Expr val)
+    return $ At pos (Expr val)
 
 parseIf = do
+    pos <- P.getPosition
     P.string "if"
     mustSpaces
     pred <- parseToken
@@ -179,25 +204,27 @@ parseIf = do
     ifCase <- parseToken
     mustSpaces
     elseCase <- parseToken
-    return $ If pred ifCase elseCase
+    return $ At pos (If pred ifCase elseCase)
 
 parseLet = do
+    pos <- P.getPosition
     P.string "let"
     mustSpaces
-    Dict env <- parseDict
+    At _ (Dict env) <- parseDict
     mustSpaces
     body <- parseToken
-    return $ Let env body
+    return $ At pos (Let env body)
 
 
 parseDict = do
+    pos <- P.getPosition
     lbrace
     l <- P.sepBy parseKeyVal (P.try comma)
     rbrace
-    return $ Dict l
+    return $ At pos (Dict l)
 
 parseKeyVal = do
-    Ident key <- parseIdent
+    At _ (Ident key) <- parseIdent
     mustSpaces
     P.char '='
     mustSpaces
@@ -205,20 +232,22 @@ parseKeyVal = do
     return (key, val)
 
 parsePair = do
+    pos <- P.getPosition
     lparen
     a <- parseToken
     comma
     b <- parseToken
     rparen
-    return $ Pair a b
+    return $ At pos (Pair a b)
 
 parseSeq = do
+    pos <- P.getPosition
     P.string "seq"
     mustSpaces
     a <- parseToken
     mustSpaces
     b <- parseToken
-    return $ Seq a b
+    return $ At pos (Seq a b)
 
 parseToken =
         P.try parseIf

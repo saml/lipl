@@ -1,4 +1,7 @@
 module Settings where
 
-sPRELUDE = "core.lipl"
+--import Paths_Lipl
+
+sBASEDIR = ".lipl"
+sPRELUDE = "core.lipl" -- getDataFileName "core.lipl"
 sLANGNAME = "LIPL"

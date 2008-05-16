@@ -6,6 +6,8 @@ module REPLMonad where
 import qualified Control.Monad.Trans as T
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.State as S
+import qualified Control.Monad.Writer as W
+import qualified Control.Monad.Reader as R
 
 import TIMonad
 import EvalMonad

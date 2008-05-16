@@ -183,10 +183,6 @@ toSubst :: [(Id, Type)] -> Subst
 toSubst = Map.fromList . fromIdType
 
 
-newtype TInfer a = TInfer {
-    runTInfer :: TIT (E.ErrorT ErrMsg IO) a }
-    deriving (E.MonadError ErrMsg, Monad, MonadTI)
-
 {-
 test :: TInfer ()
 test = do
