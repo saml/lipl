@@ -116,7 +116,12 @@ eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
 
 eval x = return x
 
-
+evaluate e@(FunDef name args body) = do
+    result <- runLocally (eval e)
+    updateVal name result
+    return result
+evaluate (Expr [e]) = evaluate e
+evaluate e = runLocally (eval e)
 
 runLocally action = do
     prev <- getEnvs

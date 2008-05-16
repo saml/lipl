@@ -291,6 +291,9 @@ defaultSubst = toSubst [
     ]
 initialSubst = defaultSubst `Map.union` toSubst builtinSubst
 
+clearSubst :: (MonadTI m) => m ()
+clearSubst = putSubst initialSubst
+
 
 showTI ti = let (s,_,t) = runTI ti initialSubst 0
     in

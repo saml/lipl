@@ -87,6 +87,8 @@ processInput line =
             println "Clear Environment"
             clearEnv
             printEnv
+            println "Clear Type Environment"
+            clearSubst
             repl
         ":l" -> do
             result <- loadFile $ (head . tail . words) line
@@ -137,7 +139,7 @@ parseAndEval input = case parseSingle input of
     Right val -> do
         t <- typeInfer val
         println ("type: " ++ show t)
-        eval val
+        evaluate val
 
 {-
 parseAndEval input = case parseSingle input of
@@ -151,7 +153,7 @@ parseAndEvalMultiple fn input = case parseMultiple fn input of
         M.mapM (\val -> (do
             t <- typeInfer val
             return t)) vals
-        M.mapM eval vals
+        M.mapM evaluate vals
         return Null
 
 prompt :: String -> IO String
