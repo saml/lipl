@@ -16,7 +16,6 @@ import LangData
 import Parser (parse, parseSingle, parseMultiple)
 import Type
 import TParse
-import Trace
 import CoreLib (builtinSubst)
 import Utils
 import TIMonad
@@ -89,17 +88,10 @@ tInfer (If pred true false) = do
     unify tPred tBool
     tTrue <- tInfer true
     tFalse <- tInfer false
-    --sF <- mgu (apply s tTrue) (apply s tFalse)
-    s <- getSubst
-    unify (apply s tTrue) tFalse
-    s <- getSubst
-    return (apply s tFalse)
-    {-
     s <- getSubst
     unify (apply s tTrue) (apply s tFalse)
-    s' <- getSubst
-    return $ apply s' tFalse
-    -}
+    s <- getSubst
+    return (apply s tFalse)
 
 tInfer (Lambda [] e) = tInfer e
 
@@ -306,9 +298,5 @@ initialSubst = defaultSubst `Map.union` toSubst builtinSubst
 clearSubst :: (MonadTI m) => m ()
 clearSubst = putSubst initialSubst
 
-{-
-showTI ti = let (s,_,t) = runTI ti initialSubst 0
-    in
-        showSubstTypePair (s,t)
--}
+
 

@@ -48,9 +48,9 @@ findPrelude = do
                 return $ joinPath [d, sPRELUDE]
 
 loadPrelude = do
-    --fname <- findPrelude `catch` (\e -> return "")
-    let fname = sPRELUDE
-    loadFile fname
+    fname <- T.liftIO findPrelude -- `catch` (\e -> return "")
+    --let fname = sPRELUDE
+    runAndPrint (loadFile fname) --`E.catchError` (\e -> ioError (userError (show e)))
 --loadPrelude = runAndPrint (loadFile sPRELUDE)
 
 runAndPrint action = do

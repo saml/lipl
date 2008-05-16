@@ -5,7 +5,16 @@ module TCheckTest where
 import TCheck
 import TParse
 import Type
+import Main
+import Parser
 
+ty input = case parseSingle input of
+    Left err -> error (show err)
+    Right val -> do
+        t <- typeInfer val
+        return t
+
+{-
 runTests = [
     ty "(let { f = (lambda (f) f) } ( (f 1), (f True)))"
         `tEq` tParse "(Int,Bool)"
@@ -48,3 +57,4 @@ runTests = [
     , ty "(lambda (x) ((let { x = (lambda (x) (+. 0.1 x)) } x) x))"
         `tEq` tParse "Float -> Float"
     ]
+    -}
