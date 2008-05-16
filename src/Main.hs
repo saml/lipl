@@ -34,6 +34,7 @@ runAndPrint action = do
     T.liftIO $ putStrLn msg
 
 main = do
+    hSetBuffering stdout NoBuffering
     fn <- getArgs
     if length fn > 0
         then do
@@ -84,11 +85,11 @@ processInput line =
             printEnv
             repl
         ":c" -> do
-            println "Clear Environment"
             clearEnv
+            println "Environment cleared"
             printEnv
-            println "Clear Type Environment"
             clearSubst
+            println "Type environment cleared"
             repl
         ":l" -> do
             result <- loadFile $ (head . tail . words) line
@@ -96,7 +97,11 @@ processInput line =
             repl
         ":r" -> do
             clearEnv
-            println "Cleared Environment"
+            println "Environment cleared"
+            clearSubst
+            println "Type environment cleared"
+            loadFile sPRELUDE
+            println (sPRELUDE ++ " loaded")
             result <- loadFile $ (head . tail . words) line
             println result
             repl

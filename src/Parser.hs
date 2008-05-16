@@ -211,8 +211,17 @@ parsePair = do
     rparen
     return $ Pair a b
 
+parseSeq = do
+    P.string "seq"
+    mustSpaces
+    a <- parseToken
+    mustSpaces
+    b <- parseToken
+    return $ Seq a b
+
 parseToken =
         P.try parseIf
+    <|> P.try parseSeq
     <|> P.try parseLet
     <|> P.try parseDef
     <|> P.try parseLambda

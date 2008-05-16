@@ -28,6 +28,48 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
                   (cons x xs)
                   xs))))
 
+(def dropWhile (f l)
+    (if (isEmpty l)
+        []
+        (let {x = (head l), xs = (tail l)}
+            (if (f x)
+                (dropWhile f xs)
+                l))))
+
+(def isSpace (c)
+    (|| (== ' ' c)
+    (|| (== '\t' c)
+    (|| (== '\n' c)
+    (|| (== '\r' c)
+    (|| (== '\f' c)
+        (== '\v' c)))))))
+
+(def break (p l)
+    (if (isEmpty l)
+        ([], [])
+        (let {x = (head l), xs = (tail l)}
+            (if (p x)
+                ([], l)
+                (let { broken = (break p xs)
+                        , ys = (fst broken)
+                        , zs = (snd broken) }
+                    ((cons x ys), zs))))))
+
+(def words (s)
+    (if (isEmpty s)
+        []
+        (let { x = (head s), xs = (tail s) }
+            (let { s' = (dropWhile isSpace s) }
+                (if (isEmpty s')
+                    []
+                    (let { broken = (break isSpace s')
+                            , w = (fst broken)
+                            , ss = (snd broken) }
+                        (cons w (words ss))))))))
+
+
+
+
 # simple quick sort
 (def quick-sort (l) (if (isEmpty l) # is the list empty?
     l

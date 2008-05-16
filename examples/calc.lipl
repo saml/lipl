@@ -1,0 +1,53 @@
+
+(def parse (x) (words x))
+
+(def eval (st l) (if (isEmpty l)
+    (if (== 1 (length st))
+        (head st)
+        (seq (println "not well formed") 0))
+    (let {x = (head l), xs = (tail l)}
+        (if (|| (== "-" x)
+            (|| (== "+" x)
+            (|| (== "*" x)
+                (== "/" x))))
+            (if (< (length st) 2)
+                (seq (println "not well formed. to many ops") 0)
+                (let {arg1 = (head (tail st)), arg2 = (head st)
+                        , st' = (tail (tail st))}
+                    (if (== "+" x)
+                        (eval (cons (+ arg1 arg2) st') xs)
+                    (if (== "-" x)
+                        (eval (cons (- arg1 arg2) st') xs)
+                    (if (== "*" x)
+                        (eval (cons (* arg1 arg2) st') xs)
+                        (eval (cons (div arg1 arg2) st') xs))))))
+            (eval (cons (readInt x) st) xs)))))
+
+
+(def prompt (x) (seq (print x) getLine))
+
+(def repl ()
+    (let { input = (prompt "CALC> ") }
+        (if (== ":q" input)
+            ()
+            (seq
+                (println
+                    (concat "==> " (show (eval [] (parse input)))))
+                repl))))
+
+(def msg ()
+    "Welcome to Postfix Calculator
+
+- :q quits
+- only calculates well formed postfix arithmetics expressions
+  involving integers, +, -, *, /
+")
+
+(def main ()
+    (seq
+        (println msg)
+        repl))
+
+(main)
+
+

@@ -1,7 +1,7 @@
 module LangData ( Val (..)
     , Env, nullEnv, emptyEnv, EnvStack, showEnv
     , KeyValList, Key
-    , ppValList, ppVal
+    , ppValList, ppVal, toStr
     ) where
 
 import qualified Text.PrettyPrint.HughesPJ as PP
@@ -73,6 +73,7 @@ type RemainingArgs = Int
 
 data Val = -- Comment String
     Null
+    | Seq Val Val
     | Ident { unpackIdent :: Name }
     | Int { unpackInt :: Integer }
     | Float { unpackFloat :: Double }
@@ -98,6 +99,7 @@ instance Show Val where show = PP.render . ppVal
 
 -- ppVal (Comment s) = PP.text ("#" ++ s)
 ppVal Null = PP.text "Null"
+ppVal (Seq e1 e2) = ppVal e1 <+> ppVal e2
 ppVal (Ident s) = PP.text s
 ppVal (Int i) = PP.integer i
 ppVal (Float f) = PP.double f
@@ -114,6 +116,7 @@ ppVal (FunDef name args body) = PP.parens
         , ppArgs args
         , ppVal body]
 ppVal (PrimFun name) = PP.text name
+ppVal (Prim name _ _) = PP.text "<builtin:" <+> PP.text name <> PP.text ">"
 --ppVal (Fun _ _ _) = PP.text "<function>"
 --ppVal (Lambda _ _) = PP.text "<lambda>"
 --ppVal (Prim name _ _) = PP.text "<builtin>"
@@ -124,10 +127,12 @@ ppVal (PrimFun name) = PP.text name
         , PP.text name, PP.int remaining
         , PP.parens $ PP.fsep $ ppValList params]
 -}
+ppVal (List l@(Char c:xs)) = ppVal (toStr l)
 ppVal (List xs) = PP.brackets
     (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
 ppVal (Dict xs) = ppKeyValList xs
-ppVal (Pair a b) = PP.parens (PP.fsep [ppVal a, ppVal b])
+ppVal (Pair a b) = PP.parens
+    (PP.fsep $ PP.punctuate PP.comma [ppVal a, ppVal b])
 --ppVal (Dict xs) = PP.braces
 --    (PP.hsep $ PP.punctuate PP.comma (ppKeyValList (Map.toList xs)))
 ppVal (Expr xs) = PP.parens (PP.fsep $ ppValList xs)
@@ -139,3 +144,7 @@ ppVal (App f x) = PP.parens (PP.fsep [ppVal f, ppVal x])
 --ppVal (Closure env val) = PP.parens
 --    $ PP.fsep [PP.text "closure", ppEnv env, ppVal val]
 
+toStr [] = Str ""
+toStr (Char c:xs) = let Str xs' = toStr xs
+    in
+        Str (c:xs')

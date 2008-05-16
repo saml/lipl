@@ -50,11 +50,7 @@ eval (Lambda [] body) = eval body
 eval e@(Lambda args body) = do
     env <- getEnvFor (unboundVars e)
     env' <- getEnv
-    --traceM ("lambda: " ++ show e)
-    --traceM ("lambda env: " ++ show env)
-    --traceM ("lambda env': " ++ show env')
     let fun = Fun env args body
-    --traceM ("lambda fun: " ++ show fun)
     return fun
 
 eval e@(FunDef name args body) = do
@@ -65,6 +61,10 @@ eval e@(FunDef name args body) = do
     updateVal name fun
     return fun
 
+eval e@(Seq e1 e2) = do
+    eval e1
+    eval e2
+
 eval (If pred ifCase elseCase) = do
     ifOrElse <- eval pred
     case ifOrElse of
@@ -73,12 +73,9 @@ eval (If pred ifCase elseCase) = do
 
 eval e@(Let env body) = do
     env' <- runLocally (keyValToEnv env)
-    --traceM ("let env: " ++ show env')
     withEnv env' (eval body)
 
 eval (Fun env [] body) = do
-    traceM ("fun: env: " ++ show env)
-    traceM ("fun: body: " ++ show body)
     withEnv env (eval body)
 
 eval (Closure env body) = withEnv (Map.fromList env) (eval $ body)
@@ -113,6 +110,11 @@ eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
             arg1 <- eval $ firstArg
             evalPrim name arg1 restArgs args remaining
         otherwise -> E.throwError $ NotFunErr "" (show f)
+
+eval (Pair e1 e2) = do
+    v1 <- eval e1
+    v2 <- eval e2
+    return $ Pair v1 v2
 
 eval x = return x
 

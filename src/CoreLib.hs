@@ -55,6 +55,8 @@ primitives = Map.fromList [
     , ("<=", Builtin 2 compareLte (tParse "a -> a -> Bool"))
     , (">", Builtin 2 compareGt (tParse "a -> a -> Bool"))
     , (">=", Builtin 2 compareGte (tParse "a -> a -> Bool"))
+    , ("fst", Builtin 1 fst' (tParse "(a, b) -> a"))
+    , ("snd", Builtin 1 snd' (tParse "(a, b) -> b"))
     --, ("fix", Builtin 1 fixOp (tParse "(a -> a) -> a"))
     , ("length", Builtin 1 listLength (tParse "[a] -> Int"))
     , ("head", Builtin 1 listHead (tParse "[a] -> a"))
@@ -67,6 +69,11 @@ primitives = Map.fromList [
     , ("printVar", Builtin 1 (printVar False) (tParse "a -> ()"))
     , ("getLine", Builtin 0 (readFrom stdin) (tParse "Str"))
     , ("show", Builtin 1 showVar (tParse "a -> Str"))
+    , ("readInt", Builtin 1 readInt (tParse "Str -> Int"))
+    , ("readFloat", Builtin 1 readFloat (tParse "Str -> Float"))
+    , ("readBool", Builtin 1 readBool (tParse "Str -> Bool"))
+
+--    , ("seq", Builtin 2 liplSeq (tParse "a -> b -> b"))
 --    , ("env", Builtin 1 showEnvironment)
 --    , ("free-vars", Builtin 1 getFreeVars)
 --    , ("from-str", Builtin 1 strToList)
@@ -81,6 +88,16 @@ builtins = map snd primitivesList
 builtinSubst = map mkSubst primitivesList
     where
         mkSubst (a, b) = (a, getBuiltinType b)
+
+fst' [(Pair x _)] = return x
+snd' [(Pair _ x)] = return x
+
+readInt [(Str s)] = return (Int (read s))
+readInt [(List l)] = readInt [toStr l]
+readFloat [(Str s)] = return (Float (read s))
+readFloat [(List l)] = readFloat [toStr l]
+readBool [(Str s)] = return (Bool (read s))
+readBool [(List l)] = readBool [toStr l]
 
 toInt [(Float f)] = return (Int $ floor f)
 toFloat [(Int i)] = return (Float $ fromIntegral i)
@@ -119,6 +136,8 @@ compareOp op [Int a, Float b] =
 compareOp op [Float a, Float b] = return $ Bool $ op (compare a b)
 compareOp op [Bool a, Bool b] = return $ Bool $ op (compare a b)
 compareOp op [Str a, Str b] = return $ Bool $ op (compare a b)
+compareOp op [a@(Str _), List l] = compareOp op [a, toStr l]
+compareOp op [List l, a@(Str _)] = compareOp op [toStr l, a]
 compareOp op [Char a, Char b] = return $ Bool $ op (compare a b)
 compareOp op [List a, List b] = return $ Bool $ op (compare a b)
 compareOp op e@([a,b]) =
@@ -253,8 +272,9 @@ listIsEmpty [Str a] = return $ Bool (null a)
 --listIsEmpty x = E.throwError $ ArityErr 1 x
 
 printStr newLine [Str x] = do
-    T.liftIO $ putStr x
+    T.liftIO $ putStr  x
     T.liftIO $ putChar (if newLine then '\n' else '\0')
+    T.liftIO $ hFlush stdout
     return Null
 --printStr _ [x] = E.throwError $ TypeErr "need string" x
 --printStr _ x = E.throwError $ ArityErr 1 x
@@ -262,6 +282,7 @@ printStr newLine [Str x] = do
 printVar newLine [Str x] = do
     T.liftIO $ putStr x
     T.liftIO $ putChar (if newLine then '\n' else ' ')
+    T.liftIO $ hFlush stdout
     return Null
 printVar newLine [x] = printVar newLine [Str $ show x]
 --printVar _ x = E.throwError $ ArityErr 1 x
