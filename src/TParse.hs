@@ -41,14 +41,6 @@ parseTVar = do
     xs <- P.many P.alphaNum
     return (TVar (x:xs)) <?> "Variable"
 
-{-
-parseTApp = do
-    t1 <- parseType
-    P.spaces
-    t2 <- parseType
-    return (TApp t1 t2)
--}
-
 parseArrow = do
     P.string "->"
     return fn
@@ -60,21 +52,6 @@ parseFunc = do
     P.spaces
     t2 <- parseType
     return (t1 `fn` t2) <?> "Arrow"
-
-{-
-parseManyTVar = do
-    tVars <- P.many parseTVar
-    return tVars
--}
-
-{-
-parseTConst = do
-    P.try (P.string "()" >> return tUnit)
-    <|> P.try (P.string "Int" >> return tInt)
-    <|> P.try (P.string "Float" >> return tFloat)
-    <|> P.try (P.string "Bool" >> return tBool)
-    <|> P.try (P.string "Char" >> return tChar)
--}
 
 parseInt = do
     P.string "Int"
@@ -125,11 +102,5 @@ parseType = do
     <|> P.try parsePair
     <|> P.try parseUnit
     <|> P.try parseTVar
-    -- <|> P.try parseArrow
 
-{-
-expr = P.buildExpressionParser table el
-table = [
-    [P.op
-    ]
--}
+

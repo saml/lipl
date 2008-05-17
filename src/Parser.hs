@@ -1,50 +1,25 @@
 module Parser where
 
 import qualified Text.ParserCombinators.Parsec as P
-import qualified Text.ParserCombinators.Parsec.Token as P
---import qualified Text.ParserCombinators.Parsec.Expr as P
-import qualified Text.ParserCombinators.Parsec.Language as P
 import Text.ParserCombinators.Parsec ((<|>))
-
-import qualified Control.Monad.Error as E
-import qualified Data.Map as Map
-import Data.Char ( chr )
 
 import LangData
 import CoreLib (builtinNames)
 import ParseUtils
-import Utils
 import Settings
-import PosMonadClass
+import PosMonadClass (initialPos)
 
-{-
-lexeme = P.lexeme lexer
-symbol = P.symbol lexer
-natural = P.natural lexer
-parens = P.parens lexer
-identifier = P.identifier lexer
-reserved = P.reserved lexer
-reservedOp = P.reservedOp lexer
-
-runLex p input = P.parse (do
-    x <- p
-    P.eof
-    return x) "" input
--}
+at val = At initialPos val
 
 parse input = case parseSingle input of
     Right v -> v
     Left err -> error (show err)
 
-parseSingle input = P.parse parseSingleExpr (sLANGNAME ++ " REPL") input
+parseSingle input = P.parse
+    parseSingleExpr (sLANGNAME ++ " REPL") input
 
 parseMultiple fileName input =
     P.parse parseMultipleExpr fileName input
-
-parseComment = do
-    P.char '#'
-    s <- P.many (P.noneOf "\n")
-    return ()
 
 parseBool = do
     pos <- P.getPosition
@@ -61,10 +36,10 @@ parseIdent = do
         parseOp = parseHeadBody opChar opChar
         parseName = parseHeadBody identChar identChar
 
-at val = At initialPos val
 
 parsePrimFun = do
-    (At pos (Ident ident)) <- P.try parseIdent <|> return (at (Ident ""))
+    (At pos (Ident ident)) <- P.try parseIdent
+        <|> return (at (Ident ""))
     if ident `elem` builtinNames
         then
             return $ At pos (PrimFun ident)
@@ -100,7 +75,6 @@ parseChar = do
 -- TODO: support \32353 and unicode.
 escapedChars = do
     P.char '\\' -- get \
-    --c <- P.oneOf "\\\"ntrvf" -- \, ", n, t, r
     c <- P.anyChar
     return $ case c of
         'n' -> "\n"
@@ -110,10 +84,6 @@ escapedChars = do
         'f' -> "\f"
         'a' -> "\a"
         'b' -> "\b"
-        --'v' -> [chr 11]
-        --'f' -> [chr 12]
-        --'a' -> [chr 7]
-        --'b' -> [chr 8]
         otherwise -> [c]
 
 parseStr = do
@@ -141,21 +111,6 @@ parseParams = do
     params <- P.sepEndBy parseIdent mustSpaces
     rparen
     return (getIdents params)
-{-
-    where
-        extractIds [] = []
-        extractIds (At _ (Ident x) : xs) = x : extractIds xs
-        extractIds (Ident x : xs) = x : extractIds xs
-        extractIds (_ : xs) = extractIds xs
--}
-
-getParams l = do
-    let params = getIdents l
-    if noDup params
-        then
-            return params
-        else
-            fail "Parameters can't have duplicates"
 
 parseLambda = do
     pos <- P.getPosition
@@ -164,17 +119,7 @@ parseLambda = do
     args <- parseParams
     mustSpaces
     body <- parseToken
-    --let params = getIdents args
     return $ At pos (Lambda args body)
-
-{-
-    let params = getIdents args
-    if noDup params
-        then
-            return $ Lambda params body
-        else
-            fail "Parameters can't be same"
--}
 
 parseDef = do
     pos <- P.getPosition

@@ -3,19 +3,12 @@
 module TCheck where
 
 import qualified Data.Map as Map
-import qualified Data.List as List
 import Data.List ((\\))
 import qualified Control.Monad as M
-import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Error as E
-import qualified Control.Monad.State as S
-import qualified Control.Monad.Trans as T
-import Debug.Trace (trace)
 
 import LangData
-import Parser (parse, parseSingle, parseMultiple)
 import Type
-import TParse
 import CoreLib (builtinSubst)
 import Utils
 import TIMonad

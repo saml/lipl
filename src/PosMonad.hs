@@ -39,21 +39,6 @@ instance (Monad m) => MonadPos (PosT m) where
     setSourcePos pos = S.put pos
     getSourcePos = S.get
 
-
-
-{-
-instance (T.MonadIO m) => T.MonadIO (PosT m) where
-    liftIO = T.lift . T.liftIO
-
-instance (R.MonadReader r m) => R.MonadReader r (PosT m) where
-    ask =  T.lift R.ask
-    local f m = PosT (R.local f (runPosT m))
-
-instance (W.MonadWriter w m) => W.MonadWriter w (PosT m) where
-    tell = T.lift . W.tell
-    listen m = PosT (W.listen (runPosT m))
-    pass m = PosT (W.pass (runPosT m))
-
 instance (MonadTI m) => MonadTI (PosT m) where
     getSubst = T.lift getSubst
     putSubst = T.lift . putSubst
@@ -68,6 +53,4 @@ instance (MonadEval m) => MonadEval (PosT m) where
     putEnvs = T.lift . putEnvs
     pushEnv = T.lift . pushEnv
     popEnv = T.lift popEnv
-
--}
 

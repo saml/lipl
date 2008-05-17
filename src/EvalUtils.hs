@@ -19,23 +19,8 @@ freeVars (Let env body) =
 
 freeVars (Lambda params body) = freeVars body \\ toSet params
 
---freeVars (Fun env params body) = freeVarsEnv env `union` freeVars body
-
-{-
-freeVars (Fun env params body) = ((freeVarsEnv env `union` freeVars body)
-    \\ params') \\ keys
-    where
-        params' = toSet params
-        keys = toSet $ Map.keys env
--}
-
---freeVars (Closure env body) = -- freeVarsEnv env `List.union`
---    freeVars body \\ Map.keys env
 freeVars (FunDef name params body) = freeVars body \\ toSet (name : params)
---freeVars (Prim _ _ []) = []
---freeVars (Prim _ _ x) = concat $ map freeVars x
-    -- freeVars x `List.union`
-    -- freeVars (Expr xs)
+
 freeVars (Expr (x:xs)) = freeVars x `union` freeVars (Expr xs)
 freeVars (Expr []) = Set.empty
 freeVars x = Set.empty

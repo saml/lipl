@@ -24,32 +24,6 @@ import TIMonadClass
 import EvalMonadClass
 import PosMonadClass
 
-{-
-newtype Eval a = Eval {
-    runEval :: E.ErrorT Err (S.StateT EnvStack I.Identity) a
-    } deriving (Functor, Monad
-        , E.MonadError Err, S.MonadState EnvStack)
-
-instance MonadEval Eval where
-    getEnv = do
-        envs <- S.get
-        return $ (fst . pop) envs
-
-    getEnvs = S.get
-
-    putEnvs = S.put
-
-    pushEnv env = do
-        envs <- S.get
-        S.put (push env envs)
-
-    popEnv = do
-        envs <- S.get
-        if nullEnv == envs
-            then return ()
-            else S.put $ (snd . pop) envs
--}
-
 newtype Eval a = Eval { runEval :: EvalT I.Identity a }
     deriving (Monad, Functor
         ,  S.MonadState EnvStack
@@ -87,29 +61,6 @@ updateVal key val = do
 clearEnv :: (MonadEval m) => m ()
 clearEnv = putEnvs nullEnv
 
-
-
-{-
-newtype Wrap a = Wrap {
-    runWrap :: (E.ErrorT Err (S.StateT EnvStack IO)) a
-} deriving (
-    Functor, Monad
-    , E.MonadError Err, S.MonadState EnvStack, T.MonadIO)
-
-extendPushEnv :: Env -> Wrap ()
-extendPushEnv env = do
-    envs <- S.get
-    if isEmpty envs
-        then
-            S.put (push env envs)
-        else
-            do
-                let currEnv = head envs
-                let newEnvs = push (env `Map.union` currEnv) envs
-                S.put newEnvs
-
--}
-
 newtype EvalT m a = EvalT {
     runEvalT ::  (S.StateT EnvStack m) a
     } deriving(Monad, Functor, R.MonadReader r, W.MonadWriter w
@@ -136,20 +87,6 @@ instance (Monad m) => MonadEval (EvalT m) where
         if nullEnv == envs
             then return ()
             else S.put $ (snd . pop) envs
-{-
-instance (T.MonadIO m) => T.MonadIO (EvalT m) where
-    liftIO = T.lift . T.liftIO
-
-instance (R.MonadReader r m) => R.MonadReader r (EvalT m) where
-    ask =  T.lift R.ask
-    local f m = EvalT (R.local f (runEvalT m))
-
-instance (W.MonadWriter w m) => W.MonadWriter w (EvalT m) where
-    tell = T.lift . W.tell
-    listen m = EvalT (W.listen (runEvalT m))
-    pass m = EvalT (W.pass (runEvalT m))
-
-
 
 instance (MonadTI m) => MonadTI (EvalT m) where
     getSubst = T.lift getSubst
@@ -160,7 +97,6 @@ instance (MonadTI m) => MonadTI (EvalT m) where
     putN = T.lift . putN
 
 
--}
 instance (E.MonadError e m) => E.MonadError e (EvalT m) where
     throwError = T.lift . E.throwError
     m `catchError` h = EvalT (runEvalT m `E.catchError`

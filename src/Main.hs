@@ -4,11 +4,11 @@ import System.IO
 import System.Directory
 import System.FilePath
 import System.Environment (getArgs)
-import qualified Data.Map as Map
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.State as S
 import qualified Control.Monad.Trans as T
 import qualified Control.Monad as M
+import qualified Text.ParserCombinators.Parsec as P
 import Control.Applicative ((<$>))
 
 import Evaluator
@@ -23,7 +23,6 @@ import Type
 import Settings
 import PosMonad
 
---run wrap = runTIT (E.runErrorT (runREPL wrap)) initialSubst
 run action = S.runStateT (runPosT (S.runStateT (
     runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
     nullEnv)) initialPos
@@ -48,10 +47,8 @@ findPrelude = do
                 return $ joinPath [d, sPRELUDE]
 
 loadPrelude = do
-    fname <- T.liftIO findPrelude -- `catch` (\e -> return "")
-    --let fname = sPRELUDE
-    runAndPrint (loadFile fname) --`E.catchError` (\e -> ioError (userError (show e)))
---loadPrelude = runAndPrint (loadFile sPRELUDE)
+    fname <- T.liftIO findPrelude
+    runAndPrint (loadFile fname)
 
 runAndPrint action = do
     msg <- action
@@ -75,7 +72,8 @@ main = do
 println s = T.liftIO $ putStrLn s
 
 repl = do
-    line <- M.liftM (unwords . words) $ T.liftIO $ prompt (sLANGNAME ++ "> ")
+    line <- M.liftM (unwords . words)
+        $ T.liftIO $ prompt (sLANGNAME ++ "> ")
     if length line == 0
         then
             repl
@@ -167,18 +165,12 @@ interpret file = do
 
 parseAndEval input = case parseSingle input of
     Left err -> do
-        pos <- getSourcePos
+        let pos = P.errorPos err
         E.throwError $ Err pos (show err)
     Right val -> do
         t <- typeInfer val
         println ("type: " ++ show t)
         evaluate val
-
-{-
-parseAndEval input = case parseSingle input of
-    Left err -> E.throwError $ ParseErr err
-    Right val -> eval val
--}
 
 parseAndEvalMultiple fn input = case parseMultiple fn input of
     Left err -> do
@@ -197,24 +189,3 @@ prompt p = do
     hFlush stdout
     getLine
 
-{-
-loopUntil pred prompt action = do
-    input <- prompt
-    if pred input
-        then
-            return ()
-        else
-            do
-                action input
-                loopUntil pred prompt action
-ev input = case parseSingle input of
-    Left err -> error (show err)
-    Right v -> runEvalMonad (eval v)
--}
-{-
-ev input = do
-    ((_,_,result),_) <- run (do
-        v <- parseAndEval input
-        return v)
-    return result
--}

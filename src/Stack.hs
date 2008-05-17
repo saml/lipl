@@ -8,7 +8,6 @@ isEmpty = null
 
 pop :: Stack a -> (a, Stack a)
 pop (x:xs) = (x, xs)
---pop [] = (0,[])
 
 push :: a -> Stack a -> Stack a
 push v s = v : s

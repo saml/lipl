@@ -1,14 +1,9 @@
 module Evaluator where
 
-import qualified Control.Monad.State as S
-import qualified Control.Monad.Identity as I
 import qualified Control.Monad.Error as E
-import qualified Control.Monad.Trans as T
-import qualified Control.Monad.Fix as F
-import qualified Control.Exception as Ex
+
 import qualified Data.Map as Map
 
-import Parser
 import LangData
 import CoreLib
 import EvalUtils
@@ -17,7 +12,6 @@ import EvalMonad
 import PosMonad
 import Error
 
-import Debug.Trace (trace)
 
 --eval :: (MonadEval m, E.MonadError Err m, T.MonadIO m)
 --    => Val -> m Val
@@ -83,25 +77,12 @@ eval e@(Let env body) = do
 eval (Fun env [] body) = do
     withEnv env (eval body)
 
-eval (Closure env body) = withEnv (Map.fromList env) (eval $ body)
+--eval (Closure env body) = withEnv (Map.fromList env) (eval $ body)
 
 eval (Expr []) = return Null
 
 eval (Expr [e]) = eval e -- unwrap outer parens
 
-{-
-eval (Expr [Ident "=", Ident name, body]) = do
-    putVal name body
-    env <- getEnvFor (unboundVars body)
-    return $ Fun env [] body
-
-eval (Expr (Ident "free-vars" : e)) = do
-    return $ List (map Ident (unboundVars (Expr e)))
-
-eval (Expr (Ident "f-v" : e)) = do
-    e' <- eval $ Expr e
-    return $ List (map Ident (unboundVars e'))
--}
 
 eval (Expr (f:e)) = do -- both f and e are Val because Expr [e] case
     let firstArg = head e
@@ -190,6 +171,4 @@ apply e _ = do
 
 evalWith env val = withEnv env (eval val)
 
-test s = case parseSingle s of
-    Right val -> unboundVars val
 

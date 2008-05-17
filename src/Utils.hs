@@ -55,4 +55,30 @@ traceM msg = if isDebugSet
     where
         isDebugSet = True
 
+splitAtDot str = reverse $ map reverse $ split str [[]]
+    where
+        split [] acc = acc
+        split ('.':xs) acc = split xs ([] : acc)
+        split (x:xs) (a:as) = split xs ((x : a) : as)
+
+-- | "Foo.bar" ==> ["Foo", "bar"]
+splitOn _ [] = []
+splitOn chr l = f (break (== chr) l)
+    where
+        f (h, []) = [h]
+        f (h, (_:xs)) = h : splitOn chr xs
+
+splitNS ident = let
+    dotIndices = List.findIndices (== '.') ident
+    in
+        if null dotIndices
+            then
+                ("", ident)
+            else
+                (\(x,y) -> (x, tail y))
+                    $ splitAt (last dotIndices) ident
+
+
+getNamespace = fst . splitNS
+getName = snd . splitNS
 

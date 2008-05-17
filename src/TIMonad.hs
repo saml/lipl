@@ -21,19 +21,7 @@ import TIMonadClass
 import Type
 import PosMonadClass
 
-type ErrMsg = String
-
 newtype TI a = TI { runTI :: Subst -> Int -> (Subst, Int, a) }
-
-newTVar :: (MonadTI m) => m Type
-newTVar = do
-    v <- newId
-    return (TVar v)
-
-unify t1 t2 = do
-    s <- getSubst
-    u <- mgu (apply s t1) (apply s t2)
-    extendSubst u
 
 instance Monad TI where
     return x = TI (\s n -> (s, n, x))
@@ -54,11 +42,15 @@ instance MonadTI TI where
     getN = TI (\s n -> (s, n, n))
     putN n = TI (\s _ -> (s, n, ()))
 
-{-
-instance MonadPos TI where
-    setSourcePos pos = TI (\s n -> (s, n, ()))
-    getSourcePos = TI (\s n -> (s, n, ()))
--}
+newTVar :: (MonadTI m) => m Type
+newTVar = do
+    v <- newId
+    return (TVar v)
+
+unify t1 t2 = do
+    s <- getSubst
+    u <- mgu (apply s t1) (apply s t2)
+    extendSubst u
 
 newtype TIT m a = TIT { runTIT :: Subst -> Int -> m (Subst, Int, a) }
 
@@ -116,77 +108,8 @@ instance (MonadPos m) => MonadPos (TIT m) where
     getSourcePos = T.lift getSourcePos
 
 
-
-
-
-
-
-{-
-instance E.MonadError String TI where
-    throwError = Fail
-    ok@(TI _) `catchError` _ = ok
-    Fail err `catchError` h = h err
--}
---runTI (TI f) s i = f s i
--- runTI (Fail msg) s i = Fail msg
-
-{-
-instance S.MonadState (TI a) a where
-    get = TI (\s n -> (s, n, (s,n)))
-    put (s,n) = TI (\_ _ -> (s, n, ()))
--}
-
-
-
-{-
-getSubst = TI (\s n -> (s, n, s))
-getN = TI (\s n -> (s, n, n))
-putSubst s = TI (\_ n -> (s, n, ()))
-putN n = TI (\s _ -> (s, n, ()))
-extendSubst s' = TI (\s n -> (s @@ s', n, ()))
--- showSubst ([("x", TScheme [] tInt)] @@ [("x", TScheme [] tChar)])
--- runTI (extendSubst [("x", TScheme [] tChar)]) [("x", TScheme [] tInt)] 0
-
-unify t1 t2 = do
-    s <- getSubst
-    u <- mgu (apply s t1) (apply s t2)
-    extendSubst u
-
-newId = TI (\s n -> (s, n+1, "t" ++ show n))
-
-newTVar = do
-    v <- newId
-    return (TVar v)
--}
-
-{-
-find x assumptions = case lookup x assumptions of
-    Just t -> return t
-    otherwise -> fail $ "unbound type variable: " ++ x
-
-unifiable t1 t2 = case runTI action initialSubst 0 of
-    (_,_,result) -> result
-    where
-        action = (do
-            unify t1 t2
-            s <- getSubst
-            return (apply s t1 == apply s t2))
--}
-
-
-
-
-
 fromIdType = map (\(k,v) -> (k, mkPolyType v))
 
 toSubst :: [(Id, Type)] -> Subst
 toSubst = Map.fromList . fromIdType
 
-
-{-
-test :: TInfer ()
-test = do
-    s <- getSubst
-    E.throwError "asdf"
-    return ()
--}
