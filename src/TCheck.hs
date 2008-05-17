@@ -58,6 +58,7 @@ tInfer (Ident x) = do
     case Map.lookup x s of
         Just ts -> do
             t <- toType ts
+            traceM (x  ++ ": " ++ show t)
             s <- getSubst
             return (apply s t)
         otherwise -> do
@@ -195,12 +196,9 @@ tInferList :: (MonadTI m, MonadPos m, E.MonadError Err m) => [Val] -> m [Type]
 tInferList = mapM tInfer
 
 
-toType (TScheme [] t) = return t
-
-toType (TScheme (x:xs) t) = do
-    v <- newId
-    toType $ TScheme xs (replace x v t)
-
+toType (TScheme l t) = do
+    l' <- mapM (const newId) l
+    return $ subst (zip l l') t
 
 showS s = showSubst $ onlyNew s
 onlyNew s = s `Map.difference` initialSubst
@@ -215,10 +213,13 @@ locally action = do
 
 localSubst s action = do
     sOrig <- getSubst
+    traceM ("s: " ++ showS s)
     let cache = sOrig `Map.intersection` s
     extendSubst s
     result <- action
     s' <- getSubst
+    traceM ("s': " ++ showS s')
+    let cache = sOrig `Map.intersection` s
     let cache' = Map.map (apply s') cache
     let ks = Map.keys s
     let s'' = subtractMap s' ks @@ cache

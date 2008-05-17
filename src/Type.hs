@@ -29,8 +29,9 @@ tSanitize t =
 
 tEq t1 t2 = tSanitize t1 == tSanitize t2
 
-subst dict (TVar v) = case lookup v dict of
+subst dict t@(TVar v) = case lookup v dict of
     Just v' -> TVar v'
+    Nothing -> t
 subst dict (TApp t1 t2) = TApp (subst dict t1) (subst dict t2)
 subst dict t = t
 
