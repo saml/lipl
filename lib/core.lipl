@@ -56,7 +56,37 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
     (|| (== '7' c)
         (== '9' c)))))))))))
 
-# todo: all, and, foldl, foldr, ....
+(def flip (f a b) (f b a))
+
+(def foldl (f z l)
+    (if (isEmpty l)
+        z
+        (let { x = (head l), xs = (tail l) }
+            (foldl f (f z x) xs))))
+
+(def foldr (f z l)
+    (if (isEmpty l)
+        z
+        (let {x = (head l), xs = (foldr f z (tail l))}
+            (f x xs))))
+
+(def and () (foldr && True))
+
+(def or () (foldr || False))
+
+(def compose (f g x) (f (g x)))
+
+(def apply (f x) (f x))
+
+(def id (a) a)
+
+(def all (p) (compose and (map p))) # bug??
+
+(def any (p l)
+    (if (isEmpty l)
+        False
+        (let {x = (head l), xs = (tail l)}
+            (|| (p x) (any p xs)))))
 
 (def break (p l)
     (if (isEmpty l)
@@ -114,11 +144,7 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
                        (cons (head l) []))
                 (qs (filter (lambda (a) (>= a (head l))) (tail l))))))
 
-(def compose (f g x) (f (g x)))
 
-(def apply (f x) (f x))
-
-(def id (a) a)
 
 {-
 (def trace (msg x) (if (println msg) x x))

@@ -3,7 +3,8 @@ module Main where
 import System.IO
 import System.Directory
 import System.FilePath
-import System.Environment (getArgs)
+import qualified Control.Exception as Ex
+import qualified System.Environment as Sys
 import qualified Control.Monad.Error as E
 import qualified Control.Monad.State as S
 import qualified Control.Monad.Trans as T
@@ -22,10 +23,16 @@ import REPLMonad
 import Type
 import Settings
 import PosMonad
+import Utils
 
 run action = S.runStateT (runPosT (S.runStateT (
     runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
     nullEnv)) initialPos
+
+liplPath = do
+    path <- Ex.handle (\e -> return "") (Sys.getEnv sPATH)
+    base <- baseDir
+    return (splitOn searchPathSeparator path ++ [base])
 
 baseDir = do
     home <- getHomeDirectory
@@ -36,6 +43,14 @@ createBaseDir = do
     exists <- doesDirectoryExist d
     if exists then return () else createDirectory d
 
+getValidFile l = do
+    yes <- mapM doesFileExist l
+    getFirst (zip yes l)
+    where
+        getFirst [] = return ""
+        getFirst ((True, x):_) = return x
+        getFirst (_:xs) = getFirst xs
+
 findPrelude = do
     exists <- doesFileExist sPRELUDE
     if exists
@@ -43,8 +58,10 @@ findPrelude = do
             return sPRELUDE
         else
             do
-                d <- baseDir
-                return $ joinPath [d, sPRELUDE]
+                paths <- liplPath
+                let fs = map (\x -> joinPath [x, sPRELUDE]) paths
+                f <- getValidFile fs
+                return f
 
 loadPrelude = do
     fname <- T.liftIO findPrelude
@@ -57,7 +74,7 @@ runAndPrint action = do
 main = do
     hSetBuffering stdout NoBuffering
     createBaseDir
-    fn <- getArgs
+    fn <- Sys.getArgs
     if length fn > 0
         then do
             run (do
