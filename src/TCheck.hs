@@ -58,7 +58,6 @@ tInfer (Ident x) = do
     case Map.lookup x s of
         Just ts -> do
             t <- toType ts
-            traceM (x  ++ ": " ++ show t)
             s <- getSubst
             return (apply s t)
         otherwise -> do
@@ -121,18 +120,10 @@ tInfer (Let [(k,v)] e) = do
         sE <- getSubst
         tK <- tInfer (Ident k)
         sK <- getSubst
-        --traceM ("tK: " ++ show tK)
-        --traceM ("tV: " ++ show tV)
-        --traceM ("sK: " ++ showS sK)
         unify tK tV
 
         s <- getSubst
-        --traceM ("s: " ++ showS s)
-        --putSubst $ Map.delete k s
         return (apply s tE))
-    --return (s2 @@ s1, tE)
--- tyi "(let { x = (lambda (x) (+ 1 x)) } (x 1))"
--- tyi "(let { x = (lambda (x) (if (== 1 (head x)) 'a' 'b')), y = x} (y ))"
 
 tInfer (Let kvs e) = tInfer $ foldr (Let . (:[])) e kvs
 
@@ -213,12 +204,10 @@ locally action = do
 
 localSubst s action = do
     sOrig <- getSubst
-    traceM ("s: " ++ showS s)
     let cache = sOrig `Map.intersection` s
     extendSubst s
     result <- action
     s' <- getSubst
-    traceM ("s': " ++ showS s')
     let cache = sOrig `Map.intersection` s
     let cache' = Map.map (apply s') cache
     let ks = Map.keys s
