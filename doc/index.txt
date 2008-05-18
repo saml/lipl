@@ -1,0 +1,427 @@
+===========================================
+LIPL: a Little Idiotic Programming Language
+===========================================
+
+------------------------------------
+CS731 Software Development Practicum
+------------------------------------
+
+:Author: Sam Lee
+:Organization: `Queens College - CUNY`_
+
+.. _`Queens College - CUNY`: http://www.cs.qc.edu/
+
+.. sectnum::
+.. contents::
+
+
+About
+=====
+
+An interpreter of LIPL, a tiny functional programming language,
+is implemented in Haskell programming language.
+
+
+Installation and Running
+========================
+
+Quick Start
+-----------
+
+If you already have GHC and Cabal on your computer, you can quickly build
+and run the LIPL interpreter with following steps
+(``*nix`` environment assumed)::
+
+    shell> cd lipl #go to project root
+    shell> runhaskell Setup.lhs configure --prefix=/usr/local
+    shell> runhaskell Setup.lhs build
+    shell> runhaskell Setup.lhs install
+    shell> mkdir ~/.lipl
+    shell> cp /usr/local/share/Lipl-0.1/lib/core.lipl ~/.lipl
+    shell> lipl #assuming /usr/local/bin is in PATH
+    lipl> (+ 1 2)
+    type: Int
+    3
+    lipl> :q
+    bye
+    shell>
+
+Requirements
+------------
+
+To build and install the interpreter, a Haskell compiler is required.
+Optionally, Cabal_ can be used to build and install the interpreter.
+
+Haskell Compiler
+----------------
+
+The interpreter can be compiled with GHC_ (the Glasgow Haskell Compiler)
+version ``6.8.*``.
+Other Haskell compilers or different GHC version might be able to
+compile the interpreter. But, only the specified GHC version is used
+to test the project.
+
+.. _GHC: http://haskell.org/ghc
+
+Windows installer can be downloaded from
+http://haskell.org/ghc/download_ghc_682.html#windows .
+
+After installing GHC, make sure the bin directory
+(probably ``C:\ghc\ghc-6.8.2\bin`` for Windows) is included
+in PATH environment variable so that ghc executable can be
+invoked from anywhere.
+
+GHC comes with several executables:
+
+ghc
+  compiles Haskell code to native binary.
+  Example usage: ``ghc --make Main.hs``
+
+ghci
+  is an interactive Haskell interpreter.
+
+runghc
+  interprets Haskell source code.
+  Example usage: ``runghc Main.hs``
+
+runhaskell
+  same as runghc
+
+Cabal
+-----
+
+The project is a `Cabal <http://www.haskell.org/cabal/>`_ package.
+Cabal is included in GHC version 6.8.* .
+
+Source Code for LIPL Interpreter
+--------------------------------
+
+If you have release zip file, you can skip to the next section.
+
+Otherwise, you can check out source code for LIPL interpreter
+from the svn repository using an svn client.
+
+If you don't have an svn client,
+`TortoiseSVN <http://tortoisesvn.tigris.org/>`_ is recommended for
+Windows.
+
+::
+
+    svn co http://svn2.assembla.com/svn/cs731/lipl/trunk lipl
+
+will check out latest version of LIPL interpreter to the directory
+called``lipl``.
+
+Project Structure
+-----------------
+
+When you unzip the release or check out from the svn repository,
+you should have the following directory structure::
+
+    lipl/
+        doc/
+        src/
+        lib/
+
+- ``lipl`` is project root.
+- ``doc`` contains documentations.
+- ``src`` contains Haskell source code for the interpreter.
+- ``lib`` contains libraries written in LIPL.
+
+Building
+--------
+
+Building the project can be done in many ways.
+
+Using Cabal
+~~~~~~~~~~~
+
+At the project root, type the following::
+
+    shell> runhaskell Setup.lhs configure
+    shell> runhaskell Setup.lhs build
+    shell> runhaskell Setup.lhs install
+
+First command configures the project.
+Optionally, you can set installation path by passing
+``--prefix`` option. For example, if you want to install the LIPL
+interpreter to ``C:\lipl``::
+
+    shell> runhaskell Setup.lhs configure --prefix="C:\lipl"
+
+Then, execute build and install commands::
+
+    shell> runhaskell Setup.lhs build
+    shell> runhaskell Setup.lhs install
+
+If the project has been configured with ``--prefix="C:\lipl"``,
+the interpreter, lipl.exe, can be found in ``C:\lipl\bin\lipl.exe``.
+
+Follow instructions in Installing_ section to finish installation
+process.
+
+Manual Build
+~~~~~~~~~~~~
+
+To manually build the interpreter without using Cabal:
+
+- go to src directory under project root.
+- type ``ghc --make -o lipl Main.hs``
+
+This will create lipl.exe under src directory.
+You can move lipl.exe to ``C:\lipl\bin\lipl.exe`` if you want.
+
+Installing
+----------
+
+Assuming lipl.exe is under ``C:\lipl\bin`` add
+``C:\lipl\bin`` to PATH environment variable so that you can start
+the interpreter from any directory.
+
+The interpreter tries to find and load ``core.lipl`` (prelude library)
+that implements various useful functions.
+It searches ``core.lipl`` in following order:
+
+1. current working directory
+1. directories listed in LIPLPATH environment variable
+1. in ``.lipl`` directory under HOME directory (``C:\Users\yourid``
+or ``C:\Documents and Settings\yourid``)
+
+core.lipl is can be found under lib directory, which is under
+project root.
+So, copy it to a directory of your choice.
+Then set LIPLPATH environment variable to the directory where you
+copied core.lipl to.
+Or, copy core.lipl to ``C:\Users\yourid\.lipl\core.lipl``
+(the directory ``C:\Users\yourid\.lipl`` is created when the interpreter
+is run for the first time).
+
+Running the Interpreter
+-----------------------
+
+After finishing installation, you can type the following to start
+LIPL REPL (read eval print loop)::
+
+    shell> lipl
+    lipl>
+
+At the ``lipl>`` prompt, you can type LIPL expressions to evaluate them.
+Or, you can type ``:?`` to print help menu::
+
+    lipl> :?
+    :? help
+    :s current type environment
+    :q quit
+    :e current environment
+    :c clear environment
+    :l <file> load <file>
+    :r <file> load <file> on clean environment
+
+``:s``
+  prints types of currently available functions
+
+``:q``
+  quits the repl
+
+``:e``
+  prints bound identifiers and their values.
+  Builtin functions are not shown.
+
+``:c``
+  cleans all bound identifiers.
+  You are left with builtin functions only.
+
+``:l file.lipl``
+  loads file.lipl . file.lipl should not define a function
+  that is already in the environment.
+
+``:r file.lipl``
+  cleans the environment first then loads file.lipl .
+
+
+Navigating the Source
+=====================
+
+The interpreter source code is in ``lipl/src`` directory.
+In the directory, there are Haskell source codes (ends with .hs)
+that make up the LIPL interpreter.
+Source files are named after the modules they implement.
+For example, ``Parser.hs`` implements ``Parser`` module.
+
+Explanation of each module is given here.
+
+Main
+  this is the entry point of the compiled LIPL interpreter.
+  This implements read-eval-print loop.
+
+LangData
+  this module contains various data structures used accross
+  the interpreter. The module also implements useful functions
+  to access those data and how the data
+  are represented as string.
+
+  Type ``Val`` represents LIPL literals, expressions, special
+  forms, and other values used internally in the interpreter.
+
+  Type ``Err`` defines various errors that can be thrown
+  in the interpreter.
+
+  Type ``Wrap Val`` represents wrapped values.
+  ``Wrap`` is a monad that holds various extra informations
+  such as errors raised, environment
+  (variable bindings) for the evaluator...etc.
+
+CoreLib
+  this module implements various builtin functions.
+
+Parser
+  this module implements parsing functions that turns strings to
+  values used in the interpreter.
+
+  Parsing is done using Parsec_
+  library, which is included in GHC_.
+
+.. _Parsec: http://legacy.cs.uu.nl/daan/parsec.html
+
+Evaluator
+  this module is responsible for evaluating LIPL expressions.
+  Literals are returned as they are.
+  And, special forms are treated differently so that they can have
+  desired behavior: expanding environment for function definitions,
+  evaluating only one branch for if conditionals ...etc.
+  Normal expressions are treated as curried function application.
+
+Utils
+  this module contains useful utility functions used in other modules.
+
+.. _`core.lipl`:
+
+core.lipl
+  this is not a Haskell module. But this file is LIPL source code
+  that implements frequently used functions.
+  This file is loaded automatically whenever the interpreter starts.
+
+Implementation Detail
+=====================
+
+Description about the interpreter is given here
+to facilitate understanding of the source code.
+
+Values and Overview
+-------------------
+
+Values used inside the interpreter are defined in ``LangData`` module.
+Type ``Val`` can represent various special form expressions, normal
+expressions, literals, closures used in the interpreter interally, ...etc.
+
+``Val`` type is also used to represent evaluated values.
+A LIPL expression, which is of type ``Val``, is turned
+to ``Val``, usually into literals.
+Another type could have been created to represent evaluated values.
+However, the same type, ``Val``, is used for simplicity.
+
+So, the interpreter basically has three parts:
+
+- Parser turns ``String`` into ``Val``.
+- Evaluator turns ``Val`` into another ``Val`` that is put inside
+  ``Wrap`` monad (explained in `Keeping State and Flagging Error`_).
+- Main entry point connects outside world (user input and output)
+  to the parser and the evaluator.
+
+Keeping State and Flagging Error
+--------------------------------
+
+In ``LangData`` module, newtype [#newtype]_ ``Wrap`` is defined using
+monad transformers [#transformers]_.
+Each monad transformer can be thought of as a layer of an onion
+[#onion]_, where each layer can function as different monads.
+
+.. [#newtype] newtypinig monads constructed with monad transformers
+   is described in
+   http://cale.yi.org/index.php/How_To_Use_Monad_Transformers
+
+.. [#transformers] using monad transformers is described in
+   http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html
+
+.. [#onion] onion analogy is from
+   http://sigfpe.blogspot.com/2006/05/grok-haskell-monad-transformers.html
+
+
+For example, Haskell provides ``State`` monad that lets users
+put arbitrary state (integers, strings, records...etc)
+and access it via ``get`` command and modify it via ``put`` command.
+Haskell also provides ``Error`` monad that lets users
+``throwError`` during computation and ``catchError`` to deal with error.
+
+``Wrap`` combines those two monads into a new monad by using
+monad transformers (``StateT`` and ``ErrorT`` respectively).
+Actual state being kept inside ``Wrap`` monad is ``EnvStack``, which
+is a list of maps that stores mapping of ``String`` and ``Val``
+(values used in the interpreter internally).
+So, the interpreter can retrive and store key value pairs
+and throw and catch errors inside ``Wrap`` monad any time.
+
+Alternative way of keeping environment would be to make the environment
+formal parameter of the functions that need the environment.
+Using monad, this unecessary function parameter is omitted.
+
+Parsing
+-------
+
+Parsing is done using Parsec_ library.
+The library provides useful combinators to build
+parsers very easily.
+
+For example, ``Parsec.sepEndBy parseToken mustSpaces``
+is using ``sepEndBy`` combinator from Parsec library
+that parses zero or more occurrence of LIPL tokens
+(user defined ``parseToken`` combinator)
+separated by whitespaces (user defined ``mustSpaces`` combinator).
+
+Parsing turns ``String`` into ``Val`` with possible errors.
+
+Evaluation
+----------
+
+Evaluation is implemented in ``eval`` function inside ``Evaluator``
+module.
+``eval`` function takes ``Val``, which is possibly returned
+from the parser, and evaluates it in ``Wrap`` monad.
+Result of the evaluation (still ``Val`` type) is put in ``Wrap`` monad.
+
+``eval`` function is defined case by case fashion:
+
+- Various special forms are handled differently from normal expressions.
+- Normal expressions (function application) is curried by consuming
+  the next argument and returning a function object that holds
+  the consumed argument and remaining arguments.
+- Literals are returned without modification.
+- Identifiers make use of ``State`` monad, which is a layer of
+  ``Wrap`` monad used in evaluation, to query for the bound value.
+
+In the presence of error condition, error is thrown.
+The error will get stored in ``Error`` monad, which is
+another layer of ``Wrap`` monad, and get handled accordingly.
+
+Talking to the World
+--------------------
+
+Since evaluation is done inside the ``Wrap`` monad and
+the result is put inside the monad,
+most of the computation has to be done in ``Wrap`` monad
+(it's easy to get to the values inside ``Wrap`` monad when you're in
+the monad. Once you're outside the monad, it's difficult or impossible
+to get to the values).
+
+To print the evaluated value to the console,
+even action of printing has to be in ``Wrap`` monad
+(otherwise, it can't get to the value to be printed).
+So, in the core of ``Wrap`` monad is ``IO`` monad, where
+action of printing and other IO actions are lifted up to above layers.
+
+Because all Haskell programs run in ``IO`` monad,
+``Main`` module defines ``run`` function that takes
+a computation in ``Wrap`` monad and runs it in ``IO`` monad.
+In doing so, lifted IO actions
+are actually performed in ``IO`` monad.
+
