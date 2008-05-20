@@ -82,10 +82,18 @@ def dictEncode(d):
 
 def main(argv=None):
     argv = sys.argv
+    if len(argv) < 2:
+        print "Usage: %s file.lhs [dst-dir]" % argv[0]
+        sys.exit(1)
+    if len(argv) >= 3:
+        dst = argv[2]
+    else:
+        dst = os.path.curdir
     fn = argv[1]
     bn = os.path.basename(fn)
     n,e = os.path.splitext(bn)
-    name = os.path.extsep.join([n, 'html'])
+    name = os.path.join(dst, os.path.extsep.join([n, 'html']))
+    print "writing", name
     f = codecs.open(fn, encoding=default_enc)
     new = []
     for l in f:
