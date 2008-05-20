@@ -33,7 +33,7 @@ class Writer(html4css1.Writer):
         'HTML-Specific Options above) is "%s" for the PEP/HTML writer.'
         % default_stylesheet_path,
         (('Specify a template file.  Default is "%s".' % default_template_path,
-          ['--template'],
+          ['--tem'],
           {'default': default_template_path, 'metavar': '<file>'}),
          ('Python\'s home URL.  Default is "http://www.python.org".',
           ['--python-home'],
@@ -49,7 +49,7 @@ class Writer(html4css1.Writer):
     settings_default_overrides = {'stylesheet_path': default_stylesheet_path}
 
     relative_path_settings = (html4css1.Writer.relative_path_settings
-                              + ('template',))
+                              + ('tem',))
 
     #config_section = 'pep_html writer'
     #config_section_dependencies = ('writers', 'html4css1 writer')
@@ -61,11 +61,16 @@ class Writer(html4css1.Writer):
     def translate(self):
         html4css1.Writer.translate(self)
         settings = self.document.settings
-        template = open(settings.template).read()
+        template = open(settings.tem).read()
         # Substitutions dict for template:
         subs = {}
         subs['encoding'] = settings.output_encoding
         subs['version'] = docutils.__version__
+        #subs['head_prefix'] = ''
+        #subs['head'] = ''
+        #subs['body_prefix'] = ''
+        #subs['body_pre_docinfo'] = ''
+        #subs['docinfo'] = ''
         subs['stylesheet'] = ''.join(self.stylesheet)
         #index = self.document.first_child_matching_class(nodes.field_list)
         #header = self.document[index]

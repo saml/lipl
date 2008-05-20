@@ -4,7 +4,7 @@ HSC= ghc
 HSFLAGS= --make -odir $(OBJDIR) -hidir $(OBJDIR) -stubdir $(OBJDIR)
 
 all:
-	$(HSC) $(HSFLAGS) Main.hs
+	$(HSC) $(HSFLAGS) -o lipl Main.hs
 
 clean:
 	rm -rf $(OBJDIR)/*

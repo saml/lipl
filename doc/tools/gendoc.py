@@ -15,11 +15,11 @@ with an extension for colouring code-blocks
 #    pass
 
 
-from docutils import nodes, parsers
+from docutils import nodes, parsers, io
 from docutils.parsers.rst import states, directives
-from docutils.core import publish_cmdline, default_description
+from docutils.core import publish_cmdline, publish_parts, publish_string, default_description
 from pah import Writer
-import tempfile, os
+import tempfile, os, sys
 
 def get_highlighter(language):
 
@@ -74,17 +74,26 @@ code_block.arguments = (1,0,0)
 code_block.options = {'language' : parsers.rst.directives.unchanged }
 code_block.content = 1
 
-def main(argv=None):
-    # Register
+def pub(s):
+    directives.register_directive('sc', code_block)
+    overrides = {'input_encoding': 'unicode'
+        , 'output_encoding': 'unicode'
+        , }
+    #publish_string(s, writer_name='html', source_class=io.StringInput
+    #    , reader_name='standalone')
+    return publish_parts(s, writer_name='html')
+    #, settings_overrides=overrides)
+
+def init():
     directives.register_directive( 'sc', code_block )
-
-
     description = ('Generates (X)HTML documents from standalone reStructuredText '
                    'sources.  ' + default_description)
-
     pah_writer = Writer()
-    # Command line
-    publish_cmdline(writer=pah_writer, description=description)
+    return {'description':description, 'writer':pah_writer}
+
+def main(argv=None):
+    d = init()
+    publish_cmdline(writer=d['writer'], description=d['description'])
 
 if __name__ == "__main__":
     main()
