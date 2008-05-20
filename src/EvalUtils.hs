@@ -25,9 +25,12 @@ freeVars (Lambda params body) = freeVars body \\ toSet params
 
 freeVars (FunDef name params body) = freeVars body \\ toSet (name : params)
 
-freeVars (Expr [x]) = freeVars x
-freeVars (Expr (x:xs)) = freeVars x `union` freeVars (Expr xs)
 freeVars (Expr []) = Set.empty
+freeVars (Expr [x]) = freeVars x
+freeVars (Expr l) = Set.unions (map freeVars l)
+-- freeVars (Expr (x:xs)) = freeVars x `union` freeVars (Expr xs)
+
+freeVars (At _ x) = freeVars x
 freeVars x = Set.empty
 
 freeVarsKeyValList :: KeyValList -> Set.Set Key

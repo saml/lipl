@@ -47,14 +47,12 @@ eval (Prim name 0 []) = funcall name []
 eval (Lambda [] body) = eval body
 
 eval e@(Lambda args body) = do
-    --env <- getEnvFor (unboundVars e)
-    env' <- getEnv
-    let fun = Fun env' args body
+    env <- getEnvFor (unboundVars e)
+    let fun = Fun env args body
     return fun
 
 eval e@(FunDef name args body) = do
-    --env <- getEnvFor (unboundVars e)
-    env <- getEnv
+    env <- getEnvFor (unboundVars e)
     putVal name (Fun env args body)
     env' <- getEnv
     let fun = Fun env' args body
