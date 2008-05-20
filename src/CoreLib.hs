@@ -64,8 +64,8 @@ primitives = Map.fromList [
     , ("tail", Builtin 1 listTail (tParse "[a] -> [a]"))
     , ("cons", Builtin 2 listCons (tParse "a -> [a] -> [a]"))
     , ("isEmpty", Builtin 1 listIsEmpty (tParse "[a] -> Bool"))
-    , ("println", Builtin 1 (printStr True) (tParse "Str -> ()"))
-    , ("print", Builtin 1 (printStr False) (tParse "Str -> ()"))
+    , ("println", Builtin 1 (printStr putStrLn) (tParse "Str -> ()"))
+    , ("print", Builtin 1 (printStr putStr) (tParse "Str -> ()"))
     --, ("printVarLn", Builtin 1 (printVar True) (tParse "a -> ()"))
     --, ("printVar", Builtin 1 (printVar False) (tParse "a -> ()"))
     , ("getLine", Builtin 0 (readFrom stdin) (tParse "Str"))
@@ -194,11 +194,11 @@ listCons [Char x, Str xs] = return $ Str (x:xs)
 listIsEmpty [List a] = return $ Bool (null a)
 listIsEmpty [Str a] = return $ Bool (null a)
 
-printStr newLine [Str x] = do
-    T.liftIO $ putStr  x
-    T.liftIO $ putChar (if newLine then '\n' else '\0')
+printStr f [Str x] = do
+    T.liftIO $ f x
     T.liftIO $ hFlush stdout
     return Null
+printStr f [List x] = printStr f [toStr x]
 
 showVar [x] = return $ Str (show x)
 

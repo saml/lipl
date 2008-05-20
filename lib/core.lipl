@@ -8,6 +8,50 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
 # let f x = ((\x -> (let x = \x -> x + 1 in x)) x) x in f
 -}
 
+(def compose (f g x) (f (g x)))
+
+(def apply (f x) (f x))
+
+(def id (a) a)
+
+(def flip (f a b) (f b a))
+
+(def const (a b) a)
+
+(def foldl (f z l)
+    (if (isEmpty l)
+        z
+        (let { x = (head l), xs = (tail l) }
+            (foldl f (f z x) xs))))
+
+
+(def scanl (f q ls)
+    (let { ls' = (if (isEmpty ls)
+                    []
+                    (let {x = (head ls), xs = (tail ls)}
+                        (scanl f (f q x) xs))) }
+        (cons q ls')))
+
+(def foldr (f z l)
+    (if (isEmpty l)
+        z
+        (let {x = (head l), xs = (foldr f z (tail l))}
+            (f x xs))))
+
+(def foldr1 (f l) # l can't be empty
+    (let {x = (head l), xs = (tail l)}
+        (if (isEmpty xs)
+            x
+            (f x (foldr1 f xs)))))
+
+(def scanr (f q0 l)
+    (if (isEmpty l)
+        [q0]
+        (let { x = (head l), xs = (tail l)
+            , qs = (scanr f q0 xs)
+            , q = (head qs) }
+            (cons (f x q) qs))))
+
 (def map (f l) (if (isEmpty l)
                    []
                    (let {x = (head l), xs = (tail l)}
@@ -17,6 +61,10 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
                         l2
                         (let {x = (head l1), xs = (tail l1)}
                              (cons x (concat xs l2)))))
+
+(def concatMap (f)
+    (foldr (compose concat f) []))
+
 (def filter (f l)
      (if (isEmpty l)
          l
@@ -56,40 +104,46 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
     (|| (== '7' c)
         (== '9' c)))))))))))
 
-(def flip (f a b) (f b a))
+(def zip (ks vs)
+    (if (isEmpty ks)
+        []
+    (if (isEmpty vs)
+        []
+        (let {k = (head ks), v = (head vs)
+            , kss = (tail ks), vss = (tail vs)}
+            (cons (k, v) (zip kss vss))))))
 
+(def zipWith (f ks vs)
+    (if (isEmpty ks)
+        []
+    (if (isEmpty vs)
+        []
+        (let {k = (head ks), v = (head vs)
+            , kss = (tail ks), vss = (tail vs)}
+            (cons (f k v) (zipWith f kss vss))))))
 
-(def foldl (f z l)
-    (if (isEmpty l)
-        z
-        (let { x = (head l), xs = (tail l) }
-            (foldl f (f z x) xs))))
+(def unzip ()
+    (foldr
+        (lambda (kv ksvs)
+            (let {k = (fst kv), v = (snd kv)
+                , ks = (fst ksvs), vs = (snd ksvs)}
+                ((cons k ks), (cons v vs))))
+        ([],[])))
 
-
-(def foldr (f z l)
-    (if (isEmpty l)
-        z
-        (let {x = (head l), xs = (foldr f z (tail l))}
-            (f x xs))))
-
-(def foldr1 (f l) # l can't be empty
-    (let {x = (head l), xs = (tail l)}
-        (if (isEmpty xs)
-            x
-            (f x (foldr1 f xs)))))
 
 (def reverse ()
     (foldl (flip cons) []))
 
+(def last (l) # l should not be empty
+    (let { x = (head l), xs = (tail l) }
+        (if (isEmpty xs)
+            x
+            (last xs))))
+
+
 (def and () (foldr && True))
 
 (def or () (foldr || False))
-
-(def compose (f g x) (f (g x)))
-
-(def apply (f x) (f x))
-
-(def id (a) a)
 
 (def all (p) (compose and (map p)))
 
@@ -98,6 +152,32 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
         False
         (let {x = (head l), xs = (tail l)}
             (|| (p x) (any p xs)))))
+
+(def elem (v l)
+    (if (isEmpty l)
+        False
+        (let { x = (head l), xs = (tail l) }
+            (if (== v x)
+                True
+                (elem v xs)))))
+
+(def member (k l)
+    (if (isEmpty l)
+        False
+        (let {x = (head l), xs = (tail l)
+            , key = (fst x)}
+            (if (== k key)
+                True
+                (member k xs)))))
+
+(def lookup (k l) # when k is not found in l, _|_
+    (let {x = (head l)
+        , key = (fst x)
+        , val = (snd x)
+        , xs = (tail l)}
+        (if (== key k)
+            val
+            (lookup k xs))))
 
 (def break (p l)
     (if (isEmpty l)
@@ -127,6 +207,16 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
         ""
         (foldr1 (lambda (w s) (concat w (cons ' ' s))) s)))
 
+(def lines (s)
+    (if (isEmpty s)
+        []
+        (let { x = (break (== '\n') s)
+            , l = (fst x), s1 = (snd x)
+            , s2 = (if (isEmpty s1) [] (tail s1)) }
+            (cons l (lines s2)))))
+
+(def unlines ()
+    (concatMap (lambda (x) (concat x "\n"))))
 
 # simple quick sort
 (def quick-sort (l) (if (isEmpty l) # is the list empty?
@@ -178,17 +268,13 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
 
 (def succ (x) (+ x 1))
 
-(def acc (f init l)
- (if (isEmpty l)
-     init
-     (let {
-              x = (head l)
-           , xs = (tail l)
-          }
-          (f x (acc f init xs)))))
+(def pred (x) (- x 1))
 
 (def sum (l)
-     (acc + 0 l))
+     (foldl + 0 l))
+
+(def product ()
+    (foldl * 1))
 
 (def subs (l)
      (if (isEmpty l)

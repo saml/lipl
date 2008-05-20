@@ -22,8 +22,10 @@
         , y = (f (break (== ']') (reverse x))) }
         (reverse y)))
 
-
 {-
+(def eval (env st l)
+    (if (isEmpty l)
+
 (def parse (l)
     (if (isEmpty l)
         []
