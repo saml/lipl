@@ -63,7 +63,8 @@ parseFloat = do
 parseChar = do
     pos <- P.getPosition
     P.char '\''
-    c <- P.letter <|> P.digit <|> P.space <|> escapedChar
+    c <- escapedChar <|> P.anyChar
+    --c <- P.letter <|> P.digit <|> P.space <|> escapedChar <|> P.anyChar
     P.char '\''
     return $ At pos $ Char c
     where

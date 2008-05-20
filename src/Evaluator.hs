@@ -47,14 +47,15 @@ eval (Prim name 0 []) = funcall name []
 eval (Lambda [] body) = eval body
 
 eval e@(Lambda args body) = do
-    env <- getEnvFor (unboundVars e)
+    --env <- getEnvFor (unboundVars e)
     env' <- getEnv
-    let fun = Fun env args body
+    let fun = Fun env' args body
     return fun
 
 eval e@(FunDef name args body) = do
-    env <- getEnvFor (unboundVars e)
-    putVal name (Fun env args body) -- for recursive definition ??
+    --env <- getEnvFor (unboundVars e)
+    env <- getEnv
+    putVal name (Fun env args body)
     env' <- getEnv
     let fun = Fun env' args body
     updateVal name fun

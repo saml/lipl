@@ -1,5 +1,5 @@
 module LangData ( Val (..)
-    , Env, nullEnv, emptyEnv, EnvStack, showEnv
+    , Env, nullEnv, emptyEnv, EnvStack, showEnv, showEnvs
     , KeyValList, Key
     , ppValList, ppVal, toStr
     ) where
@@ -31,6 +31,8 @@ emptyEnv = Map.empty
 nullEnv = [emptyEnv]
 
 showEnv env = show $ ppEnv env
+showEnvs envs = PP.render
+    ((PP.fsep $ map ppEnv envs) $+$ PP.int (length envs))
 ppEnv env = ppKeyValList  $ Map.toList env
 
 ppValList = map ppVal

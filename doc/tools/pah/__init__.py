@@ -69,8 +69,8 @@ class Writer(html4css1.Writer):
         subs['stylesheet'] = ''.join(self.stylesheet)
         #index = self.document.first_child_matching_class(nodes.field_list)
         #header = self.document[index]
-        subs['title'] = "Stack.lhs"
-        subs['navigation'] = "hello, this is navigation"
+        subs['title'] = self.document[0].astext()
+        #subs['navigation'] = "hello, this is navigation"
         subs['body'] = ''.join(
             self.body_pre_docinfo + self.docinfo + self.body)
         subs['body_suffix'] = ''.join(self.body_suffix)

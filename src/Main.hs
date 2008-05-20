@@ -164,8 +164,8 @@ printSubst = do
     T.liftIO $ putStrLn (showSubst s)
 
 printEnv = do
-    env <- getEnv
-    T.liftIO $ putStrLn (showEnv env)
+    env <- getEnvs
+    T.liftIO $ putStrLn (showEnvs env)
 
 interpret file = do
     isValidFile <- T.liftIO $ doesFileExist file

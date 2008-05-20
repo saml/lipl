@@ -18,7 +18,7 @@ with an extension for colouring code-blocks
 from docutils import nodes, parsers
 from docutils.parsers.rst import states, directives
 from docutils.core import publish_cmdline, default_description
-from tmp import Writer
+from pah import Writer
 import tempfile, os
 
 def get_highlighter(language):
@@ -51,8 +51,6 @@ def code_block(name, arguments, options, content, lineno,
        def main():
            sys.stdout.write("Hello world")
 
-    Currently support languages: python (requires pygments),
-    haskell (requires HsColour), anything else supported by pygments
     """
     language = arguments[0]
     highlighter = get_highlighter(language)
@@ -78,7 +76,7 @@ code_block.content = 1
 
 def main(argv=None):
     # Register
-    directives.register_directive( 'lh', code_block )
+    directives.register_directive( 'sc', code_block )
 
 
     description = ('Generates (X)HTML documents from standalone reStructuredText '

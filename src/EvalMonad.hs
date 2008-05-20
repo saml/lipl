@@ -37,13 +37,23 @@ getVal key = do
             pos <- getSourcePos
             E.throwError $ Err pos ("not found: " ++ key)
 
+{-
+getVal key = do
+    env <- getEnv
+    case Map.lookup key env of
+        Just x -> return x
+        otherwise -> do
+            pos <- getSourcePos
+            E.throwError $ Err pos ("not found: " ++ key)
+-}
+
 getEnvFor keys = do
     vals <- mapM getVal keys
     let env = Map.fromList $ zip keys vals
     return env
 
 putVal key val = do
-    (env:envs) <- getEnvs
+    env <- getEnv
     if Map.member key env
         then
             do
@@ -51,7 +61,7 @@ putVal key val = do
                 E.throwError
                     $ Err pos ("destructive update: " ++ key)
         else
-            putEnvs (Map.insert key val env : envs)
+            pushEnv (Map.insert key val env)
 
 updateVal key val = do
     (env:envs) <- getEnvs

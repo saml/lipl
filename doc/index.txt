@@ -128,8 +128,8 @@ you should have the following directory structure::
 - ``src`` contains Haskell source code for the interpreter.
 - ``lib`` contains libraries written in LIPL.
 
-Building
---------
+Build
+-----
 
 Building the project can be done in many ways.
 
@@ -157,7 +157,7 @@ Then, execute build and install commands::
 If the project has been configured with ``--prefix="C:\lipl"``,
 the interpreter, lipl.exe, can be found in ``C:\lipl\bin\lipl.exe``.
 
-Follow instructions in Installing_ section to finish installation
+Follow instructions in Installation_ section to finish installation
 process.
 
 Manual Build
@@ -171,8 +171,8 @@ To manually build the interpreter without using Cabal:
 This will create lipl.exe under src directory.
 You can move lipl.exe to ``C:\lipl\bin\lipl.exe`` if you want.
 
-Installing
-----------
+Installation
+------------
 
 Assuming lipl.exe is under ``C:\lipl\bin`` add
 ``C:\lipl\bin`` to PATH environment variable so that you can start
@@ -238,190 +238,192 @@ Or, you can type ``:?`` to print help menu::
 ``:r file.lipl``
   cleans the environment first then loads file.lipl .
 
+Project Timeline
+================
 
-Navigating the Source
-=====================
+The project was proposed in the beginning of Spring 2008 semester,
+during the week of January 27th, 2008.
+And it was submitted on May 28th, 2008 (total 18 weeks).
+Below is weekly summary of the project progress.
 
-The interpreter source code is in ``lipl/src`` directory.
-In the directory, there are Haskell source codes (ends with .hs)
-that make up the LIPL interpreter.
-Source files are named after the modules they implement.
-For example, ``Parser.hs`` implements ``Parser`` module.
+- Project proposal and language specification.
+    - 1st week (Jan 27): Project proposal. Brainstorm about the language.
+    - 2nd week (Feb 3): Specify syntax of the language.
+    - 3rd week (Feb 10): Write specification of syntax and semantics.
+- Parser and evaluator.
+    - 4th week (Feb 17): Start writing parser.
+    - 5th week (Feb 24): Start writing evaluator.
+    - 6th week (Mar 2): Adding basic arithmetics functions.
+    - 7th week (Mar 9): Deviation from the specification (allowing
+      prefix, postfix, infix).
+    - 8th week (Mar 16): Revert back to the specification (stick to prefix only).
+      Adding boolean operations, comparison functions, and conditional
+      expression.
+    - 9th week (Mar 23): Adding buggy environment (function definition
+      and let expression).
+    - 10th week (Mar 30): Disallowing recursive let expression
+      (recursive definitions only works for function definition).
+- Type inference.
+    - 11th week (Apr 6): Start type inference.
+    - 12th week (Apr 13): Try to fix buggy type inference for let expressions and
+      lambda expressions (improper variable capture).
+    - 13th week (Apr 20): Fix more bugs involving let expressions
+      and lambda expressions.
+    - 14th week (Apr 27): Fix bugs for recursive function
+      definitions.
+    - 15th week (May 4): Refactoring monad stack.
+    - 16th week (May 11): Fix bugs for variable capture.
+- Documentation.
+    - 17th week (May 18): Start documentation.
+    - 18th week (May 25): Add example programs.
 
-Explanation of each module is given here.
+Implementation Summary
+======================
 
-Main
-  this is the entry point of the compiled LIPL interpreter.
-  This implements read-eval-print loop.
+Each LIPL expression goes through 3 phases:
 
-LangData
-  this module contains various data structures used accross
-  the interpreter. The module also implements useful functions
-  to access those data and how the data
-  are represented as string.
+#. parse
+#. type inference
+#. evaluation
 
-  Type ``Val`` represents LIPL literals, expressions, special
-  forms, and other values used internally in the interpreter.
+Parse
+-----
 
-  Type ``Err`` defines various errors that can be thrown
-  in the interpreter.
+During parse phase, abstract syntax tree is built from
+string representation of a LIPL program.
+The abstract syntax tree is represented with Haskell data structures.
+For example, ``(+ 1 2)`` is parsed into
+``At pos (Expr [PrimFun "+", Int 1, Int 2])``
+where pos is source position (file name, line number, and column number)
+that the expression ``(+ 1 2)`` is located, and At, Expr, PrimFun, and Int
+are Haskell data constructors.
 
-  Type ``Wrap Val`` represents wrapped values.
-  ``Wrap`` is a monad that holds various extra informations
-  such as errors raised, environment
-  (variable bindings) for the evaluator...etc.
+By recording source position with actual abstract syntax tree,
+better error message can be printed.
 
-CoreLib
-  this module implements various builtin functions.
+Actual implementation uses Parsec_ library that
+comes with GHC.
 
-Parser
-  this module implements parsing functions that turns strings to
-  values used in the interpreter.
+.. _Parsec: http://research.microsoft.com/users/daan/parsec.html
 
-  Parsing is done using Parsec_
-  library, which is included in GHC_.
+Type Inference
+--------------
 
-.. _Parsec: http://legacy.cs.uu.nl/daan/parsec.html
+After successfully building abstract syntax tree from an expression,
+the tree is traversed and its type is inferred.
+Type inference makes sure ill-formed expressions are rejected
+before evaluation.
+For example, type inference phase fails to infer the type of
+``(+ 1 'a')`` because the function + expects two Ints but a Char
+is passed to it.
 
-Evaluator
-  this module is responsible for evaluating LIPL expressions.
-  Literals are returned as they are.
-  And, special forms are treated differently so that they can have
-  desired behavior: expanding environment for function definitions,
-  evaluating only one branch for if conditionals ...etc.
-  Normal expressions are treated as curried function application.
-
-Utils
-  this module contains useful utility functions used in other modules.
-
-.. _`core.lipl`:
-
-core.lipl
-  this is not a Haskell module. But this file is LIPL source code
-  that implements frequently used functions.
-  This file is loaded automatically whenever the interpreter starts.
-
-Implementation Detail
-=====================
-
-Description about the interpreter is given here
-to facilitate understanding of the source code.
-
-Values and Overview
--------------------
-
-Values used inside the interpreter are defined in ``LangData`` module.
-Type ``Val`` can represent various special form expressions, normal
-expressions, literals, closures used in the interpreter interally, ...etc.
-
-``Val`` type is also used to represent evaluated values.
-A LIPL expression, which is of type ``Val``, is turned
-to ``Val``, usually into literals.
-Another type could have been created to represent evaluated values.
-However, the same type, ``Val``, is used for simplicity.
-
-So, the interpreter basically has three parts:
-
-- Parser turns ``String`` into ``Val``.
-- Evaluator turns ``Val`` into another ``Val`` that is put inside
-  ``Wrap`` monad (explained in `Keeping State and Flagging Error`_).
-- Main entry point connects outside world (user input and output)
-  to the parser and the evaluator.
-
-Keeping State and Flagging Error
---------------------------------
-
-In ``LangData`` module, newtype [#newtype]_ ``Wrap`` is defined using
-monad transformers [#transformers]_.
-Each monad transformer can be thought of as a layer of an onion
-[#onion]_, where each layer can function as different monads.
-
-.. [#newtype] newtypinig monads constructed with monad transformers
-   is described in
-   http://cale.yi.org/index.php/How_To_Use_Monad_Transformers
-
-.. [#transformers] using monad transformers is described in
-   http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html
-
-.. [#onion] onion analogy is from
-   http://sigfpe.blogspot.com/2006/05/grok-haskell-monad-transformers.html
-
-
-For example, Haskell provides ``State`` monad that lets users
-put arbitrary state (integers, strings, records...etc)
-and access it via ``get`` command and modify it via ``put`` command.
-Haskell also provides ``Error`` monad that lets users
-``throwError`` during computation and ``catchError`` to deal with error.
-
-``Wrap`` combines those two monads into a new monad by using
-monad transformers (``StateT`` and ``ErrorT`` respectively).
-Actual state being kept inside ``Wrap`` monad is ``EnvStack``, which
-is a list of maps that stores mapping of ``String`` and ``Val``
-(values used in the interpreter internally).
-So, the interpreter can retrive and store key value pairs
-and throw and catch errors inside ``Wrap`` monad any time.
-
-Alternative way of keeping environment would be to make the environment
-formal parameter of the functions that need the environment.
-Using monad, this unecessary function parameter is omitted.
-
-Parsing
--------
-
-Parsing is done using Parsec_ library.
-The library provides useful combinators to build
-parsers very easily.
-
-For example, ``Parsec.sepEndBy parseToken mustSpaces``
-is using ``sepEndBy`` combinator from Parsec library
-that parses zero or more occurrence of LIPL tokens
-(user defined ``parseToken`` combinator)
-separated by whitespaces (user defined ``mustSpaces`` combinator).
-
-Parsing turns ``String`` into ``Val`` with possible errors.
+Unification algorithm is used to infer type of each expression.
+Maintaining substitution (table of type variables and type expressions)
+and generation of new type variables are implemented in a custom monad.
 
 Evaluation
 ----------
 
-Evaluation is implemented in ``eval`` function inside ``Evaluator``
-module.
-``eval`` function takes ``Val``, which is possibly returned
-from the parser, and evaluates it in ``Wrap`` monad.
-Result of the evaluation (still ``Val`` type) is put in ``Wrap`` monad.
+Well-typed expressions are evaluated (normalized) in applicative order
+(eager evaluation).
+For example, both ``(g a)`` are evaluated then passed to
+function f, in ``(f (g a) (g a))``.
 
-``eval`` function is defined case by case fashion:
+Currying is implemented with closures.
+For example, ``(f a b)`` will be evaluated so that
+a closure is formed where the 1st formal parameter of f is bound to
+the actual parameter, a. Then, the closure is applied to the next
+actual parameter, b.
 
-- Various special forms are handled differently from normal expressions.
-- Normal expressions (function application) is curried by consuming
-  the next argument and returning a function object that holds
-  the consumed argument and remaining arguments.
-- Literals are returned without modification.
-- Identifiers make use of ``State`` monad, which is a layer of
-  ``Wrap`` monad used in evaluation, to query for the bound value.
+Evaluation is done inside a monad simulating a stack of
+environments: key value pairs where key is identifiers appearing
+in expressions and value is value bound to them.
 
-In the presence of error condition, error is thrown.
-The error will get stored in ``Error`` monad, which is
-another layer of ``Wrap`` monad, and get handled accordingly.
+Source
+======
 
-Talking to the World
---------------------
+Source code of the interpreter is written in literate Haskell
+style.
 
-Since evaluation is done inside the ``Wrap`` monad and
-the result is put inside the monad,
-most of the computation has to be done in ``Wrap`` monad
-(it's easy to get to the values inside ``Wrap`` monad when you're in
-the monad. Once you're outside the monad, it's difficult or impossible
-to get to the values).
+#. Settings.lhs
+#. Stack.lhs
+#. Utils.lhs
+#. LangData.lhs
+#. EvalUtils.lhs
+#. Error.lhs
+#. Type.lhs
+#. TIMonadClass.lhs
+#. TIMonad.lhs
+#. EvalMonadClass.lhs
+#. EvalMonad.lhs
+#. PosMonadClass.lhs
+#. PosMonad.lhs
+#. REPLMonad.lhs
+#. ParseUtils.lhs
+#. Parser.lhs
+#. TParse.lhs
+#. TCheck.lhs
+#. Evaluator.lhs
+#. CoreLib.lhs
+#. Main.lhs
 
-To print the evaluated value to the console,
-even action of printing has to be in ``Wrap`` monad
-(otherwise, it can't get to the value to be printed).
-So, in the core of ``Wrap`` monad is ``IO`` monad, where
-action of printing and other IO actions are lifted up to above layers.
 
-Because all Haskell programs run in ``IO`` monad,
-``Main`` module defines ``run`` function that takes
-a computation in ``Wrap`` monad and runs it in ``IO`` monad.
-In doing so, lifted IO actions
-are actually performed in ``IO`` monad.
+LIPL Reference
+==============
+
+LIPL language reference is a separate document,
+located at: `here <langref.html>`_.
+
+References
+==========
+
+To learn about Haskell programming and functional programming in
+general, these resources were used:
+
+- Daumé III, Hal (2002) Yet Another Haskell Tutorial.
+  Retrieved January 1, 2008, from
+  http://darcs.haskell.org/yaht/yaht.pdf
+- Grabmüller, Martin (2006) Monad Transformers Step by Step.
+  Retrieved March 1, 2008 from
+  http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html
+- Hudak, Paul (1989) Conception, Evolution, and Application
+  of Functional Programming Languages. ACM Computing Surveys 21 (3):
+  359-411
+- Hudak, Paul et al. (2000) A Gentle Introduction to Haskell,
+  Version 98. Retrieved January 1, 2008 from
+  http://www.haskell.org/tutorial/
+- Newbern, Jeff. All About Monads.
+  Retrieved April 1, 2008 from
+  http://www.haskell.org/all_about_monads/html/index.html
+- O'Sullivan, Bryan et al. (2007) Real World Haskell (beta).
+  Retrieved May 1, 2008 from
+  http://book.realworldhaskell.org/beta/
+- Wadler, Philip (1992) The Essence of Functional Programming.
+  Invited Talk, 19th Symposium on Principles of Programming Languages,
+  ACM Press, Albuquerque.
+  Retrieved March 1, 2008 from
+  http://homepages.inf.ed.ac.uk/wadler/papers/essence/essence.ps
+
+For implementation of LIPL evaluator and type inference,
+these resources were used:
+
+- Cardelli, Luca and Wegner, Peter (1985)
+  On Understanding Types, Data Abstraction, and
+  Polymorphism. ACM Computing Surveys 17 (4): 471-522
+- Cardelli, Luca (1987) Basic Polymorphic Typechecking.
+  Retrieved April 1, 2008 from
+  http://lucacardelli.name/Papers/BasicTypechecking.pdf
+- Henderson, Peter (1980) Functional Programming: Application and
+  Implementation. Prentice Hall.
+- Peyton Jones, Simon (1987) The Implementation of Functional
+  Programming Languages. Prentice Hall.
+  Retrieved May 1, 2008 from
+  http://research.microsoft.com/~simonpj/papers/slpj-book-1987/index.htm
+- P. Jones, Mark (2000) Typing Haskell in Haskell.
+  Retrieved April 1, 2008 from
+  http://web.cecs.pdx.edu/~mpj/thih/
+- Tang, Jonathan. Write Yourself a Scheme in 48 Hours: A Haskell Tutorial.
+  Retrieved January 1, 2008 from
+  http://halogen.note.amherst.edu/~jdtang/scheme_in_48/tutorial/overview.html
+
 

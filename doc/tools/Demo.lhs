@@ -10,6 +10,9 @@ For example::
 
 > module Stack where
 > type Stack a = [a]
+
+differnt
+
 > type Queue a = [a]
 > isEmpty :: Stack a -> Bool
 > isEmpty = null
