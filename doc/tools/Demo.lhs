@@ -6,12 +6,16 @@ For example::
     asdf asdf
     asdf asdf
 
-.. lh:: haskell
+.. sc:: haskell
 
 > module Stack where
 > type Stack a = [a]
 
+aumé III, Hal (2
+abmüller, Martin (20
 differnt
+
+.. sc:: haskell
 
 > type Queue a = [a]
 > isEmpty :: Stack a -> Bool

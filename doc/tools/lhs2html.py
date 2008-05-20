@@ -1,7 +1,8 @@
-import sys, os.path
+import sys, os.path, codecs
 from docutils import nodes, parsers
 from docutils.parsers.rst import directives
 from docutils.core import publish_parts
+
 
 def get_highlighter(language):
 
@@ -56,12 +57,28 @@ code_block.arguments = (1,0,0)
 code_block.options = {'language' : parsers.rst.directives.unchanged }
 code_block.content = 1
 
+default_enc = 'utf-8'
+
 def pub(s):
     directives.register_directive('sc', code_block)
-    overrides = {'input_encoding': 'unicode'
-        , 'output_encoding': 'unicode'
-        , }
-    return publish_parts(s, writer_name='html')
+    overrides = {'input_encoding': default_enc
+        , 'output_encoding': default_enc
+        }
+    return publish_parts(s, writer_name='html'
+            , settings_overrides=overrides)
+
+def tounicode(obj, encoding=default_enc):
+    if isinstance(obj, basestring):
+        if not isinstance(obj, unicode):
+            obj = unicode(obj, encoding)
+    return obj
+
+def dictEncode(d):
+    result = {}
+    for k,v in d.iteritems():
+        print type(v)
+        result[k] = tounicode(v)
+    return result
 
 def main(argv=None):
     argv = sys.argv
@@ -69,16 +86,16 @@ def main(argv=None):
     bn = os.path.basename(fn)
     n,e = os.path.splitext(bn)
     name = os.path.extsep.join([n, 'html'])
-    f = open(fn)
+    f = codecs.open(fn, encoding=default_enc)
     new = []
     for l in f:
-        if l[0] == '>':
-            new.append( ''.join(['    >', l[1:]]) )
+        if l[0] == u'>':
+            new.append( u''.join([u'    >', l[1:]]) )
         else:
             new.append(l)
     f.close()
 
-    template = '''
+    template = u'''
 <?xml version="1.0" encoding="%(encoding)s" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -92,8 +109,12 @@ def main(argv=None):
 </body>
 '''
     output = pub(''.join(new))
-    outf = open(name, 'w')
-    outf.write(template % output)
+    output.setdefault('encoding', default_enc)
+    outf = codecs.open(name, 'w', encoding=default_enc)
+    #output = dictEncode(output)
+    outf.write(template
+
+            % output)
     outf.close()
 
 if __name__ == "__main__":
