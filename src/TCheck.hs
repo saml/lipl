@@ -127,9 +127,11 @@ tInfer (Let [(k,v)] e) = do
 
 tInfer (Let kvs e) = tInfer $ foldr (Let . (:[])) e kvs
 
+{-
 tInfer (Seq _ e2) = do
     tE2 <- tInfer e2
     return tE2
+-}
 
 tInfer e@(FunDef name args body) = if noDup args
     then

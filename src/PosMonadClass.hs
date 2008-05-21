@@ -7,4 +7,4 @@ class (Monad m) => MonadPos m where
     setSourcePos :: P.SourcePos -> m ()
     getSourcePos :: m P.SourcePos
 
-initialPos = P.initialPos ""
+--initialPos = P.initialPos ""

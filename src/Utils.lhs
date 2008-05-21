@@ -28,9 +28,11 @@ http://haskell.org/ghc/docs/latest/html/libraries/index.html
 with ``import ModuleName (func1, func2, func3)``,
 only func1, func2, and func3 are accessible directly.
 Other functions in MouduleName are not accessible from this module.
-So, one can call union and ``\\`` on this module.
+So, one can call union and ``\\`` on this module
+(note the parenthesis around ``\\``).
 But other functions defined in ``Data.Set`` module
-should be called as ``Set.functionName``.
+should be called as ``Set.functionName`` (because Data.Set
+module was qualified as Set).
 
 .. sc:: haskell
 
@@ -44,6 +46,7 @@ should be called as ``Set.functionName``.
 
 ::
 
+    ghci> :l Utils
     ghci> let l = [("a", 1), ("b", 1)]
     ghci> getKeys l
     ["a", "b"]
@@ -52,37 +55,63 @@ should be called as ``Set.functionName``.
 
 .. sc:: haskell
 
->
-> substitute key val (x:xs) = if x == key
->     then
->         val : substitute key val xs
->     else
->         x : substitute key val xs
-> substitute key val [] = []
->
 > allEq l = all (== True) $ zipWith (==) l (tail l)
->
+
+allEq tests if the list l has all same elements::
+
+    l:                  [e1,e2,...,eN]
+    tail l:             [e2,e3,...]
+    zipWith (==) ...  : [e1 == e2, e2 == e3, ..., eN-1 == eN]
+    all (== True) ... : \-    are they all True ??         -/
+
+.. sc:: haskell
+
 > noDup l = length l == length (List.nub l)
->
-> exclude kv k = filter (not . (`elem` k) . fst) kv
->
+
+noDup tests if l has no duplicate::
+
+    l: [e1, e2, ..., eN]
+    length l: N
+    List.nub l: [e1, e2, ..., eM] where all duplicates are removed.
+
+So, when length of l is same as length of ``List.nub l``, l did not have
+duplicates to begin with.
+
+.. sc:: haskell
+
 > subtractMap kv k = foldr Map.delete kv k
->
->
+
+subtractMap takes a Map and a list of keys. And it deletes
+items from the Map that are mapped into keys::
+
+    let m = Map.fromList [("a",1), ("b",2)]
+
+    foldr Map.delete m ["c", "b", "a"]
+    ==> Map.delete "c" (Map.delete "b" (Map.delete "a" m))
+    ==> Map.delete "c" (Map.delete "b" m')
+        where m' is Map.fromList [("b",2)], ("a",1) is deleted.
+    ==> Map.delete "c" m''
+        where m'' is Map.empty, ("b",2) is deleted.
+    ==> Map.empty
+
+.. sc:: haskell
+
 > traceM msg = if isDebugSet
 >     then
->         trace ('\n' : msg) (return ())
+>         trace msg (return ())
 >     else
 >         return ()
 >     where
 >         isDebugSet = True
->
-> splitAtDot str = reverse $ map reverse $ split str [[]]
->     where
->         split [] acc = acc
->         split ('.':xs) acc = split xs ([] : acc)
->         split (x:xs) (a:as) = split xs ((x : a) : as)
->
+
+traceM can be used in a monad to print out msg::
+
+    do
+        traceM "hello"
+        ...
+
+.. sc:: haskell
+
 > -- | "Foo.bar" ==> ["Foo", "bar"]
 > splitOn _ [] = []
 > splitOn chr l = f (break (== chr) l)
@@ -90,14 +119,10 @@ should be called as ``Set.functionName``.
 >         f (h, []) = [h]
 >         f (h, (_:xs)) = h : splitOn chr xs
 >
-> splitNS ident = let
->     dotIndices = List.findIndices (== '.') ident
->     in
->         if null dotIndices
->             then
->                 ("", ident)
->             else
->                 (\(x,y) -> (x, tail y))
->                     $ splitAt (last dotIndices) ident
->
+
+splitOn splits a list (including string) on an element (character)::
+
+    ghci> :l Utils
+    ghci> splitOn '.' "Utils.lhs"
+    ["Utils", "lhs"]
 

@@ -59,9 +59,11 @@ eval e@(FunDef name args body) = do
     updateVal name fun
     return fun
 
+{-
 eval e@(Seq e1 e2) = do
     eval e1
     eval e2
+-}
 
 eval (If pred ifCase elseCase) = do
     ifOrElse <- eval pred

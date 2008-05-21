@@ -27,7 +27,7 @@ import Utils
 
 run action = S.runStateT (runPosT (S.runStateT (
     runEvalT (runTIT (E.runErrorT (runREPL action)) initialSubst 0))
-    nullEnv)) initialPos
+    emptyEnvStack)) initialPos
 
 liplPath = do
     path <- Ex.handle (\e -> return "") (Sys.getEnv sPATH)

@@ -69,7 +69,7 @@ updateVal key val = do
 
 
 clearEnv :: (MonadEval m) => m ()
-clearEnv = putEnvs nullEnv
+clearEnv = putEnvs emptyEnvStack
 
 newtype EvalT m a = EvalT {
     runEvalT ::  (S.StateT EnvStack m) a
@@ -94,7 +94,7 @@ instance (Monad m) => MonadEval (EvalT m) where
 
     popEnv = do
         envs <- S.get
-        if nullEnv == envs
+        if emptyEnvStack == envs
             then return ()
             else S.put $ (snd . pop) envs
 
@@ -119,4 +119,4 @@ instance (MonadPos m) => MonadPos (EvalT m) where
 runEvalMonad action =
     I.runIdentity $
         (S.runStateT $  runEvalT $ runEval action)
-        nullEnv
+        emptyEnvStack

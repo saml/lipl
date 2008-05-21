@@ -7,7 +7,6 @@ import LangData
 import CoreLib (builtinNames)
 import ParseUtils
 import Settings
-import PosMonadClass (initialPos)
 
 at val = At initialPos val
 
@@ -186,6 +185,7 @@ parsePair = do
     rparen
     return $ At pos (Pair a b)
 
+{-
 parseSeq = do
     pos <- P.getPosition
     P.string "seq"
@@ -194,10 +194,10 @@ parseSeq = do
     mustSpaces
     b <- parseToken
     return $ At pos (Seq a b)
+-}
 
 parseToken =
         P.try parseIf
-    <|> P.try parseSeq
     <|> P.try parseLet
     <|> P.try parseDef
     <|> P.try parseLambda
