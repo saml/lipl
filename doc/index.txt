@@ -365,6 +365,7 @@ style.
 #. `TCheck.lhs`_
 #. `Evaluator.lhs`_
 #. `CoreLib.lhs`_
+#. `MainUtils.lhs`_
 #. `Main.lhs`_
 
 .. _`Settings.lhs`: Settings.html
@@ -387,6 +388,7 @@ style.
 .. _`TCheck.lhs`: TCheck.html
 .. _`Evaluator.lhs`: Evaluator.html
 .. _`CoreLib.lhs`: CoreLib.html
+.. _`MainUtils.lhs`: MainUtils.html
 .. _`Main.lhs`: Main.html
 
 

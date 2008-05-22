@@ -28,9 +28,14 @@ tInfer (Str _) = return $ list tChar
 
 tInfer (PrimFun x) = do
     s <- getSubst
-    let Just (TScheme _ tX) = Map.lookup x s
-    tX' <- tUpdateTVars tX
-    return tX'
+    case Map.lookup x s of
+        Just (TScheme _ tX) -> do
+            tX' <- tUpdateTVars tX
+            return tX'
+        otherwise -> do
+            pos <- getSourcePos
+            E.throwError
+                $ Err pos ("primitive function not found: " ++ x)
 
 tInfer (List []) = do
     v <- newTVar

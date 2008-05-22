@@ -29,11 +29,18 @@ newtype Pos a = Pos {
 newtype PosT m a = PosT {
     runPosT :: (S.StateT P.SourcePos m) a
     } deriving (Monad, Functor, S.MonadState P.SourcePos
-        , R.MonadReader r, W.MonadWriter w
+        , R.MonadReader r, W.MonadWriter w, E.MonadError e
         , T.MonadIO)
 
 instance T.MonadTrans PosT where
     lift m = PosT (T.lift m)
+
+{-
+instance (E.MonadError e m) => E.MonadError e (PosT m) where
+    throwError = T.lift . E.throwError
+    m `catchError` h = PosT (runPosT m `E.catchError`
+        (\e -> runPosT (h e)))
+-}
 
 instance (Monad m) => MonadPos (PosT m) where
     setSourcePos pos = S.put pos

@@ -15,12 +15,21 @@ import Error
 import TCheck
 import PosMonad
 
+{-
 newtype REPL a = REPL {
     runREPL :: E.ErrorT Err (TIT (EvalT (PosT IO))) a
     } deriving (Monad, Functor
         , MonadTI, MonadEval, MonadPos
         , E.MonadError Err, T.MonadIO)
+-}
 
+newtype REPL a = REPL {
+    runREPL :: TIT (EvalT (PosT (E.ErrorT Err IO))) a
+    } deriving (Monad, Functor
+        , MonadTI, MonadEval, MonadPos
+        , E.MonadError Err, T.MonadIO)
+
+{-
 instance (MonadEval m) => MonadEval (E.ErrorT Err m) where
     getEnv = T.lift getEnv
     getEnvs = T.lift getEnvs
@@ -39,6 +48,7 @@ instance (MonadTI m) => MonadTI (E.ErrorT Err m) where
 instance (MonadPos m) => MonadPos (E.ErrorT Err m) where
     getSourcePos = T.lift getSourcePos
     setSourcePos = T.lift . setSourcePos
+-}
 
 rollBackOnErr action = do
     envs <- getEnvs

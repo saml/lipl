@@ -252,6 +252,19 @@ mapped into type (scheme) b.
 
 .. sc:: haskell
 
+> fromIdType = map (\(k,v) -> (k, mkPolyType v))
+>
+> toSubst :: [(Id, Type)] -> Subst
+> toSubst = Map.fromList . fromIdType
+
+fromIdType converts ``[(Id, Type)]`` to
+``[(Id, TScheme)]`` in a way that each Type bound to Id
+is polytype (type variables can be instantiated more than once).
+And toSubst converts ``[(Id, Type)]`` to Subst
+such that each Type becomes polytype.
+
+.. sc:: haskell
+
 > class Types t where
 >     apply :: Subst -> t -> t
 >     tv :: t -> [Id]

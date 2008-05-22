@@ -8,6 +8,8 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
 # let f x = ((\x -> (let x = \x -> x + 1 in x)) x) x in f
 -}
 
+(def seq (a b) (let { x = a } b)) # execute a then b
+
 (def compose (f g x) (f (g x)))
 
 (def apply (f x) (f x))
