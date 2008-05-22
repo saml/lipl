@@ -345,27 +345,51 @@ Source
 Source code of the interpreter is written in literate Haskell
 style.
 
-#. Settings.lhs
-#. Stack.lhs
-#. Utils.lhs
-#. LangData.lhs
-#. EvalUtils.lhs
-#. Error.lhs
-#. Type.lhs
-#. TIMonadClass.lhs
-#. TIMonad.lhs
-#. EvalMonadClass.lhs
-#. EvalMonad.lhs
-#. PosMonadClass.lhs
-#. PosMonad.lhs
-#. REPLMonad.lhs
-#. ParseUtils.lhs
-#. Parser.lhs
-#. TParse.lhs
-#. TCheck.lhs
-#. Evaluator.lhs
-#. CoreLib.lhs
-#. Main.lhs
+#. `Settings.lhs`_
+#. `Stack.lhs`_
+#. `Utils.lhs`_
+#. `LangData.lhs`_
+#. `EvalUtils.lhs`_
+#. `Error.lhs`_
+#. `Type.lhs`_
+#. `TIMonadClass.lhs`_
+#. `TIMonad.lhs`_
+#. `EvalMonadClass.lhs`_
+#. `EvalMonad.lhs`_
+#. `PosMonadClass.lhs`_
+#. `PosMonad.lhs`_
+#. `REPLMonad.lhs`_
+#. `ParseUtils.lhs`_
+#. `Parser.lhs`_
+#. `TParse.lhs`_
+#. `TCheck.lhs`_
+#. `Evaluator.lhs`_
+#. `CoreLib.lhs`_
+#. `Main.lhs`_
+
+.. _`Settings.lhs`: Settings.html
+.. _`Stack.lhs`: Stack.html
+.. _`Utils.lhs`: Utils.html
+.. _`LangData.lhs`: LangData.html
+.. _`EvalUtils.lhs`: EvalUtils.html
+.. _`Error.lhs`: Error.html
+.. _`Type.lhs`: Type.html
+.. _`TIMonadClass.lhs`: TIMonadClass.html
+.. _`TIMonad.lhs`: TIMonad.html
+.. _`EvalMonadClass.lhs`: EvalMonadClass.html
+.. _`EvalMonad.lhs`: EvalMonad.html
+.. _`PosMonadClass.lhs`: PosMonadClass.html
+.. _`PosMonad.lhs`: PosMonad.html
+.. _`REPLMonad.lhs`: REPLMonad.html
+.. _`ParseUtils.lhs`: ParseUtils.html
+.. _`Parser.lhs`: Parser.html
+.. _`TParse.lhs`: TParse.html
+.. _`TCheck.lhs`: TCheck.html
+.. _`Evaluator.lhs`: Evaluator.html
+.. _`CoreLib.lhs`: CoreLib.html
+.. _`Main.lhs`: Main.html
+
+
 
 
 LIPL Reference
