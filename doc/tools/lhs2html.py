@@ -83,7 +83,10 @@ def dictEncode(d):
     return result
 
 def main(argv=None):
-    argv = sys.argv
+    '''argv[1] = file name to convert
+argv[1] = destination to put the converted html (optional)'''
+    if argv is None:
+        argv = sys.argv
     if len(argv) < 2:
         print "Usage: %s file.lhs [dst-dir]" % argv[0]
         sys.exit(1)
@@ -91,6 +94,7 @@ def main(argv=None):
         dst = argv[2]
     else:
         dst = os.path.curdir
+
     fn = argv[1]
     bn = os.path.basename(fn)
     n,e = os.path.splitext(bn)

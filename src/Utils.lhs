@@ -55,14 +55,24 @@ module was qualified as Set).
 
 .. sc:: lhs
 
-> allEq l = all (== True) $ zipWith (==) l (tail l)
+> allEqWith eq l = all (== True) $ zipWith eq l (tail l)
 
-allEq tests if the list l has all same elements::
+allEqWith tests if the list l has all same elements, where equality
+is defined by function eq::
 
     l:                  [e1,e2,...,eN]
     tail l:             [e2,e3,...]
-    zipWith (==) ...  : [e1 == e2, e2 == e3, ..., eN-1 == eN]
-    all (== True) ... : \-    are they all True ??         -/
+    zipWith eq ...  :   [e1 `eq` e2, e2 `eq` e3, ..., eN-1 `eq` eN]
+    all (== True) ... : \-    are they all True ??               -/
+
+.. sc:: lhs
+
+> allEq :: (Eq a) => [a] -> Bool
+> allEq = allEqWith (==)
+
+allEq tests if the list l has all same elements where equality
+is checked by ``==``.
+
 
 .. sc:: lhs
 
@@ -82,7 +92,7 @@ duplicates to begin with.
 > subtractMap kv k = foldr Map.delete kv k
 
 subtractMap takes a Map and a list of keys. And it deletes
-items from the Map that are mapped into keys::
+items from the Map that are mapped to keys::
 
     let m = Map.fromList [("a",1), ("b",2)]
 
