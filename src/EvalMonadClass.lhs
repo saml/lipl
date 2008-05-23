@@ -2,6 +2,9 @@
 EvalMonadClass.lhs
 ==================
 
+.. sectnum::
+.. contents::
+
 EvalMonadClass declares MonadEval class that provides
 actions useful for evaluation of LIPL expressions.
 

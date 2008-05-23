@@ -2,6 +2,9 @@
 EvalMonad.lhs
 =============
 
+.. sectnum::
+.. contents::
+
 EvalMonad creates a monad, Eval, that implements MonadEval class.
 Also, EvalT, a transformer of Eval, is defined.
 

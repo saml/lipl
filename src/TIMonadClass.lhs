@@ -2,6 +2,9 @@
 TIMonadClass.lhs
 ================
 
+.. sectnum::
+.. contents::
+
 TIMonadClass declares interface for MonadTI.
 
 .. sc:: lhs

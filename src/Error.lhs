@@ -2,6 +2,9 @@
 Error.lhs
 =========
 
+.. sectnum::
+.. contents::
+
 Module Error defines Err type that is used in the interpreter.
 
 .. sc:: lhs

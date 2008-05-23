@@ -2,6 +2,9 @@
 LangData.lhs
 ============
 
+.. sectnum::
+.. contents::
+
 ``module ModuleName (func1, func2) where``
 creates a module ModuleName where func1, func2 are exported.
 So, in another module::

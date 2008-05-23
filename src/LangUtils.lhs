@@ -1,12 +1,16 @@
 =============
-EvalUtils.lhs
+LangUtils.lhs
 =============
 
-EvaluUtils module has functions used in Evaluator.
+.. sectnum::
+.. contents::
+
+LangUtils module has useful functions
+related to LIPL Val.
 
 .. sc:: lhs
 
-> module EvalUtils where
+> module LangUtils where
 >
 > import qualified Data.Map as Map
 > import qualified Data.Set as Set
@@ -68,4 +72,17 @@ a is returned.
 For other cases, Set.union and Set difference operation (``\\``) are used
 to get all free variables.
 
+.. sc:: lhs
+
+> simplifyLambda lam@(Lambda [] e) = lam
+> simplifyLambda lam@(Lambda [x] e) = lam
+> simplifyLambda lam@(Lambda (x:xs) e) =
+>     Lambda [x] (simplifyLambda (Lambda xs e))
+> simplifyLambda (Expr [x]) = simplifyLambda x
+
+simplifyLambda converts a lambda with multiple parameters
+to a normal lambda that takes only 1 parameter::
+
+    (lambda (x1 x2 ... xN) e)
+    ==> (lambda (x1) (lambda (x2) ... (lambda (xN) e)))
 

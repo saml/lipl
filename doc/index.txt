@@ -349,7 +349,7 @@ style.
 #. `Stack.lhs`_
 #. `Utils.lhs`_
 #. `LangData.lhs`_
-#. `EvalUtils.lhs`_
+#. `LangUtils.lhs`_
 #. `Error.lhs`_
 #. `Type.lhs`_
 #. `TIMonadClass.lhs`_
@@ -372,7 +372,7 @@ style.
 .. _`Stack.lhs`: Stack.html
 .. _`Utils.lhs`: Utils.html
 .. _`LangData.lhs`: LangData.html
-.. _`EvalUtils.lhs`: EvalUtils.html
+.. _`LangUtils.lhs`: LangUtils.html
 .. _`Error.lhs`: Error.html
 .. _`Type.lhs`: Type.html
 .. _`TIMonadClass.lhs`: TIMonadClass.html

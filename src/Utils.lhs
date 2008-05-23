@@ -2,6 +2,9 @@
 Utils.lhs
 =========
 
+.. sectnum::
+.. contents::
+
 .. sc:: lhs
 
 > module Utils where

@@ -17,6 +17,7 @@ using unification.
 > import qualified Control.Monad.Error as E
 >
 > import LangData
+> import LangUtils
 > import Type
 > import CoreLib (builtinSubst)
 > import Utils
@@ -230,38 +231,87 @@ them upon exit::
 >             pos <- getSourcePos
 >             E.throwError $ Err pos ("duplicate argument: " ++ show lam)
 
+When lambda has more than 1 parameter, it is turned to
+a lambda with 1 parameter and type inferred::
+
+    (lambda (x y z) e)
+    ==> (lambda (x) (lambda (y) (lambda (z) e)))
+
+noDup makes sure there's no duplicate parameter (such as ``(lambda (x x) e)``).
+simplifyLambda turns multiple parameter lambda expression to
+normal 1 parameter lambda expression.
+
+.. sc:: lhs
+
 > tInfer (Let [(k,v)] e) = do
 >     tV <- tInfer v
 >     s <- getSubst
 >     let keys = Map.keys s
 >     let vals = Map.elems s
 >     let freeVs = (tv tV \\ keys) \\ tv vals
->
->     s <- getSubst
 >     localSubst s (do
 >         extendSubst (k +-> TScheme freeVs tV)
 >         tE <- tInfer e
->         sE <- getSubst
 >         tK <- tInfer (Ident k)
->         sK <- getSubst
 >         unify tK tV
->
->         s <- getSubst
->         return (apply s tE))
->
+>         s' <- getSubst
+>         return (apply s' tE))
+
+For a let expression of the form ``let { k = v } e``,
+type of v is inferred first (tV).
+Since tV might contain type variables that are already in current Subst,
+only those type variables that do not appear in the Subst are
+stored in freeVs.
+For example::
+
+    (lambda (x) (let { x = x } x))
+             |         |   |   +----- x of let      x4
+             |         |   +--------- x of lambda   x3
+             |         +------------- x of let      x2
+             +----------------------- x of lambda   x1
+
+while inferring type of x3 (x of lambda), it can get type variable t0
+(during type inferencing the outer lambda,
+x gets type variable t0, for example).
+Then when extending Subst with ``x2 +-> t0``
+(``k +-> TScheme freeVs tV`` in source code), x2 is bound to t0.
+And, this will interfere type inference for x1.
+So, freeVs only stores type variables that are not already found in
+the current Subst.
+After getting freeVs, type of e is inferred in local environment,
+where k is bound to tV with freeVs universally quantified.
+During inference of e, which can contain k, Subst is modified
+to have enough information about k to infer type of k.
+Type of k is inferred (tK) and is unified with tV.
+During unification, Subst is modified to contain most general unifier
+of tK and tV. Using the modified Subst, type of e (tE) is
+finalized (normalized).
+
+.. sc:: lhs
+
 > tInfer (Let kvs e) = tInfer $ foldr (Let . (:[])) e kvs
->
-> {-
-> tInfer (Seq _ e2) = do
->     tE2 <- tInfer e2
->     return tE2
-> -}
->
+
+When a let expression has more than 1 key value assignment
+(such as ``let {x1 = v1, x2 = v2, ... } e``),
+it is converted to a let expression with only 1 key value assignment.
+And, type of the converted let expression is inferred::
+
+    let {x1 = v1, x2 = v2, ..., xN = vN} e
+    ==> let { x1 = v1 }
+            (let {x2 = v2}
+                ...
+                (let {xN = vN} e))
+
+This is possible because LIPL does not allow mutually recursive
+let expressions, and key value assignments are evaluated in sequence.
+
+.. sc:: lhs
+
 > tInfer e@(FunDef name args body) = if noDup args
 >     then
 >         do
 >             v <- newTVar
->             extendSubst (name +-> TScheme [] v)
+>             extendSubst (name +-> mkMonoType v)
 >             tF <- tInfer (Lambda args body)
 >             unify v tF
 >             s <- getSubst
@@ -272,12 +322,26 @@ them upon exit::
 >         do
 >             pos <- getSourcePos
 >             E.throwError $ Err pos ("duplicate argument: " ++ show e)
->
+
+For a function definition, parameters are checked to make sure
+they don't contain duplicates.
+Then, Subst is extended with function name bound to a new type variable.
+mkMonoType is used because function name should be instantiated
+with one type only (for recursive functions).
+Then, using parameters and function body, a lambda expression is formed
+and type of the lambda is inferred (tF).
+After unifying tF with the new type variable bound to function name (v),
+type of the function is computed by applying current Subst to
+the new type variable.
+The current Subst is extended with the function name bound to the function
+type.
+
+.. sc:: lhs
+
 > typeInfer (At _ e@(FunDef _ _ _)) = typeInfer e
 > typeInfer e@(FunDef name args body) = do
 >     t <- M.liftM tSanitize (locally (tInfer e))
 >     extendSubst (name +-> mkPolyType t)
->     --s <- getSubst
 >     return t
 >
 > typeInfer (At _ (Expr [e])) = typeInfer e
@@ -285,41 +349,38 @@ them upon exit::
 > typeInfer e = do
 >     t <- locally (tInfer e)
 >     return (tSanitize t)
->
->
-> {-
-> tInfer (Let kvs e) = tInfer $ Expr (Lambda (keys kvs) e : vals kvs)
->     where
->         keys = map fst
->         vals = map snd
-> -- Let [(x1, e1), (x2,e2), ..., (xN,eN)] expr
-> -- ==> Expr [Lambda [x1, x2, ..., xN] expr, e1, e2, ...]
-> -}
->
->
->
->
-> mkFunType [] = do
->     v <- newTVar
->     return v
->
-> mkFunType (_:xs) = do
->     v <- newTVar
->     rest <- mkFunType xs
->     return (v `fn` rest)
->
->
-> tInferList :: (MonadTI m, MonadPos m, E.MonadError Err m) => [Val] -> m [Type]
-> tInferList = mapM tInfer
->
->
+
+typeInfer uses tInfer but after inferring type of given LIPL value,
+it brings Subst to previous state (using locally combinator).
+Only when the Val is function definition, Subst is extended
+to register type of the function.
+
+liftM takes a transformation function (a function of type ``a -> b``)
+and transforms the value inside a monad.
+
+.. sc:: lhs
+
 > toType (TScheme l t) = do
 >     l' <- mapM (const newId) l
 >     return $ subst (zip l l') t
->
-> showS s = showSubst $ onlyNew s
-> onlyNew s = s `Map.difference` initialSubst
->
+
+toType instantiates a TScheme to a Type
+by replacing universally quantified type variables with
+new type variables.
+
+::
+
+    ghci> :t mapM
+    mapM :: (Monad m) => (a -> m b) -> [a] -> m [b]
+
+mapM takes a function that returns a monad
+and applies it to each element in a list.
+The list now has monads.
+Then it executes each monad in the list collecting
+values of each monad in a list.
+
+.. sc:: lhs
+
 > locally action = do
 >     s <- getSubst
 >     n <- getN
@@ -327,7 +388,13 @@ them upon exit::
 >     putSubst s
 >     putN n
 >     return result
->
+
+locally caches current state of TI monad.
+Then it executes the given action.
+And it restores cached state before returning.
+
+.. sc:: lhs
+
 > localSubst s action = do
 >     sOrig <- getSubst
 >     let cache = sOrig `Map.intersection` s -- store sOrig's types
@@ -338,60 +405,14 @@ them upon exit::
 >     let s'' = subtractMap s' ks @@ cache -- restore sOrig's types
 >     putSubst s''
 >     return result
->
-> tUpdateTVars e = do
->     let vs = getTVars e
->     vs' <- mapM (const newId) vs
->     return $ subst (zip vs vs') e
->
->
->
-> simplifyLambda lam@(Lambda [] e) = lam
-> simplifyLambda lam@(Lambda [x] e) = lam
-> simplifyLambda lam@(Lambda (x:xs) e) =
->     Lambda [x] (simplifyLambda (Lambda xs e))
-> simplifyLambda (Expr [x]) = simplifyLambda x
->
->
-> {-
-> ty input = case parseSingle input of
->     Right v -> case runTI (tInfer v) initialSubst 0 of
->         (s,i,t) -> t --tSanitize t
->     Left err -> error (show err)
->     where
->         prettySubst s = s `Map.difference` initialSubst
->
-> tyi input = case parseSingle input of
->     Right v -> case runTI (tInfer v) initialSubst 0 of
->         (s,i,t) -> putStrLn
->             $ showSubstType (prettySubst s) t -- (tSanitize t)
->     Left err -> putStrLn (show err)
->     where
->         prettySubst s = s `Map.difference` initialSubst
->         -- (s,i,t) -> putStrLn $ showSubstType (s \\ initialSubst) t
->
-> tyim input = case parseMultiple "" input of
->     Right l -> case runTI (tInferList l) initialSubst 0 of
->         (s, i, t) -> mapM_ (putStrLn . show) (map tSanitize t)
->     Left err -> putStrLn (show err)
->
-> -}
->
-> -- ti (Lambda ["x"] (Lambda ["x"] (App (App (PrimFun "+") (Ident "x")) (Ident "x"))))
->
->
-> printRunTIResult (s,i,t) = putStrLn $ show t
->
-> theta = [("X", TVar "a"), ("Y", TVar "b"), ("Z", TVar "Y")]
-> eta = [("X", TApp (TVar "f") (TVar "Y")), ("Y", TVar "Z")]
-> -- theta @@ eta = [("X",f b),("Z",Y)]
->
-> {-
-> tCheck :: Val -> Either String Type
-> tCheck v = case runTI (tInfer v) initialSubst 0 of
->     (s, i, t) -> Right t
-> -}
->
+
+localSubst extends current Subst with the given Subst, s.
+When s contains conflicting entries, original types bound to
+the conflicting entries are cached.
+After running the given action, cached types are restored.
+
+.. sc:: lhs
+
 > defaultSubst :: Subst
 > defaultSubst = toSubst [
 >     ("Int", tInt)
@@ -401,9 +422,22 @@ them upon exit::
 >     , ("Str", list tChar)
 >     ]
 > initialSubst = defaultSubst `Map.union` toSubst builtinSubst
->
+
+initialSubst has types of built-in functions (``+``, ``-``, head, ...)
+and built-in types (Int, Float, ...).
+
+.. sc:: lhs
+
 > clearSubst :: (MonadTI m) => m ()
 > clearSubst = putSubst initialSubst
->
->
->
+
+clearSubst clears current type environment by replacing it with
+initialSubst.
+
+.. sc:: lhs
+
+> showS s = showSubst $ onlyNew s
+> onlyNew s = s `Map.difference` initialSubst
+
+showS is a convenience action that converts key-type mappings
+that are not part of initialSubst to String.

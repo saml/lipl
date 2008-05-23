@@ -6,7 +6,7 @@ import qualified Data.Map as Map
 
 import LangData
 import CoreLib
-import EvalUtils
+import LangUtils
 import Utils
 import EvalMonad
 import PosMonad
