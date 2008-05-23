@@ -44,7 +44,7 @@ To define a module, one can use::
 that defines a module named ModuleName.
 ``module`` and ``where`` are keywords.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module Settings where
 
@@ -73,7 +73,7 @@ can be rewritten as::
 Note that one would not need to define g before it can be used
 (g is used before it is defined).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > sBASEDIR = ".lipl"
 > sPRELUDE = "core.lipl"

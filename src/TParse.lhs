@@ -15,7 +15,7 @@ using type parsing functions, one can write type expressions like::
 
     TApp (TApp (TConst "->") TVar "a") (TVar "b")
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module TParse where
 >
@@ -35,7 +35,7 @@ using type parsing functions, one can write type expressions like::
 tParse parses a type expression to Type.
 In case of error, exception is raised (program quits).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > lexer  = P.makeTokenParser (P.haskellStyle {
 >     P.reservedOpNames = ["->"]
@@ -63,7 +63,7 @@ after parsing.
 
 term parses what parseType parses or parenthesized expr.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > expr = P.buildExpressionParser table term <?> "expr"
 >
@@ -77,7 +77,7 @@ expr parses terms connected with ``->``::
 
     term1 -> term2 -> term3 ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseExpr = do
 >     t <- expr
@@ -88,7 +88,7 @@ parseExpr parses a type expression.
 
 Below parsers are straight forward:
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseTVar = do
 >     x <- P.letter

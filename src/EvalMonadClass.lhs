@@ -5,7 +5,7 @@ EvalMonadClass.lhs
 EvalMonadClass declares MonadEval class that provides
 actions useful for evaluation of LIPL expressions.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module EvalMonadClass where
 >

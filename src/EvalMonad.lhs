@@ -5,7 +5,7 @@ EvalMonad.lhs
 EvalMonad creates a monad, Eval, that implements MonadEval class.
 Also, EvalT, a transformer of Eval, is defined.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > {-# LANGUAGE GeneralizedNewtypeDeriving
 >     , FlexibleInstances, MultiParamTypeClasses #-}
@@ -49,7 +49,7 @@ Eval monad is defined using EvalT transformer::
 Eval monad also derives (automatically implements)
 Monad, Functor, MonadState EnvStack, and MonadEval classes.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > getVal key = do
 >     envs <- getEnvs
@@ -75,7 +75,7 @@ the EnvStack is searched from top to bottom for a Val bound to key.
     ghci> catMaybes [Nothing]
     []
 
-.. sc:: haskell
+.. sc:: lhs
 
 > getEnvFor keys = do
 >     vals <- mapM getVal keys
@@ -89,7 +89,7 @@ given list of keys::
                          -- {a = 1, b = "hi", c = 3}
     ==> {a = 1, b = "hi"}
 
-.. sc:: haskell
+.. sc:: lhs
 
 > putVal key val = do
 >     env <- getEnv
@@ -113,14 +113,14 @@ When key is already bound, it throws an exception
 updateVal, however, allows destructive update (a key can be bound
 multiple times).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > clearEnvs :: (MonadEval m) => m ()
 > clearEnvs = putEnvs emptyEnvStack
 
 clearEnvs clears the global EnvStack.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > newtype EvalT m a = EvalT {
 >     runEvalT ::  (S.StateT EnvStack m) a
@@ -170,7 +170,7 @@ In the same way, MonadReader, MonadWriter, ... actions
 can be used without explicit lift in EvalT m monad since
 EvalT derives them.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance T.MonadTrans EvalT where
 >     lift m = EvalT (T.lift m)
@@ -180,7 +180,7 @@ To function as a transformer, EvalT should implement lift function
 that turns a monadic action m to EvalT t action
 by first lifting m to t m and wrapping t m in EvalT.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (Monad m) => MonadEval (EvalT m) where
 >     getEnv = do
@@ -205,7 +205,7 @@ MonadEval actions are implemented using MonadState actions (pop and get).
 popEnv does not do anything when the EnvStack is already empty
 (nothing to pop).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (MonadTI m) => MonadTI (EvalT m) where
 >     getSubst = T.lift getSubst
@@ -218,7 +218,7 @@ popEnv does not do anything when the EnvStack is already empty
 By making EvalT m an instance of MonadTI for all m that is an instance
 of MonadTI, EvalT m can use MonadTI actions (getSubst, putSubst,...).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > {- instance (E.MonadError e m) => E.MonadError e (EvalT m) where
 >     throwError = T.lift . E.throwError

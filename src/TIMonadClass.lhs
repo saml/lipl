@@ -4,7 +4,7 @@ TIMonadClass.lhs
 
 TIMonadClass declares interface for MonadTI.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module TIMonadClass where
 >

@@ -7,7 +7,7 @@ Stack.lhs
 
 This file defines Stack module
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module Stack where
 
@@ -20,7 +20,7 @@ makes MyInt an alias of built-in type Int.
 MyInt can be used in place of Int.
 MyInt is called a type constructor, just like Int.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > type Stack a = [a]
 
@@ -49,7 +49,7 @@ tells the compiler that the function functionName has type Type.
 ``::`` is part of type annotation syntax.
 ``a :: B`` says, "a has type B".
 
-.. sc:: haskell
+.. sc:: lhs
 
 > isEmpty :: Stack a -> Bool
 
@@ -60,7 +60,7 @@ type b).
 Hence, isEmpty is a function that takes ``Stack a`` (a list of a's)
 and returns Bool (boolean).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > isEmpty = null
 
@@ -79,7 +79,7 @@ True if the list is empty, False otherwise::
 
 ``:t expr`` is GHCi command that prints type of expr.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > pop :: Stack a -> (a, Stack a)
 > pop (x:xs) = (x, xs)
@@ -124,7 +124,7 @@ because::
                    +------------ x  -------+
 
 
-.. sc:: haskell
+.. sc:: lhs
 
 > push :: a -> Stack a -> Stack a
 > push v s = v : s

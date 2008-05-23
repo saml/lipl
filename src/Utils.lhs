@@ -2,7 +2,7 @@
 Utils.lhs
 =========
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module Utils where
 
@@ -21,7 +21,7 @@ a function, empty, in ``Data.Map`` can be accessed as ``Map.empty``.
 Descriptions of each module (Map, List, ...) can be found in
 http://haskell.org/ghc/docs/latest/html/libraries/index.html
 
-.. sc:: haskell
+.. sc:: lhs
 
 > import Data.Set ((\\), union)
 
@@ -34,7 +34,7 @@ But other functions defined in ``Data.Set`` module
 should be called as ``Set.functionName`` (because Data.Set
 module was qualified as Set).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > import qualified Text.PrettyPrint.HughesPJ as PP
 > import Text.PrettyPrint.HughesPJ (
@@ -53,7 +53,7 @@ module was qualified as Set).
     ghci> getVals l
     [1,1]
 
-.. sc:: haskell
+.. sc:: lhs
 
 > allEq l = all (== True) $ zipWith (==) l (tail l)
 
@@ -64,7 +64,7 @@ allEq tests if the list l has all same elements::
     zipWith (==) ...  : [e1 == e2, e2 == e3, ..., eN-1 == eN]
     all (== True) ... : \-    are they all True ??         -/
 
-.. sc:: haskell
+.. sc:: lhs
 
 > noDup l = length l == length (List.nub l)
 
@@ -77,7 +77,7 @@ noDup tests if l has no duplicate::
 So, when length of l is same as length of ``List.nub l``, l did not have
 duplicates to begin with.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > subtractMap kv k = foldr Map.delete kv k
 
@@ -94,7 +94,7 @@ items from the Map that are mapped into keys::
         where m'' is Map.empty, ("b",2) is deleted.
     ==> Map.empty
 
-.. sc:: haskell
+.. sc:: lhs
 
 > traceM msg = if isDebugSet
 >     then
@@ -110,7 +110,7 @@ traceM can be used in a monad to print out msg::
         traceM "hello"
         ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > -- | "Foo.bar" ==> ["Foo", "bar"]
 > splitOn _ [] = []

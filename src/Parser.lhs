@@ -7,7 +7,7 @@ Parser.lhs
 
 Parser module implements parser of LIPL.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module Parser where
 >
@@ -24,7 +24,7 @@ Parser module implements parser of LIPL.
 at function wraps given Val with initialPos, which is
 (line 1, column 1).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parse input = case parseSingle input of
 >     Right v -> v
@@ -44,7 +44,7 @@ It returns ParseError in case of error.
 parseMultiple parses multiple LIPL expressions into Val.
 It also returns ParseError in case of error.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseBool = do
 >     pos <- P.getPosition
@@ -59,7 +59,7 @@ parsed boolean along with the SourcePos.
 Most other parser actions in this module
 wraps parsed Val with current SourcePos.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseIdent = (do
 >     pos <- P.getPosition
@@ -72,7 +72,7 @@ wraps parsed Val with current SourcePos.
 parseIdent parses LIPL identifiers:
 apple, app-le, apple' , app''''---__le, +, -,  ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parsePrimFun = (do
 >     (At pos (Ident ident)) <- P.try parseIdent
@@ -86,7 +86,7 @@ apple, app-le, apple' , app''''---__le, +, -,  ...
 parsePrimFun parses one of identifiers defined in builtinNames:
 +, -, div, toInt, ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseInt = (do
 >     pos <- P.getPosition
@@ -106,7 +106,7 @@ parsePrimFun parses one of identifiers defined in builtinNames:
 parseInt parses LIPL integers: 000, -000024, 235, 00234, ...
 parseFloat parses LIPL floats: 00000.000, -0000.003, 00213.23, ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseChar = (do
 >     pos <- P.getPosition
@@ -137,7 +137,7 @@ parseFloat parses LIPL floats: 00000.000, -0000.003, 00213.23, ...
 parseChar parses any single character enclosed in ``' '``
 or escaped characters: ``\n``, ``\t``, ...etc.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseStr = (do
 >     pos <- P.getPosition
@@ -149,7 +149,7 @@ or escaped characters: ``\n``, ``\t``, ...etc.
 parseStr parses LIPL strings: multi line strings
 enclosed in ``" "`` with escaped double quote (``\"``).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseList = (do
 >     pos <- P.getPosition
@@ -165,7 +165,7 @@ parseList parses LIPL lists::
 parseList does not detect heterogeneous lists although LIPL only
 allows homogeneous lists.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > getIdents [] = []
 > getIdents (At _ (Ident a) : xs) = a : getIdents xs
@@ -187,7 +187,7 @@ parseParams parses parameter list::
 
     (ident1 ident2 ident3 ... identN)
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseLambda = (do
 >     pos <- P.getPosition
@@ -202,7 +202,7 @@ parseLambda parses LIPL lambda expression::
 
     lambda (ident1 ident2 ... identN) expr
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseDef = (do
 >     pos <- P.getPosition
@@ -219,7 +219,7 @@ parseDef parses LIPL function definition::
 
     def fname (ident1 ident2 ... identN) expr
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseParenExpr = (do
 >     pos <- P.getPosition
@@ -233,7 +233,7 @@ parenthesized::
 
     (lambda (x) x), (def f (x) x), (1), (-3.324), ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseIf = (do
 >     pos <- P.getPosition
@@ -250,7 +250,7 @@ parseIf parses LIPL if expression::
 
     (if expr1 expr2 expr3)
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseLet = (do
 >     pos <- P.getPosition
@@ -290,7 +290,7 @@ parseDict parses::
     { identifer1 = expr1 , identifier2 = expr2
         , ..., identiferN = exprN}
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parsePair = (do
 >     pos <- P.getPosition
@@ -305,7 +305,7 @@ parsePair parses::
 
     (expr1, expr2)
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseToken =
 >         P.try parseIf
@@ -327,7 +327,7 @@ parsePair parses::
 parseToken parses a LIPL token, which can be a nested
 parenthesized expression.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseSingleExpr = do
 >     ws

@@ -4,7 +4,7 @@ Error.lhs
 
 Module Error defines Err type that is used in the interpreter.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module Error where
 >
@@ -24,14 +24,14 @@ Type constructor is used to construct a type (in this case type Err).
 And, data constructor is used to construct a value or data of some type.
 So, a value of type Err can be constructed using Err data constructor.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > ppErr (Err pos msg) = PP.fsep [PP.text (show pos), PP.text msg]
 
 ppErr turns a value of type Err into a value that can be pretty-printed
 (looks nice when printed).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance Show Err where
 >     show e = PP.render $ ppErr e
@@ -41,7 +41,7 @@ converted to String and printed.
 When a value of type Err is converted to String, ppErr is used
 to make the string representation look nice.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance E.Error Err where
 >     noMsg = Err initialPos "Error"

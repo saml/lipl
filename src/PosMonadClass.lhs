@@ -11,7 +11,7 @@ These actions can be used to store current source code position
 so that in case of error, the LIPL interpreter can print
 location of error.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module PosMonadClass where
 >

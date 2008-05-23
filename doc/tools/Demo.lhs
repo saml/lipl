@@ -6,7 +6,7 @@ For example::
     asdf asdf
     asdf asdf
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module Stack where
 > type Stack a = [a]
@@ -15,7 +15,7 @@ aumé III, Hal (2
 abmüller, Martin (20
 differnt
 
-.. sc:: haskell
+.. sc:: lhs
 
 > type Queue a = [a]
 > isEmpty :: Stack a -> Bool
@@ -26,4 +26,4 @@ differnt
 > push v s = v : s
 > front :: Queue a -> (a, Queue a)
 > front (x:xs) = (x, xs)
-
+> b = "bmüll"

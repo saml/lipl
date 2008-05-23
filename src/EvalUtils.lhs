@@ -4,7 +4,7 @@ EvalUtils.lhs
 
 EvaluUtils module has functions used in Evaluator.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module EvalUtils where
 >
@@ -20,7 +20,7 @@ EvaluUtils module has functions used in Evaluator.
 
 toSet converts a list to Set.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > unboundVars x = Set.toList (freeVars x)
 
@@ -35,7 +35,7 @@ unboundVars returns list of Key's that are not bound (free variables)::
 "a" is free in the first expression.
 However, it is bound in the lambda expression. So, only "b" is returned.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > freeVars (Ident a) = Set.singleton a
 >

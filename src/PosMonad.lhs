@@ -8,7 +8,7 @@ PosMonad.lhs
 PosMonad implements Pos monad and PosT monad transformer
 that provides actions declared in MonadPos interface.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > {-# LANGUAGE GeneralizedNewtypeDeriving
 >     , FlexibleInstances, MultiParamTypeClasses #-}
@@ -40,7 +40,7 @@ that provides actions declared in MonadPos interface.
 
 Pos is built using PosT.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > newtype PosT m a = PosT {
 >     runPosT :: (S.StateT P.SourcePos m) a
@@ -52,7 +52,7 @@ PosT is built using StateT SourcePos.
 PosT derives many classes so that it doesn't need to lift
 explicitly.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance T.MonadTrans PosT where
 >     lift m = PosT (T.lift m)
@@ -65,7 +65,7 @@ PosT m is an instance of MonadPos.
 And implementation of setSourcePos and getSourcePos
 is just delegation to State actions: put and get.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (MonadTI m) => MonadTI (PosT m) where
 >     getSubst = T.lift getSubst

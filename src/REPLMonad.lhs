@@ -9,7 +9,7 @@ REPLMonad defines REPL monad that supports
 useful actions: getSubst, putEnv, ...
 to build the LIPL interpreter (including read eval print loop).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > {-# LANGUAGE GeneralizedNewtypeDeriving
 >     , FlexibleInstances #-}
@@ -50,7 +50,7 @@ REPL has TI, Eval, Pos, Error, IO monad::
 
 So, in REPL, any of those actions can be used.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > rollBackOnErr action = do
 >     envs <- getEnvs

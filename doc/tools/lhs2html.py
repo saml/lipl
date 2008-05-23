@@ -1,3 +1,5 @@
+# from http://lukeplant.me.uk/blog.php?id=1107301665
+
 import sys, os.path, codecs
 from docutils import nodes, parsers
 from docutils.parsers.rst import directives

@@ -10,7 +10,7 @@ Detailed documentation about Parsec library, that is used
 in this module, can be found at:
 http://research.microsoft.com/users/daan/parsec.html
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module ParseUtils where
 >
@@ -33,7 +33,7 @@ And, identifers can include ``-`` (in Haskell, identifiers can't include
 Since liplStyle inherites most of the settings from haskellStyle,
 nested block comments (``{- -}``) are already defined.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > lexer  = P.makeTokenParser liplStyle
 
@@ -45,7 +45,7 @@ nested block comments inside ``{- -}``), identifiers
 are tokenized so that they can contain alphaNum or one of
 ``_'-``...etc.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > ws = P.whiteSpace lexer
 > mustSpaces = P.skipMany1 P.space >> ws
@@ -53,7 +53,7 @@ are tokenized so that they can contain alphaNum or one of
 ws parses zero or more white spaces.
 musteSpace parses one or more white spaces.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > identStart = P.identStart liplStyle
 > identLetter = P.identLetter liplStyle
@@ -66,7 +66,7 @@ identLetter parses 1 character that can be in an identifier
 opLetter parses 1 character that can be in an operator
 (``:!+./<=>?``...etc)
 
-.. sc:: haskell
+.. sc:: lhs
 
 > parseHeadBody headChar bodyChar = do
 >     h <- headChar
@@ -77,7 +77,7 @@ Given 2 character parsers, parseHeadBody parses
 a string that starts with one of headChar and continues with
 one of bodyChar.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > nat = P.many1 P.digit
 >

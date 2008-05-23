@@ -8,7 +8,7 @@ TIMonad.lhs
 TIMonad module implements MonadTI class.
 Type inference will use (run in) TIMonad.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies
 >     , FlexibleInstances, GeneralizedNewtypeDeriving #-}
@@ -23,7 +23,7 @@ standard.
 GHC suggests extensions to enable when it can't compile a module.
 So, one can include proper pragmas by trial and error.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module TIMonad (
 >     module TIMonadClass
@@ -34,7 +34,7 @@ TIMonad exports TIMonadClass module and TIMonad module (itself).
 So, upon importing TIMonad, one can access MonadTI (defined in TIMonadClass)
 and all top level functions defined in this module (TIMonad).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > import qualified Data.List as List
 > import qualified Data.Map as Map
@@ -89,7 +89,7 @@ One would just use State monad from mtl library:
 http://haskell.org/ghc/docs/latest/html/libraries/mtl/Control-Monad-State.html
 However, a custom monad is created for exercise.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance Monad TI where
 >     return x = TI (\s n -> (s, n, x))
@@ -153,7 +153,7 @@ puts whatever on the 3rd position of the tuple.
     ghci> runTI action nullSubst 100
     (fromList [],100,2)
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance MonadTI TI where
 >     getSubst = TI (\s n -> (s, n, s))
@@ -310,7 +310,7 @@ into ``>>``::
         action2
     ==> action1 >> action2
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance Functor TI where
 >     fmap f m = TI (\s n -> let
@@ -327,7 +327,7 @@ TI can also be a Functor: f is called on the 3rd value of the tuple
 (which is return value). Functor's interface, fmap, can be used
 to transform value inside monad.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > newTVar :: (MonadTI m) => m Type
 > newTVar = do
@@ -337,7 +337,7 @@ to transform value inside monad.
 newTVar creates a brand new type variable using newId (newId
 generates "t0", "t1", ...).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > unify t1 t2 = do
 >     s <- getSubst
@@ -396,7 +396,7 @@ In mtl (monad transformer library), following convention is used:
 
 Similar to mtl, type TIT is defined and made into TI monad transformer.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > newtype TIT m a = TIT { runTIT :: Subst -> Int -> m (Subst, Int, a) }
 
@@ -470,7 +470,7 @@ provide: putSubst, getN, put, get, ...etc.
 One can stack up more monads by using other transformers like:
 StateT, ReaderT, WriterT... to build more complicated monad.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (Monad m) => Monad (TIT m) where
 >     return x = TIT (\s n -> return (s, n, x))
@@ -494,7 +494,7 @@ return values of the function ``\s n -> ...`` are monads::
 runTI returns (Subst, Int, a) while runTIT returns m (Subst, Int, a):
 (Subst, Int, a) inside a monad, m.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (Monad m) => Functor (TIT m) where
 >     fmap f m = TIT (\s n -> do
@@ -505,7 +505,7 @@ Similarly, return values above are turned to a monad
 (a tuple in a monad) instead of
 flat tuples.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance T.MonadTrans TIT where
 >     lift m = TIT (\s n -> do
@@ -547,7 +547,7 @@ lift function::
     do                -- inside M
         lift m2Action -- this is now an action lifted onto M
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (Monad m) => MonadTI (TIT m) where
 >     getSubst = TIT (\s n -> return (s, n, s))
@@ -564,7 +564,7 @@ that is built up using TIT monad transformer::
     TIT (State String)
     can now use getSubst, putSubst, ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (T.MonadIO m) => T.MonadIO (TIT m) where
 >     liftIO = T.lift . T.liftIO
@@ -578,7 +578,7 @@ So, for TIT m, where m is an instance of MonadIO,
 all IO actions are turned into m action by using liftIO first.
 Then, the m action is lifted to TIT m action using lift function.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (E.MonadError e m) => E.MonadError e (TIT m) where
 >     throwError = T.lift . E.throwError
@@ -601,7 +601,7 @@ For TIT m, throwError is implemented so that error ridden m a
 (returned by call of throwError) is lifted to TIT m.
 catchError runs m. In case of error, handler h is called.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (R.MonadReader r m) => R.MonadReader r (TIT m) where
 >     ask = T.lift R.ask

@@ -12,7 +12,7 @@ So, in another module::
     g = func2 -- also fine because ModuleName exports these.
     h = func3 -- is not fine because ModuleName hides func3.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module LangData ( Val (..)
 >     , Env, emptyEnvStack, emptyEnv, EnvStack, showEnv, showEnvs
@@ -23,7 +23,7 @@ So, in another module::
 So, LangData module exports ``Val (..)``, Env, emptyEnvStack, ...etc.
 ``Val (..)`` means all data constructors of type Val are exported too.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > import qualified Text.PrettyPrint.HughesPJ as PP
 > import Text.PrettyPrint.HughesPJ ( (<>), (<+>), ($$), ($+$) )
@@ -43,7 +43,7 @@ Key, KeyVal, KeyValList are type synonyms for convenience.
 initialPos is default source position used in the interpreter
 ``(line 1, column 1)``.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > ppKeyVal (k, v) = ppVal (Ident k)
 >     <+> PP.text "="
@@ -67,7 +67,7 @@ ppKeyValList prints::
     as
     {a = 1, b = 2, c = "hello"}
 
-.. sc:: haskell
+.. sc:: lhs
 
 > type Env = Map.Map Key Val
 > type EnvStack = Stack Env
@@ -76,7 +76,7 @@ ppKeyValList prints::
 
 EnvStack is a Stack of (hence a list of) Env (or Map.Map Key Val).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > showEnv env = show $ ppEnv env
 > showEnvs envs = PP.render
@@ -88,7 +88,7 @@ EnvStack is a Stack of (hence a list of) Env (or Map.Map Key Val).
 
 Above funcitons all facilitate pretty printing of Env, EnvStack, and Val.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > type Name = String
 > type Params = [Name]
@@ -104,7 +104,7 @@ Above creates an ADT of type TypeCon that can be
 constructed using DataCon1, DataCon2, ...etc.
 Haskell ADT's are sum of product types.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > data Val =
 >     Null
@@ -174,14 +174,14 @@ of one field is easy::
 Deriving clause (deriving (Ord, Eq)) makes values of type Val
 to be comparable (can use ``==``, ``>``, ... operators on Val).
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance Show Val where show = PP.render . ppVal
 
 By making Val an instance of Show class, values of type Val
 can be converted to String and printed.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > ppVal Null = PP.text "Null"
 > ppVal (At _ e) = ppVal e
@@ -221,7 +221,7 @@ can be converted to String and printed.
 
 ppVal is used to pretty print values of type Val.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > toStr [] = Str ""
 > toStr (Char c:xs) = let Str xs' = toStr xs

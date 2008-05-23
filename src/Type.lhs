@@ -8,7 +8,7 @@ Type.lhs
 Type module defines useful functions (such as unification)
 for type inference and a way to represent types.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > module Type where
 >
@@ -39,7 +39,7 @@ For example, ``Int -> [Char]`` can be represented as::
 Type derives Eq and Ord class so that values of type Type can
 be compared.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance Show Type where
 >     show = PP.render . ppType
@@ -73,7 +73,7 @@ So, it can insert parenthesis like ``(a) -> b`` when a is a function.
 Of course, a would get expended to something like: ``(x -> y) -> b``
 when a were of type ``x -> y``.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > isFun (TApp (TApp (TConst "->") _) _) = True
 > isFun _ = False
@@ -104,7 +104,7 @@ And, it actually makes substitution for each varI with tI::
     a -> Int -> b -> Char
     ==> t0 -> Int -> t1 -> Char
 
-.. sc:: haskell
+.. sc:: lhs
 
 > tEq t1 t2 = tSanitize t1 == tSanitize t2
 
@@ -118,7 +118,7 @@ Using tSanitize, it is possible to compare equality of 2 type expressions::
     ==> t0 -> t1 == t0 -> t1
     ==> True
 
-.. sc:: haskell
+.. sc:: lhs
 
 > subst dict t@(TVar v) = case lookup v dict of
 >     Just v' -> TVar v'
@@ -129,7 +129,7 @@ Using tSanitize, it is possible to compare equality of 2 type expressions::
 subst actually replaces all type variables in the given type expression
 according to the association list.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > tUnit = TConst "()"
 > tChar = TConst "Char"
@@ -143,7 +143,7 @@ according to the association list.
 
 Above are short hands for built-in type constants: Char, Int, ...
 
-.. sc:: haskell
+.. sc:: lhs
 
 > a `fn` b = TApp (TApp tArrow a) b
 
@@ -163,7 +163,7 @@ parenthesis can turn an operator to a function::
     ==> 1 `add` 2
     ==> 3
 
-.. sc:: haskell
+.. sc:: lhs
 
 > list = TApp tList
 >
@@ -172,7 +172,7 @@ parenthesis can turn an operator to a function::
 list and pair are helper functions (like fn function) to create
 list-of types and pair types.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > -- type abstraction
 > -- ((TScheme [x,y] ([y] -> x)) Int Char) ==> [Char] -> Int
@@ -213,7 +213,7 @@ Using TScheme, type of id can be represented as::
 During type instantiation, TScheme can tell the type variable "a"
 can be instantiated again.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > type Subst = Map.Map Id TScheme
 >
@@ -226,7 +226,7 @@ can be instantiated again.
 Subst is a Map of Id and TScheme.
 It stores which type variable has which type.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > nullSubst = Map.empty
 >
@@ -242,7 +242,7 @@ mkPolyType creates a TScheme whose type variables can be instantiated
 multiple times.
 tv function used in mkPolyType returns a list of type variables in a type.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > (+->) :: Id -> TScheme -> Subst
 > v +-> ts = Map.fromList [(v, ts)]
@@ -250,7 +250,7 @@ tv function used in mkPolyType returns a list of type variables in a type.
 ``a +-> b`` builds a singleton Subst where type variable a is
 mapped into type (scheme) b.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > fromIdType = map (\(k,v) -> (k, mkPolyType v))
 >
@@ -263,7 +263,7 @@ is polytype (type variables can be instantiated more than once).
 And toSubst converts ``[(Id, Type)]`` to Subst
 such that each Type becomes polytype.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > class Types t where
 >     apply :: Subst -> t -> t
@@ -279,7 +279,7 @@ apply
 tv
     takes a type and returns all type variables in it.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance Types Type where
 >     apply s v@(TVar u) = case Map.lookup u s of
@@ -296,7 +296,7 @@ Type is an instance of Types.
 So, one can apply a Subst to a Type, and get all type variables
 from a Type.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance (Types a) => Types [a] where
 >     apply s = map (apply s)
@@ -304,7 +304,7 @@ from a Type.
 
 A list of Types is also Types.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > instance Types TScheme where
 >     apply s (TScheme l e) = TScheme l $ apply (s `subtractMap` l) e
@@ -312,7 +312,7 @@ A list of Types is also Types.
 
 TScheme is also Types.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > s1 @@ s2 = Map.union s2 s1
 
@@ -332,7 +332,7 @@ s2 has precedence::
 In case s2 maps type variable a to Int and s1 maps type variable a to Char,
 ``s1 @@ s2`` maps type variable a to Int.
 
-.. sc:: haskell
+.. sc:: lhs
 
 > mgu (TApp f1 a1) (TApp f2 a2) = do
 >     s1 <- mgu f1 f2
