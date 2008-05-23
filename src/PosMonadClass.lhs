@@ -5,7 +5,11 @@ PosMonadClass.lhs
 .. sectnum::
 .. contents::
 
-PosMonadClass provides MonadPos class (interface).
+PosMonadClass provides MonadPos class (interface):
+setSourcePos and getSourcePos.
+These actions can be used to store current source code position
+so that in case of error, the LIPL interpreter can print
+location of error.
 
 .. sc:: haskell
 
