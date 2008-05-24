@@ -27,6 +27,7 @@ to build the LIPL interpreter (including read eval print loop).
 > import Error
 > import TCheck
 > import PosMonad
+> import LangData (emptyEnvStack, initialPos)
 >
 > newtype REPL a = REPL {
 >     runREPL :: TIT (EvalT (PosT (E.ErrorT Err IO))) a
@@ -70,4 +71,13 @@ Envs, Subst, Int, SourcePos, ...
 and executes the given action.
 In case of error, cached state is restored and the error
 re-thrown.
+
+.. sc:: lhs
+
+> run action = E.runErrorT (S.runStateT (runPosT (S.runStateT
+>     (runEvalT (runTIT (runREPL action) initialSubst 0)) emptyEnvStack))
+>     initialPos)
+
+run takes a REPL action and executes it, unwrapping all monad transformers,
+leaving IO monad, which is at the core of REPL monad.
 
