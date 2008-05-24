@@ -250,8 +250,7 @@ does.
 
 > parseAndEval input = case parseSingle input of
 >     Left err -> do
->         let pos = P.errorPos err
->         E.throwError $ Err pos (show err)
+>         E.throwError $ Default (show err)
 >     Right val -> do
 >         t <- typeInfer val
 >         println ("type: " ++ show t)
@@ -259,8 +258,7 @@ does.
 >
 > parseAndEvalMultiple fn input = case parseMultiple fn input of
 >     Left err -> do
->         pos <- getSourcePos
->         E.throwError $ Err pos (show err)
+>         E.throwError $ Default (show err)
 >     Right vals -> do
 >         M.mapM (\val -> (do
 >             t <- typeInfer val

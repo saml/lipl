@@ -19,17 +19,20 @@ Module Error defines Err type that is used in the interpreter.
 > import LangData
 >
 > type ErrMsg = String
-> data Err = Err P.SourcePos ErrMsg
+> data Err = Err P.SourcePos ErrMsg | Default ErrMsg
 
 Err in ``data Err`` is a type constructor. Err after ``=`` is
 data constructor.
 Type constructor is used to construct a type (in this case type Err).
 And, data constructor is used to construct a value or data of some type.
 So, a value of type Err can be constructed using Err data constructor.
+Default is another data constructor that can be used to create
+a value of type Err.
 
 .. sc:: lhs
 
 > ppErr (Err pos msg) = PP.fsep [PP.text (show pos), PP.text msg]
+> ppErr (Default msg) = PP.text msg
 
 ppErr turns a value of type Err into a value that can be pretty-printed
 (looks nice when printed).
@@ -47,8 +50,8 @@ to make the string representation look nice.
 .. sc:: lhs
 
 > instance E.Error Err where
->     noMsg = Err initialPos "Error"
->     strMsg = Err initialPos
+>     noMsg = Default "Error"
+>     strMsg = Default
 
 By making Err an instance of Error class, Err can be used
 wherever an instance of Error class can be used.
