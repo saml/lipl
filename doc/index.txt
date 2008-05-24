@@ -18,17 +18,71 @@ CS731 Software Development Practicum
 About
 =====
 
+This is a term project for cs731, offered in Spring 2008 semester.
 An interpreter of LIPL, a tiny functional programming language,
 is implemented in Haskell programming language.
+Objective of the project is to learn about
+software development using functional programming style
+and Haskell programming language.
 
+Obtaining the Project
+=====================
+
+The project can be obtained from: http://www.lipl.googlepages.com/lipl.zip
+
+Otherwise, you can check out the project
+from svn repository using an svn client.
+If you don't have an svn client,
+`TortoiseSVN <http://tortoisesvn.tigris.org/>`_ is recommended for
+Windows.
+
+::
+
+    svn co http://svn2.assembla.com/svn/cs731/lipl/trunk lipl
+
+will check out latest version of LIPL interpreter to the directory
+called``lipl``.
+
+Project Structure
+=================
+
+When you unzip the release or check out from the svn repository,
+you should have the following directory structure::
+
+    lipl/
+        doc/
+        src/
+        lib/
+
+- ``lipl`` is project root.
+- ``doc`` contains documentations.
+- ``src`` contains Haskell source code for the interpreter.
+- ``lib`` contains libraries written in LIPL.
 
 Installation and Running
 ========================
 
+Steps
+-----
+
+To install LIPL interpreter, you need to follow the following steps:
+
+#. Compile the project (using Cabal__ or GHC__).
+#. Add the directory containing the compiled binary
+   to PATH environment variable (or, move the binary to
+   a directory included in PATH environment variable).
+#. Copy ``lib/core.lipl`` to a directory where the interpreter
+   can find:
+   - any directory listed in LIPLPATH environment variable
+   - ``~/.lipl`` directory
+
+__ `Using Cabal`_
+__ `Manual Build`_
+
 Quick Start
 -----------
 
-If you already have GHC and Cabal on your computer, you can quickly build
+If you already have GHC_ and Cabal_ on your computer, you can quickly build
 and run the LIPL interpreter with following steps
 (``*nix`` environment assumed)::
 
@@ -39,10 +93,10 @@ and run the LIPL interpreter with following steps
     shell> mkdir ~/.lipl
     shell> cp /usr/local/share/Lipl-0.1/lib/core.lipl ~/.lipl
     shell> lipl #assuming /usr/local/bin is in PATH
-    lipl> (+ 1 2)
+    LIPL> (+ 1 2)
     type: Int
     3
-    lipl> :q
+    LIPL> :q
     bye
     shell>
 
@@ -50,7 +104,12 @@ Requirements
 ------------
 
 To build and install the interpreter, a Haskell compiler is required.
-Optionally, Cabal_ can be used to build and install the interpreter.
+Since the project is a Cabal package,
+Cabal can be used to build and install the interpreter.
+Cabal is included in GHC version 6.8.* , so no separate installation
+is needed.
+
+.. _Cabal: http://www.haskell.org/cabal
 
 Haskell Compiler
 ----------------
@@ -86,47 +145,6 @@ runghc
 
 runhaskell
   same as runghc
-
-Cabal
------
-
-The project is a `Cabal <http://www.haskell.org/cabal/>`_ package.
-Cabal is included in GHC version 6.8.* .
-
-Source Code for LIPL Interpreter
---------------------------------
-
-If you have release zip file, you can skip to the next section.
-
-Otherwise, you can check out source code for LIPL interpreter
-from the svn repository using an svn client.
-
-If you don't have an svn client,
-`TortoiseSVN <http://tortoisesvn.tigris.org/>`_ is recommended for
-Windows.
-
-::
-
-    svn co http://svn2.assembla.com/svn/cs731/lipl/trunk lipl
-
-will check out latest version of LIPL interpreter to the directory
-called``lipl``.
-
-Project Structure
------------------
-
-When you unzip the release or check out from the svn repository,
-you should have the following directory structure::
-
-    lipl/
-        doc/
-        src/
-        lib/
-
-- ``lipl`` is project root.
-- ``doc`` contains documentations.
-- ``src`` contains Haskell source code for the interpreter.
-- ``lib`` contains libraries written in LIPL.
 
 Build
 -----
@@ -174,7 +192,7 @@ You can move lipl.exe to ``C:\lipl\bin\lipl.exe`` if you want.
 Installation
 ------------
 
-Assuming lipl.exe is under ``C:\lipl\bin`` add
+Assuming lipl.exe is under ``C:\lipl\bin``, add
 ``C:\lipl\bin`` to PATH environment variable so that you can start
 the interpreter from any directory.
 
@@ -182,13 +200,13 @@ The interpreter tries to find and load ``core.lipl`` (prelude library)
 that implements various useful functions.
 It searches ``core.lipl`` in following order:
 
-1. current working directory
-1. directories listed in LIPLPATH environment variable
-1. in ``.lipl`` directory under HOME directory (``C:\Users\yourid``
-or ``C:\Documents and Settings\yourid``)
+#. current working directory
+#. directories listed in LIPLPATH environment variable
+#. in ``.lipl`` directory under HOME directory (``C:\Users\yourid``
+   or ``C:\Documents and Settings\yourid``)
 
 core.lipl is can be found under lib directory, which is under
-project root.
+project root (``lipl/lib/core.lipl``).
 So, copy it to a directory of your choice.
 Then set LIPLPATH environment variable to the directory where you
 copied core.lipl to.
@@ -203,12 +221,12 @@ After finishing installation, you can type the following to start
 LIPL REPL (read eval print loop)::
 
     shell> lipl
-    lipl>
+    LIPL>
 
-At the ``lipl>`` prompt, you can type LIPL expressions to evaluate them.
+At the ``LIPL>`` prompt, you can type LIPL expressions to evaluate them.
 Or, you can type ``:?`` to print help menu::
 
-    lipl> :?
+    LIPL> :?
     :? help
     :s current type environment
     :q quit
@@ -224,12 +242,12 @@ Or, you can type ``:?`` to print help menu::
   quits the repl
 
 ``:e``
-  prints bound identifiers and their values.
-  Builtin functions are not shown.
+  prints identifiers and their values in the current environment.
+  Built-in functions are not shown.
 
 ``:c``
   cleans all bound identifiers.
-  You are left with builtin functions only.
+  You are left with built-in functions only.
 
 ``:l file.lipl``
   loads file.lipl . file.lipl should not define a function
@@ -237,6 +255,14 @@ Or, you can type ``:?`` to print help menu::
 
 ``:r file.lipl``
   cleans the environment first then loads file.lipl .
+
+
+LIPL Reference
+==============
+
+LIPL language reference is a separate document,
+located at: `here <langref.html>`_.
+
 
 Project Timeline
 ================
@@ -290,12 +316,12 @@ Parse
 -----
 
 During parse phase, abstract syntax tree is built from
-string representation of a LIPL program.
+string representation of a LIPL expression.
 The abstract syntax tree is represented with Haskell data structures.
 For example, ``(+ 1 2)`` is parsed into
 ``At pos (Expr [PrimFun "+", Int 1, Int 2])``
 where pos is source position (file name, line number, and column number)
-that the expression ``(+ 1 2)`` is located, and At, Expr, PrimFun, and Int
+where the expression ``(+ 1 2)`` is located, and At, Expr, PrimFun, and Int
 are Haskell data constructors.
 
 By recording source position with actual abstract syntax tree,
@@ -339,11 +365,25 @@ Evaluation is done inside a monad simulating a stack of
 environments: key value pairs where key is identifiers appearing
 in expressions and value is value bound to them.
 
+Monad Transformer Library
+-------------------------
+
+Custom monads and monad transformers are written along with
+typeclasses to construct a monad (REPL monad)
+that can perform IO actions, type inference, evaulation, and error reporting.
+Type inference monad and evaluation monad (custom monads) are written
+in a similar fashion as mtl monads are written, so that
+those monads can be combined with
+IO monad and error reporting monad (from base and mtl libraries that come with
+GHC) to construct the REPL monad used in the interpreter.
+
+
 Source
 ======
 
 Source code of the interpreter is written in literate Haskell
 style.
+Algorithms in the source code can be buggy and comments faulty.
 
 #. `Settings.lhs`_
 #. `Stack.lhs`_
@@ -390,15 +430,6 @@ style.
 .. _`CoreLib.lhs`: CoreLib.html
 .. _`MainUtils.lhs`: MainUtils.html
 .. _`Main.lhs`: Main.html
-
-
-
-
-LIPL Reference
-==============
-
-LIPL language reference is a separate document,
-located at: `here <langref.html>`_.
 
 References
 ==========
@@ -451,5 +482,3 @@ these resources were used:
 - Tang, Jonathan. Write Yourself a Scheme in 48 Hours: A Haskell Tutorial.
   Retrieved January 1, 2008 from
   http://halogen.note.amherst.edu/~jdtang/scheme_in_48/tutorial/overview.html
-
-

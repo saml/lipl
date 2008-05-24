@@ -8,7 +8,7 @@ Description: A small functional language interpreter.
 Data-Files: lib/core.lipl, lib/calc.lipl
 
 Executable: lipl
-Main-is: Main.hs
+Main-is: Main.lhs
 Hs-Source-Dirs: src
 Build-Depends: base, parsec, containers, filepath
     , pretty, mtl, directory
