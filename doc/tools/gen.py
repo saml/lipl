@@ -6,6 +6,8 @@ import lhs2html
 #proj/doc/tools
 base_dir = os.path.dirname(__file__)
 
+proj_dir = os.path.abspath(os.path.join(base_dir, os.pardir, os.pardir))
+
 # proj/src
 src_dir = os.path.abspath(os.path.join(base_dir, os.pardir, os.pardir, 'src'))
 
@@ -19,6 +21,13 @@ def want_to(f):
     if ext == '.lhs' and name[0].isupper():
         return True
     return False
+
+def source_code(fn, kind='.. sc:: scheme'):
+    f = open(fn)
+    newf = [kind, '\n\n']
+    for x in f:
+        newf.append(''.join(['    ', x]))
+    return ''.join(newf)
 
 
 def main(argv=None):
@@ -54,6 +63,15 @@ argv[2] = dst_dir (where to put generated htmls. optional)'''
     shutil.copy(style, doc_dir)
     print 'copying', print_style
     shutil.copy(print_style, doc_dir)
+
+
+    core = os.path.abspath(os.path.join(proj_dir, 'lib', 'core.lipl'))
+    calc = os.path.abspath(os.path.join(proj_dir, 'lib', 'calc.lipl'))
+    calcf = source_code(calc)
+    coref = source_code(core)
+
+    lhs2html.render_str(coref, 'core.html', dst_dir)
+    lhs2html.render_str(calcf, 'calc.html', dst_dir)
 
 if __name__ == "__main__":
     main()

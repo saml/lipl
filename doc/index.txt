@@ -196,7 +196,7 @@ Assuming lipl.exe is under ``C:\lipl\bin``, add
 ``C:\lipl\bin`` to PATH environment variable so that you can start
 the interpreter from any directory.
 
-The interpreter tries to find and load ``core.lipl`` (prelude library)
+The interpreter tries to find and load `core.lipl`_ (prelude library)
 that implements various useful functions.
 It searches ``core.lipl`` in following order:
 
@@ -264,7 +264,7 @@ LIPL tutorial is a separate document.
 It can be reached at: `this link <tutorial.html>`_.
 It explains how a stack based postfix calculator can be implemented
 in LIPL.
-Source code of the calculator can be found in ``lib/calc.lipl``.
+Source code of the calculator, `calc.lipl`_, can be found in ``lib/calc.lipl``.
 
 LIPL Reference
 ==============
@@ -439,6 +439,14 @@ Algorithms in the source code can be buggy and comments faulty.
 .. _`CoreLib.lhs`: CoreLib.html
 .. _`MainUtils.lhs`: MainUtils.html
 .. _`Main.lhs`: Main.html
+
+- `core.lipl`_ is a prelude library written in LIPL that is loaded
+  when the interpreter starts.
+- `calc.lipl`_ is a postfix calculator written in LIPL.
+  `LIPL Tutorial`_ is based on this.
+
+.. _`core.lipl`: core.html
+.. _`calc.lipl`: calc.html
 
 Document Generation
 ===================

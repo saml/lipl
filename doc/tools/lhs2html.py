@@ -82,6 +82,33 @@ def dictEncode(d):
         result[k] = tounicode(v)
     return result
 
+TEMPLATE = u'''
+<?xml version="1.0" encoding="%(encoding)s" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=%(encoding)s" />
+    <title>%(title)s -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+%(html_body)s
+</div>
+</body>
+'''
+
+def render_str(s, fn, dst):
+    name = os.path.join(dst, fn)
+    print "writing", name
+    f = codecs.open(fn, encoding=default_enc)
+    output = pub(s)
+    output.setdefault('encoding', default_enc)
+    outf = codecs.open(name, 'w', encoding=default_enc)
+    outf.write(TEMPLATE  % output)
+    outf.close()
+
 def main(argv=None):
     '''argv[1] = file name to convert
 argv[1] = destination to put the converted html (optional)'''
@@ -109,27 +136,12 @@ argv[1] = destination to put the converted html (optional)'''
             new.append(l)
     f.close()
 
-    template = u'''
-<?xml version="1.0" encoding="%(encoding)s" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=%(encoding)s" />
-    <title>%(title)s -- LIPL</title>
-    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
-    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
-</head>
-<body>
-<div id="wrap">
-%(html_body)s
-</div>
-</body>
-'''
+
     output = pub(''.join(new))
     output.setdefault('encoding', default_enc)
     outf = codecs.open(name, 'w', encoding=default_enc)
     #output = dictEncode(output)
-    outf.write(template
+    outf.write(TEMPLATE
 
             % output)
     outf.close()
