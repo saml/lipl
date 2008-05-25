@@ -43,10 +43,10 @@ argv[2] = dst_dir (where to put generated htmls. optional)'''
                 f = os.path.join(root, x)
                 lhs2html.main(['', f, dst_dir])
 
-    files = [os.path.join(doc_dir, 'index.txt')
-        , os.path.join(doc_dir, 'langref.txt')]
+    files = ['index.txt', 'langref.txt', 'tutorial.txt']
     for x in files:
-        lhs2html.main(['', x, dst_dir])
+        f = os.path.join(doc_dir, x)
+        lhs2html.main(['', f, dst_dir])
 
     style = os.path.abspath(os.path.join(doc_dir, 'tools', 'style.css'))
     print 'copying', style

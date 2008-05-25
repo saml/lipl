@@ -1,53 +1,84 @@
 
 (def parse (x) (words x))
 
-(def eval (st l) (if (isEmpty l)
-    (if (== 1 (length st))
-        (head st)
-        (seq (println "not well formed") 0))
-    (let {x = (head l), xs = (tail l)}
-        (if (|| (== "-" x)
-            (|| (== "+" x)
-            (|| (== "*" x)
-                (== "/" x))))
-            (if (< (length st) 2)
-                (seq (println "not well formed. to many ops") 0)
-                (let {arg1 = (head (tail st)), arg2 = (head st)
-                        , st' = (tail (tail st))}
-                    (if (== "+" x)
-                        (eval (cons (+ arg1 arg2) st') xs)
-                    (if (== "-" x)
-                        (eval (cons (- arg1 arg2) st') xs)
-                    (if (== "*" x)
-                        (eval (cons (* arg1 arg2) st') xs)
-                        (eval (cons (div arg1 arg2) st') xs))))))
-            (eval (cons (readInt x) st) xs)))))
+(def printStack ()
+    (map (lambda (x) ((compose println show) x))))
 
+(def swapOp (st)
+    (if (< (length st) 2)
+        (seq (println "not enough elements to swap") st)
+        (let {a = (head st), tl = (tail st)
+            , b = (head tl), st' = (tail tl)}
+            (cons b (cons a st')))))
+
+(def dupOp (st)
+    (if (isEmpty st)
+        (seq (println "no element to dup") [])
+        (cons (head st) st)))
+
+(def popOp (st)
+    (if (isEmpty st)
+        (seq (println "no element to pop") [])
+        (tail st)))
+
+(def arithOp (op st)
+    (if (< (length st) 2)
+        (seq (println "don't have 2 elements for arithmetic") st)
+        (let {tl = (tail st), st' = (tail tl)
+            , arg1 = (head tl), arg2 = (head st)}
+            (cons (op arg1 arg2) st'))))
+(def clearOp (st)
+    (if (isEmpty st)
+        (seq (println "nothing to clear") [])
+        (seq (printStack st) [])))
+
+(def isInt (s) (all isNum s))
+
+(def eval (st l) (if (isEmpty l)
+    st
+    (let {x = (head l), xs = (tail l)}
+        (if (== "-" x) (eval (arithOp - st) xs)
+        (if (== "+" x) (eval (arithOp + st) xs)
+        (if (== "*" x) (eval (arithOp * st) xs)
+        (if (== "/" x) (eval (arithOp div st) xs)
+        (if (== "swap" x)
+            (eval (swapOp st) xs)
+        (if (== "dup" x)
+            (eval (dupOp st) xs)
+        (if (== "pop" x)
+            (eval (popOp st) xs)
+        (if (== "." x)
+            (eval (clearOp st) xs)
+        (if (isInt x)
+            (eval (cons (readInt x) st) xs)
+            (seq (println "only integers are supported") st)))))))))))))
 
 (def prompt (x) (seq (print x) getLine))
 
-(def repl ()
+(def repl (st)
     (let { input = (prompt "CALC> ") }
         (if (== ":q" input)
             ()
-            (seq
-                (println
-                    (concat "==> " (show (eval [] (parse input)))))
-                repl))))
+        (if (== ":s" input)
+            (seq (printStack st) (repl st))
+            (repl (eval st (parse input)))))))
 
 (def msg ()
-    "Welcome to Postfix Calculator
-
-- :q quits
-- only calculates well formed postfix arithmetics expressions
-  involving integers, +, -, *, /
-")
+    "
+Welcome to Stack Based Postfix Calculator
+- :q        quits
+- :s        shows stack content
+- .         clears stack
+- swap      swaps top 2 elements from the stack
+- dup       duplicates top element from the stack
+- pop       pops top element from the stack
+- only calculates postfix arithmetic expressions
+  involving Integers, +, -, *, /")
 
 (def main ()
     (seq
         (println msg)
-        repl))
+        (repl [])))
 
 (main)
-
 

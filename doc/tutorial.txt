@@ -1,0 +1,390 @@
+=============
+LIPL Tutorial
+=============
+
+------------------------------
+Stack Based Postfix Calculator
+------------------------------
+
+.. sectnum::
+.. contents::
+
+About
+=====
+
+Welcome to LIPL : a Little Idiotic Programming Language.
+LIPL is a tiny functional language.
+LIPL expressions are parenthesized prefix expressions.
+So, LIPL looks similar to LISP language.
+
+In this tutorial, a stack based postfix calculator is implemented.
+
+Note
+====
+
+``LIPL>`` is LIPL prompt.
+
+::
+
+    LIPL> "hello"
+    type: [Char]
+    "hello"
+
+means to start the LIPL interpreter, type "hello" in the LIPL
+prompt, and to press enter key.
+Then it should print type of "hello" (list of Char) and value of "hello"
+("hello" itself).
+
+All functions that are used here without defining them first
+are from ``core.lipl`` (standard library).
+Or, they are built-in function in LIPL.
+
+Helper Functions
+================
+
+Open a text editor and save it as ``calc.lipl``.
+Type this:
+
+.. sc:: scheme
+
+    (def parse (x) (words x))
+
+This defines a function called parse that just calls function words.
+In detail::
+
+    (def parse (x) (words x))
+      |    |    |       +----- applies words function on x
+      |    |    +------------- parameter this function takes
+      |    +------------------ name of this function
+      +----------------------- def is LIPL keyword
+
+``(words x)`` will split x on whitespaces::
+
+    LIPL> (words "I\t like\n  postfix so much.")
+    type: [[Char]]
+    ["I", "like", "postfix", "so", "much."]
+
+Type this in ``calc.lipl``:
+
+.. sc:: scheme
+
+    (def printStack ()
+        (map (lambda (x) ((compose println show) x))))
+
+printStack does not take explicit argument.
+However, function map is given only 1 parameter
+when it takes 2 arguments::
+
+    (map (lambda (x) ((compose println show) x)))
+         \--- first parameter -----------------/
+              map needs 1 more parameter.
+
+map takes a function and a list and applies the function
+on each element in the list::
+
+    (map f [a,b,c])
+    ==> [(f a), (f b), (f c)]
+
+And, ``(lambda (x) ((compose println show) x))``
+is a function that takes 1 argument and prints it to the console::
+
+    (lambda (x) ((compose println show) x))
+       |     |             +---------------- same as (println (show x))
+       |     +------------------------------ the only parameter
+       +------------------------------------ keyword
+
+lambda keyword is used to create a nameless function.
+Above nameless function takes a parameter and applies
+a function ``(compose println show)`` to it.
+``((compose println show) x)`` is same as ``(println (show x))``.
+``(show x)`` converts x to string representation and println
+prints a string to the console.
+
+So, printStack takes a list and prints each element to the console.
+
+.. sc:: scheme
+
+
+    (def swapOp (st)
+        (if (< (length st) 2)
+            (seq (println "not enough elements to swap") st)
+            (let {a = (head st), tl = (tail st)
+                , b = (head tl), st' = (tail tl)}
+                (cons b (cons a st')))))
+
+swapOp takes 2 elements from a list (st)
+using head and tail.
+Before it takes 2 elements, it checks if the list
+has at least 2 elements by checking its length with length function::
+
+    (< (length st) 2)
+     |     |       +--- 2
+     |     +----------- length of st
+     +----------------- is it less than?
+
+When the list st has length less than 2, then
+"not enough elements to swap" is printed and the list returned::
+
+    (seq (println "...") st)
+      |         |         +-- and st
+      |         +------------ println
+      +---------------------- sequentially evaluate
+
+seq function takes 2 parameters and evaluates the first prameter.
+Then it evaluates the 2nd parameter and returns the result.
+
+head gives first element from a list.
+tail gives a list excluding the first element::
+
+    LIPL> (head "abc")
+    type: Char
+    'a'
+    LIPL> (tail "abc")
+    type: [Char]
+    "bc"
+
+Since strings are list of characters, head and tail can be applied
+to strings, too.
+
+::
+
+    (let {a = (head st), tl = (tail st)
+        , b = (head tl), st' = (tail tl)}
+        (cons b (cons a st')))
+
+let expression introduces variables (a, tl, b, st')
+and evaluates the body expression ``(cons b (cons a st'))``
+that contains those variables introduced.
+
+cons takes an element and a list and puts the element
+to the front of the list::
+
+    LIPL> (cons 1 [2,3])
+    type: [Int]
+    [1, 2, 3]
+    LIPL> (cons 1 ['b'])
+    types do not unify
+
+One can't cons 1 (an integer) to a list of characters because
+list has to be homogeneous (elements have all same type).
+
+So, swapOp takes 2 elements from the list
+and cons the front element first then the 2nd element
+(essentially swapping them)::
+
+    (swapOp "abc")
+    ==> "bac"
+    (swapOp [1,2])
+    ==> [2,1]
+
+.. sc:: scheme
+
+
+    (def dupOp (st)
+        (if (isEmpty st)
+            (seq (println "no element to dup") [])
+            (cons (head st) st)))
+
+dupOp also takes a list and checks if it is empty.
+If the list is empty, it prints a message and returns an empty list.
+Otherwise, it conses head of the list (essentially duplicating the head)::
+
+    (dupOp "abc")
+    ==> "aabc"
+
+.. sc:: scheme
+
+
+    (def popOp (st)
+        (if (isEmpty st)
+            (seq (println "no element to pop") [])
+            (tail st)))
+
+popOp returns tail of the list when the list is not empty (essentially
+popping head of the list)::
+
+    (popOp "abc")
+    ==> "bc"
+
+.. sc:: scheme
+
+
+    (def arithOp (op st)
+        (if (< (length st) 2)
+            (seq (println "don't have 2 elements for arithmetic") st)
+            (let {tl = (tail st), st' = (tail tl)
+                , arg1 = (head tl), arg2 = (head st)}
+                (cons (op arg1 arg2) st'))))
+
+arithOp takes a binary arithmetic function (op)
+and a list.
+It first checks if the list has at least 2 elements.
+Then it pops the 2 elements and calls them arg2 and arg1
+(head of the list is called arg2 and the 2nd element is called arg1).
+And it applies the binary function to arg1 and arg2
+and conses the result to the list with arg1 and arg2 popped::
+
+    (arithOp + [1,2])
+    ==> [3]
+    (arithOp - [1,2,10])
+    ==> [-1, 10]
+
+.. sc:: scheme
+
+
+    (def clearOp (st)
+        (if (isEmpty st)
+            (seq (println "nothing to clear") [])
+            (seq (printStack st) [])))
+
+clearOp prints content of the list and returns an empty list
+if the list is not empty. If the list is empty, a message is printed
+and an empty list is returned.
+
+.. sc:: scheme
+
+
+    (def isInt (s) (all isNum s))
+
+isInt checks if a string is made of all numeric characters
+('0', '1', '2', ..., '9').
+isNum checks if a character is numeric.
+all takes a function and a list and checks if all elements in the
+list satisfies the given function::
+
+    (all (lambda (x) (< x 2)) [0, 1, 2])
+    ==> False because of the last element, 2.
+    (all isNum "00002342")
+    ==> True
+
+Evaluator
+=========
+
+.. sc:: scheme
+
+
+    (def eval (st l) (if (isEmpty l)
+        st
+        (let {x = (head l), xs = (tail l)}
+            (if (== "-" x) (eval (arithOp - st) xs)
+            (if (== "+" x) (eval (arithOp + st) xs)
+            (if (== "*" x) (eval (arithOp * st) xs)
+            (if (== "/" x) (eval (arithOp div st) xs)
+            (if (== "swap" x)
+                (eval (swapOp st) xs)
+            (if (== "dup" x)
+                (eval (dupOp st) xs)
+            (if (== "pop" x)
+                (eval (popOp st) xs)
+            (if (== "." x)
+                (eval (clearOp st) xs)
+            (if (isInt x)
+                (eval (cons (readInt x) st) xs)
+                (seq (println "only integers are supported") st)))))))))))))
+
+eval takes 2 lists (st and l).
+When l is empty, it returns st.
+st is stack (or list) of integers. l is a list of inputs (stack commands).
+When the first input (head l) is arithmetic operator,
+arithOp is called accordingly.
+If it is swap, dup, pop, or ., appropriate function is called
+that swaps, duplicates, pops, or clears the stack.
+Since all helper functions take a stack (list) and returns
+a stack, result of the helper function (a stack)
+is passed to recursive eval function on the remaining argument (xs).
+eval function itself returns the stack when input is all consumed.
+
+REPL
+====
+
+.. sc:: scheme
+
+
+    (def prompt (x) (seq (print x) getLine))
+
+prompt takes a string and prints it. Then it gets user input.
+
+.. sc:: scheme
+
+
+    (def repl (st)
+        (let { input = (prompt "CALC> ") }
+            (if (== ":q" input)
+                ()
+            (if (== ":s" input)
+                (seq (printStack st) (repl st))
+                (repl (eval st (parse input)))))))
+
+repl gets user input from the prompt, "CALC> ".
+When the input is ":q", it returns null value.
+If the input is ":s", it prints stack content and recurses
+(prompt is shown again waiting for user input).
+Otherwise, it calls eval function after parsing user input.
+repl takes a stack of integers and feed it to eval function, which
+returns modified stack, which can be used in repl again for recursion::
+
+    st --> repl --> st --> eval -+
+    ^                            |
+    |                            |
+    +----------------------------+
+
+.. sc:: scheme
+
+
+    (def msg ()
+        "
+    Welcome to Stack Based Postfix Calculator
+    - :q        quits
+    - :s        shows stack content
+    - .         clears stack
+    - swap      swaps top 2 elements from the stack
+    - dup       duplicates top element from the stack
+    - pop       pops top element from the stack
+    - only calculates postfix arithmetic expressions
+      involving Integers, +, -, *, /")
+
+msg is just a string literal that is shown when the calculator starts.
+
+.. sc:: scheme
+
+
+    (def main ()
+        (seq
+            (println msg)
+            (repl [])))
+
+main function prints msg (welcome message) and
+starts repl on empty stack. repl will not quit until user enters ":q".
+
+.. sc:: scheme
+
+
+    (main)
+
+Lastly, main function itself is called.
+
+Run
+===
+
+With all functions defined and main function called at the bottom
+of calc.lipl file, we can run calc.lipl through LIPL interpreter::
+
+    shell> lipl calc.lipl
+    core.lipl loaded
+
+    Welcome to Stack Based Postfix Calculator
+    ...
+    CALC> 1 2
+    CALC> :s
+    2
+    1
+    CALC> swap .
+    1
+    2
+    CALC> :s
+    CALC> 2 dup * dup * dup * .
+    256
+    CALC> :q
+    shell>
+
+

@@ -22,6 +22,7 @@ MonadIO and/or MonadPos.
 
 > module CoreLib where
 >
+> import qualified Control.Monad as M
 > import qualified Control.Monad.Error as E
 > import qualified Control.Monad.Trans as T
 > import qualified Data.Map as Map
@@ -161,6 +162,8 @@ in the list::
 
 .. sc:: lhs
 
+> compareOp :: (E.MonadError Err m, MonadPos m) =>
+>     (Ordering -> Bool) -> [Val] -> m Val
 > compareOp op [Int a, Int b] = return $ Bool $ op (compare a b)
 > compareOp op [Float a, Float b] = return $ Bool $ op (compare a b)
 > compareOp op [Bool a, Bool b] = return $ Bool $ op (compare a b)
@@ -169,6 +172,14 @@ in the list::
 > compareOp op [List l, a@(Str _)] = compareOp op [toStr l, a]
 > compareOp op [Char a, Char b] = return $ Bool $ op (compare a b)
 > compareOp op [List a, List b] = return $ Bool $ op (compare a b)
+> compareOp op [Pair a1 a2, Pair b1 b2] = do
+>     ab1 <- compareOp op [a1, b1]
+>     ab2 <- compareOp op [a2, b2]
+>     return $ Bool (unpackBool ab1 && unpackBool ab2)
+> compareOp _ [a,b] = do
+>     pos <- getSourcePos
+>     E.throwError $ Err pos ("can't compare these two: "
+>         ++ show a ++ ", " ++ show b)
 
 compareOp compares two LIPL values.
 To compare equality, for example,
@@ -180,22 +191,28 @@ would be False.
 
 .. sc:: lhs
 
-> compareEq :: (Monad m) => [Val] -> m Val
+> --compareEq :: (Monad m) => [Val] -> m Val
+> compareEq :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareEq = compareOp (isIn [EQ])
 >
-> compareNeq :: (Monad m) => [Val] -> m Val
+> --compareNeq :: (Monad m) => [Val] -> m Val
+> compareNeq :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareNeq = compareOp (isIn [LT, GT])
 >
-> compareLt :: (Monad m) => [Val] -> m Val
+> --compareLt :: (Monad m) => [Val] -> m Val
+> compareLt :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareLt = compareOp (isIn [LT])
 >
-> compareLte :: (Monad m) => [Val] -> m Val
+> --compareLte :: (Monad m) => [Val] -> m Val
+> compareLte :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareLte = compareOp (isIn [LT, EQ])
 >
-> compareGt :: (Monad m) => [Val] -> m Val
+> --compareGt :: (Monad m) => [Val] -> m Val
+> compareGt :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareGt = compareOp (isIn [GT])
 >
-> compareGte :: (Monad m) => [Val] -> m Val
+> --compareGte :: (Monad m) => [Val] -> m Val
+> compareGte :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareGte = compareOp (isIn [GT, EQ])
 
 ``compare*`` functions above tests whether

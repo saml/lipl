@@ -358,6 +358,8 @@ to register type of the function.
 liftM takes a transformation function (a function of type ``a -> b``)
 and transforms the value inside a monad.
 
+
+
 .. sc:: lhs
 
 > toType (TScheme l t) = do

@@ -6,7 +6,12 @@ LIPL Language Reference
 .. contents::
 
 LIPL is a tiny functional programming language.
-It follows eager evaluation order.
+It has following characteristics:
+
+- follows eager evaluation order.
+- expressions are typed.
+- types of expressions are inferred using Hindley-Milner style
+  type inference algorithm.
 
 Syntax
 ======
@@ -21,11 +26,11 @@ EBNF [#ebnf]_ is used to describe syntax of LIPL.
 Briefly, EBNF syntax is described here:
 
 - ``{e}`` : zero or more occurrence of e.
-  For example, ``{42}`` accepts "", "42", "4242", "424242", ...
+  For example, ``{"42"}`` accepts "", "42", "4242", "424242", ...
 - ``[e]`` : zero or one occurrence of e.
-  For example, ``[42]`` accepts "" and "42".
+  For example, ``["42"]`` accepts "" and "42".
 - ``(e1 | e2)`` : one occurrence of e1 or e2.
-  For example, ``(1|2)`` accepts "1" and "2".
+  For example, ``("1"|"2")`` accepts "1" and "2".
 - ``(* e *)`` : e is ignored. comments.
 - ``'e'`` or ``"e"`` : literal e.
   For example, ``("apple"|"orange")`` accepts "apple" and "orange".
@@ -209,6 +214,10 @@ A brief description and a few examples of each token is given below:
 
   - ``(+ 1 2)``, ``(== ( + 1 0.34) (- 1 (+ -1 3)  ) )``, ...
 
+Since an expression is a token, the term *token* is used
+sometimes to refer to *expression*. And the word *expression*
+is used to refer to *token*.
+
 Special Expressions
 -------------------
 
@@ -235,14 +244,12 @@ Syntax of those special expressions are given here.
     lambda     = '(' ws 'lambda' spaces
                          ident-list spaces token ws ')'
 
-    seq        = '(' ws 'seq' spaces token spaces token ws ')'
-
 Brief descriptions of each special expression are given below:
 
 ``fun-def``
   Function definition expression starts with keyword ``def``
   followed by an identifier, parameters, and function body.
-  Parameters are separated by whitespace and enclosed in ``()``.
+  Parameters are separated by whitespaces and enclosed in ``()``.
 
   - ``(def id (x) x)`` is a function definition expression
     where the only parameter is x, and function body is x.
@@ -254,6 +261,9 @@ Brief descriptions of each special expression are given below:
   starts with keyword ``if`` followed by three tokens.
 
   - ``(if (== 1 2) "same" False)``
+    (Note that this if-expression will fail to type check.
+    Hence, its value is undefined.
+    But it is syntactically valid).
 
 ``let``
   Let expression starts with keyword ``let`` followed by
@@ -265,18 +275,12 @@ Brief descriptions of each special expression are given below:
 
 ``lambda``
   Lambda expression starts with keyword ``lambda`` followed
-  by bound variables in the lambda expression
-  and body of the lambda expression.
-  Bound variables are separated by whitespace and enclosed in ``()``.
+  by a list of identifiers
+  and a token.
+  The list of identifiers is enclosed in ``( )``
+  and identifiers in the list are separated by whitespace.
 
-  - ``(lambda (x y) (+ x y))`` has bound variables x and y.
-
-``seq``
-  Seq expression starts with keyword ``seq`` followed by
-  two tokens.
-
-  - ``(seq 1 (concat "hello" " world"))``
-
+  - ``(lambda (x y) (+ x y))``
 
 Semantics
 =========
@@ -307,7 +311,7 @@ Str
   List of Chars.
 
 ``()``
-  Null.
+  Unit type.
 
 Type Functions
 ~~~~~~~~~~~~~~
@@ -316,18 +320,43 @@ Type functions can be used to build complex types.
 
 ``->``
   Arrow function takes 2 types and builds a function type.
-  For example ``Int -> Char`` is a function whose domain is
+  For example ``Int -> Char`` is type of a function whose domain is
   Int and range is Char.
 
 ``[]``
   List function takes a type and builds a list type.
-  For example, ``[Char]`` is a list of Chars.
+  For example, ``[Char]`` is a list of Chars and ``[(Int -> Str)]``
+  is a list of functions of type ``Int -> Str``.
   Str and ``[Char]`` refer to the same type. They are interchangeable.
 
 ``(,)``
   Pair function takes 2 types and builds a pair type.
   For example, ``(Int, Str)`` is a pair of Int and Str.
 
+Type Expressions
+~~~~~~~~~~~~~~~~
+
+A LIPL expression does not contain type expressions.
+However, type expressions are used to tell users type of
+a LIPL token (their purpose is to communicate with users).
+So, user would never write type expressions. But he/she understands
+meaning of various type expressions.
+For example, in LIPL REPL::
+
+    shell> lipl
+    LIPL> 1
+    type: Int
+
+user understands type of 1 is Int.
+
+::
+
+    LIPL> (def f (x) (cons (lambda (y) x) []))
+    type: t0 -> [t1 -> t0]
+
+user understands type of f is a function that takes any type t0
+and returns a list of functions that take values of
+type t1 and returns values of type t0.
 
 Notation
 --------
@@ -338,7 +367,7 @@ The following expression is used to describe semantics of LIPL tokens.
 
     Eval[[e1 :: t1]] {x1 = v1, x2 = v2} = e2
 
-e1 is syntactically valid LIPL token.
+e1 is a syntactically valid LIPL token.
 e2 is the meaning that e1 denotes.
 For example, ``Eval[[(+ 1 2)]] = 1 + 2`` can be interpreted as:
 the LIPL expression ``(+ 1 2)`` means addition of two integers 1 and 2.
@@ -351,14 +380,14 @@ an environment where ``a`` is bound to 1.
 
 ``:: t1`` is optional. It denotes type of preceding expression.
 For example, ``Eval[[(+ 1 2) :: Int]] = 1 + 2``
-tells ``(+ 1 2)`` is of type Int.
+tells that ``(+ 1 2)`` has type Int.
 ``::`` can also be used inside an environment.
 For example, ``Eval[[a]] {a = 1 :: Int} = 1``
-specifically writes the value ``a`` is bound to, 1, is of type Int.
+specifically writes the value ``a`` is bound to, 1, has type Int.
 
 ``_|_`` (bottom) is used to denote an undefined value.
 For example, ``Eval[[(+ 'a' 'b')]] = _|_`` says that
-``(+ 'a' 'b')`` is undefined.
+the value ``(+ 'a' 'b')`` denotes is undefined.
 
 Literals
 --------
@@ -383,16 +412,18 @@ and ``False`` evaluates to false::
     Eval[[True]] = true
     Eval[[False]] = not true, false.
 
-A list is ordered collection (sequence) of tokens of same type
+A list is an ordered collection (sequence) of tokens of same type
 (homogeneous)::
 
-    Eval[[ [1,2] :: [Int] ]] = list of integers 1 and 2.
+    Eval[[ [1,2] ]] = list of integers 1 and 2.
     Eval[[ ["hello", "world"] :: [[Char]] ]] = list of
         strings, which are in turn list of characters,
         "hello" and "world".
+    Eval[[ [1, 1.0] ]] = _|_ because 1 has type Int
+                                 and 1.0 has type Float
 
 
-In general, ``Eval[[ [v1,v2,...,vN] :: t1 ]] =``
+In general, ``Eval[[ [v1,v2,...,vN] :: [t1] ]]`` =
 list of values, v1, v2, ..., vN, of type t1.
 
 A pair is a pair of two tokens::
@@ -401,7 +432,7 @@ A pair is a pair of two tokens::
     Eval[[((1,2), True)]] = a pair of a pair (1,2) and
         boolean True.
 
-In general, ``Eval[[(v1 :: t1, v2 :: t2)]] =``
+In general, ``Eval[[(v1 :: t1, v2 :: t2)]]`` =
 a pair of a value of type t1 and a value of type t2.
 
 Identifiers
@@ -419,14 +450,14 @@ Expressions
 
 An expression ``(f p1 p2 ... pN)`` denotes an application of function
 ``f`` to parameters ``p1 p2 ... pN``,
-unless the expression is a special expression.
+unless the expression is a special expression (if, let, def, lambda, ...).
 The first token in a normal expression should evaluate to a function.
 Otherwise, value of the expression is undefined::
 
     Eval[[(f p1 p2)]] {f = +} = p1 + p2
     Eval[[(1 2 3)]] = _|_
 
-Function application (normal expressions) is actually curryed.
+Function application (normal expressions) is curried.
 So, ``(f p1 p2 ... pN)`` is same as ``(...((f p1) p2) ... pN)``
 where ``(f p1)``, ``((f p1) p2)``, ..., ``(...((f p1) p2) ... pi)``
 are functions taking ``N - 1``, ``N - 2``, and ``N - i`` parameters
@@ -474,7 +505,8 @@ is undefined because ``v1`` is bound to an expression that uses
 
     Eval[[(let {x = y, y = a} e)]] = _|_
 
-Also, behavior of recursive definition is undefined.
+Also, behavior of recursive definition (both mutual and self recursion)
+is undefined.
 For example, ``(let {f = (g 1), g = (f 1)} (f (g 1)))``
 is undefined::
 
@@ -490,15 +522,6 @@ are bound to actual parameters taken::
 
     Eval[[((lambda (x) e) a)]] = Eval[[e]] {x = a}
 
-Seq
-~~~
-
-``(seq e1 e2)`` evaluates e1 and then e2 sequentially.
-Value of the expression is the value of e2::
-
-    Eval[[(seq e1 e2)]] = Eval[[e2]]
-
-e1 is used as side-effect of e2.
 
 Builtin Functions
 =================
@@ -510,17 +533,18 @@ Numeric Functions
 
 ``+``, ``-``, ``*``, ``div`` calculates addition, subtraction,
 multiplication, and division of two integers, respectively.
-Their type is ``Int -> Int -> Int``::
+Their type is ``Int -> Int -> Int`` (taking 2 integers
+and returning an integer)::
 
     Eval[[(+ (* 1 (div 1 2)) (- 2 3))]]
-        = 1 * 1 / 2 + 2 - 3 = -1
+        = 1 * (1 / 2) + 2 - 3 = -1
 
 ``+.``, ``-.``, ``*.``, ``/`` calculates addition, subtraction,
 multiplication, and division of two floats, respectively.
 Their type is ``Float -> Float -> Float``::
 
-    Eval[[(+ (* 1.0 (/ 1.0 2.0)) (- 2.0 3.0))]]
-        = 1.0 * 1.0 / 2.0 + 2.0 - 3.0
+    Eval[[(+. (*. 1.0 (/ 1.0 2.0)) (-. 2.0 3.0))]]
+        = 1.0 * (1.0 / 2.0) + 2.0 - 3.0
         = -0.5
 
 ``toInt`` converts a Float to an Int by taking floor of the Float::
@@ -550,6 +574,7 @@ same type and tells if they are same, not same, one is less than the other,
 one is less than or equal to the other, one is greater than the other,
 one is greater than or equal to the other, respectively.
 If these functions are applied to values of different type,
+or complicated values (such as functions),
 result is undefined::
 
     Eval[[(== 1 'a')]] = _|_
@@ -557,6 +582,7 @@ result is undefined::
     Eval[[(!= True (== 1 2)]] = True
     Eval[[(<= 1 1.0)]] = _|_
     Eval[[(> (toInt -0.1) -1)]] = False
+    Eval[[(== (lambda (x) x) (lambda (x) x))]] = _|_
 
 List Functions
 --------------
@@ -584,15 +610,22 @@ tail
 
 cons
   ``(cons x [x1, x2, ..., xN])`` is ``[x, x1, x2, ..., xN]``.
-  It constructs a list by adding the first parameter to the second
-  parameter::
+  It constructs a list by adding the first parameter to the front
+  of the given list. Type of the element to be added
+  should match type of elements of the list::
 
     Eval[[(cons 'a' "bc")]] = "abc"
     Eval[[(cons 'a' [1])]] = _|_
 
 isEmpty
-  ``(isEmpty l)`` is ``True`` if ``l`` is ``[]`` or ``""``.
-  When ``l`` is not a list nor a string, it is undefined.
+  ``(isEmpty l)`` is True if ``l`` is ``[]`` or ``""``.
+  When ``l`` is not a list nor a string, it is undefined::
+
+    Eval[[(isEmpty [])]] = true
+    Eval[[(isEmpty "")]] = true
+    Eval[[(isEmpty [1])]] = false
+    Eval[[(isEmpty 'a')]] = _|_
+
 
 Miscellaneous Functions
 -----------------------
@@ -601,19 +634,28 @@ show
   ``(show x)`` is string representation of x::
 
     Eval[[(show 1)]] = "1"
+    Eval[[(show [1,2])]] = "[1,2]"
 
 println
   ``(println s)`` prints string ``s`` and newline to stdout.
-  When ``s`` is not a string, it is undefined.
+  When ``s`` is not a string, it is undefined::
+
+    Eval[[(println (show s))]] = string representation of s
+                                 is printed to stdout
+    Eval[[(println [])]] = empty line printed because
+                           [] is same as ""
+    Eval[[(println 1]] = _|_
 
 print
   ``(print s)`` prints the string ``s`` to stdout.
   When ``s`` is not a string, it is undefined.
 
 getLine
-  ``getLine`` reads a line from stdin.
-  ``(let {x = getLine} (println x))`` reads a line from stdin
-  and prints it to stdout.
+  ``getLine`` reads a line from stdin::
+
+    Eval[[(let {x = getLine} (println x))]] =
+        reads a line from stdin
+        and prints it to stdout.
 
 readInt
   converts a string to integer. If the string does not represent
@@ -638,32 +680,35 @@ Examples
 ========
 
 A few examples are given below.
-Some of the functions are from core library , which is
+Some of the functions are from core library (``core.lipl``), which is
 a collection of useful functions written in LIPL.
 
 ::
 
     (def compose (f g x) (f (g x)))
+      |     |       |       +------- function body
+      |     |       +--------------- function arguments
+      |     +----------------------- function name
+      +----------------------------- keyword def
 
 defines a function called ``compose``
 that takes two unary functions, f and g, and a value.
 ``compose`` function will make a composition of functions f and g.
 For example, ``(compose (lambda (x) (+ x 1)) (lambda (x) (- x 1)))``
-is numeric identity function that takes a number and returns it
+is integer identity function that takes an integer and returns it
 (x - 1 + 1 == x).
-
 
 ::
 
-    lipl> ((compose (lambda (x) (+ x 1)) (lambda (x) (- x 1))) 42)
+    LIPL> ((compose (lambda (x) (+ x 1)) (lambda (x) (- x 1))) 42)
     42
 
-Type the above in the interpreter and you'll see the result
+Type the above in the interpreter and you'll see the result.
 
 ::
 
     (def map (f l) (if (isEmpty l)
-                       l
+                       []
                        (let {x = (head l), xs = (tail l)}
                             (cons (f x) (map f xs)))))
 
@@ -672,7 +717,7 @@ a unary function, f, and a list. ``(map f [v1,v2, ...,vN])``
 applies f on each element in the list:
 ``[(f v1), (f v2), ..., (f vN)]``.
 It is defined recursively.
-First, when l is an empty list, it just returns l itself.
+First, when l is an empty list, it just returns empty list.
 Otherwise, it constructs a list whose first element is
 result of application of f to the first element of l.
 And the rest of the elements are evaluated by recursively
@@ -686,14 +731,13 @@ applying ``map`` to the rest of l.
                                  (cons x (concat xs l2)))))
 
 defines a function ``concat`` that takes two lists and concatenates
-them. Since strings are converted into lists,
-``(concat "abcd" [1,2,3])`` returns ``['a', 'b', 'c', 'd', 1, 2, 3]``.
+them.
 
 ::
 
     (def filter (f l)
          (if (isEmpty l)
-             l
+             []
              (let {
                     x  = (head l)
                   , xs = (filter f (tail l))
@@ -712,7 +756,7 @@ For example ``(filter (lambda (a) (<= a 2)) [1,2,3])`` is
 ::
 
     (def quick-sort (l) (if (isEmpty l)
-        l
+        []
         (let {     x       = (head l)
                  , xs      = (tail l)
                  , lesser  = (filter (lambda (a) (< a x))  xs)
@@ -759,22 +803,5 @@ Evaluation of ``(twice twice succ 0)`` is::
     ==> (succ (succ 2))
     ==> (succ 3)
     ==> 4
-
-Future of LIPL
-==============
-
-Since LIPL is dynamically typed, programming errors can not be caught
-early on: one has to run the program to see the errors.
-So, static type checking and inference is planned for the future.
-
-Also, LIPL lacks pattern matching making function definitions lengthy.
-For example, ``filter`` function, which is around 10 lines of code,
-can be shortened with pattern matching::
-
-    (def filter (f []) [])             # matches empty list
-    (def filter (f (cons x xs))        # matches non empty list
-         (let { rest = (filter f xs) }
-              (if (f x) (cons x rest)
-                        rest)))
 
 

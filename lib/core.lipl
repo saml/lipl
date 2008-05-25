@@ -1,12 +1,4 @@
 # Prelude
-{-
-ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
-(def f (x) (((lambda (x) (let { x = (lambda (x) (+ x 1)) } x)) x) x))
-(def f (x) (((lambda (x) ((lambda (x) x) (lambda (x) (+ x 1)))) x) x))
-(lambda (x) ((let { x = (lambda (x) ((let {x = (lambda (x y) (+ x y)) } x) x 1)) } x) x))
-# f x = ((\x -> let x = (\x -> x + 1) in x) x) x
-# let f x = ((\x -> (let x = \x -> x + 1 in x)) x) x in f
--}
 
 (def seq (a b) (let { x = a } b)) # execute a then b
 
@@ -54,6 +46,26 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
             , q = (head qs) }
             (cons (f x q) qs))))
 
+(def take (n l)
+    (if (<= n 0)
+        []
+    (if (isEmpty l)
+        []
+        (let { x = (head l), xs = (tail l) }
+            (cons x (take (- n 1) xs))))))
+
+
+(def drop (n l)
+    (if (<= n 0)
+        l
+    (if (isEmpty l)
+        []
+        (drop (- n 1) (tail l)))))
+
+
+(def splitAt (n l) ((take n l), (drop n l)))
+
+
 (def map (f l) (if (isEmpty l)
                    []
                    (let {x = (head l), xs = (tail l)}
@@ -67,9 +79,23 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
 (def concatMap (f)
     (foldr (compose concat f) []))
 
+(def insertAt (n x xs)
+    (let { sp = (splitAt n xs), before = (fst sp), after = (snd sp) }
+        (concat before (cons x after))))
+
+(def range (n)
+    (if (< n 0)
+        []
+        (concat (range (- n 1)) [n])))
+
+(def iterateN (f x n)
+    (if (<= n 0)
+        []
+        (cons x (iterateN f (f x) (- n 1)))))
+
 (def filter (f l)
      (if (isEmpty l)
-         l
+         []
          (let {
                 x  = (head l)
               , xs = (filter f (tail l))
@@ -222,7 +248,7 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
 
 # simple quick sort
 (def quick-sort (l) (if (isEmpty l) # is the list empty?
-    l
+    []
     (let {     x       = (head l)
              , xs      = (tail l)
              , lesser  = (filter (lambda (a) (< a x))  xs)
@@ -232,31 +258,7 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
                          (cons x []))
                  (quick-sort greater)))))
 
-# (let { x = (head l), xs = (tail l) } (filter (lambda (a) (< a x))  xs))
-(def filter_ (f l)
-     (if (isEmpty l)
-         l
-         (if (f (head l))
-             (cons (head l) (filter f (tail l)))
-             (filter f (tail l)))))
-
-(def qs (l)
-     (if (isEmpty l)
-         l
-         (concat
-                (concat
-                       (qs
-                            (filter (lambda (a) (< a (head l))) (tail l)))
-                       (cons (head l) []))
-                (qs (filter (lambda (a) (>= a (head l))) (tail l))))))
-
-
-
-{-
-(def trace (msg x) (if (println msg) x x))
-
-(def t (x) (if (printVarLn x) x x))
--}
+(def trace (msg x) (seq (println msg) x))
 
 (def fac (n) (if (<= n 1) 1 (* n (fac (- n 1)))))
 
@@ -308,20 +310,12 @@ ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
 -}
 
 {-
-(def test (l)
-     ((lambda (l)
-            (let {   x = (head l)
-                  , xs = (filter (lambda (a) (< a x)) l)} xs)) l))
-
-(def test1 (l) (let {
-                x = (head l)
-                , xs = (map (lambda (a) (+ a x)) (tail l))
-                }
-                (cons x xs)))
+ev "((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)"
+(def f (x) (((lambda (x) (let { x = (lambda (x) (+ x 1)) } x)) x) x))
+(def f (x) (((lambda (x) ((lambda (x) x) (lambda (x) (+ x 1)))) x) x))
+(lambda (x) ((let { x = (lambda (x) ((let {x = (lambda (x y) (+ x y)) } x) x 1)) } x) x))
+# f x = ((\x -> let x = (\x -> x + 1) in x) x) x
+# let f x = ((\x -> (let x = \x -> x + 1 in x)) x) x in f
 -}
 
 
-{-
-(def hello (s) (println (concat "hello
-                         world" (show s))))
--}

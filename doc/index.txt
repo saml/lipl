@@ -257,11 +257,20 @@ Or, you can type ``:?`` to print help menu::
   cleans the environment first then loads file.lipl .
 
 
+LIPL Tutorial
+=============
+
+LIPL tutorial is a separate document.
+It can be reached at `this link <tutorial.html>`_.
+It explains how a stack based postfix calculator can be implemented
+in LIPL.
+Source code of the calculator can be found in ``lib/calc.lipl``.
+
 LIPL Reference
 ==============
 
 LIPL language reference is a separate document,
-located at: `here <langref.html>`_.
+located `here <langref.html>`_.
 
 
 Project Timeline
@@ -372,7 +381,7 @@ Custom monads and monad transformers are written along with
 typeclasses to construct a monad (REPL monad)
 that can perform IO actions, type inference, evaulation, and error reporting.
 Type inference monad and evaluation monad (custom monads) are written
-in a similar fashion as mtl monads are written, so that
+in similar fashion as mtl monads are written, so that
 those monads can be combined with
 IO monad and error reporting monad (from base and mtl libraries that come with
 GHC) to construct the REPL monad used in the interpreter.
