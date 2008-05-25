@@ -261,7 +261,7 @@ LIPL Tutorial
 =============
 
 LIPL tutorial is a separate document.
-It can be reached at `this link <tutorial.html>`_.
+It can be reached at: `this link <tutorial.html>`_.
 It explains how a stack based postfix calculator can be implemented
 in LIPL.
 Source code of the calculator can be found in ``lib/calc.lipl``.
@@ -439,6 +439,22 @@ Algorithms in the source code can be buggy and comments faulty.
 .. _`CoreLib.lhs`: CoreLib.html
 .. _`MainUtils.lhs`: MainUtils.html
 .. _`Main.lhs`: Main.html
+
+Document Generation
+===================
+
+To generate HTML documents (including this),
+go to ``lipl/doc/tools`` directory
+and run gen.py::
+
+    shell> cd doc/tools
+    shell> python gen.py
+
+Python_, Docutils_, and Pygments_ are needed to run gen.py.
+
+.. _Python: http://www.python.org/
+.. _Docutils: http://docutils.sourceforge.net/
+.. _Pygments: http://pygments.org/
 
 References
 ==========

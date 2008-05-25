@@ -1,0 +1,11 @@
+* {
+    color: #000; !important
+    background-color: #fff; !important
+    width: auto; !important
+}
+a {
+    text-decoration: none; !important
+}
+#wrap {
+    width: auto; !important
+}

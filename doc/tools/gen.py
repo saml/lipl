@@ -49,8 +49,11 @@ argv[2] = dst_dir (where to put generated htmls. optional)'''
         lhs2html.main(['', f, dst_dir])
 
     style = os.path.abspath(os.path.join(doc_dir, 'tools', 'style.css'))
+    print_style = os.path.abspath(os.path.join(doc_dir, 'tools', 'print.css'))
     print 'copying', style
     shutil.copy(style, doc_dir)
+    print 'copying', print_style
+    shutil.copy(print_style, doc_dir)
 
 if __name__ == "__main__":
     main()

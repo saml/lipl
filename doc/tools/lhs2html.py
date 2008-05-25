@@ -116,10 +116,13 @@ argv[1] = destination to put the converted html (optional)'''
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=%(encoding)s" />
     <title>%(title)s -- LIPL</title>
-    <link href="style.css" rel="stylesheet" type="text/css" media="all"/>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
 </head>
 <body>
+<div id="wrap">
 %(html_body)s
+</div>
 </body>
 '''
     output = pub(''.join(new))
