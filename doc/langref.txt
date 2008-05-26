@@ -116,10 +116,10 @@ in LIPL are defined here.
 
     number  = integer | float
 
-    char    = "'" ? any single character ? "'"
+    char    = "'" (* any single character that is not ' *) "'"
     (* ' should be escaped as in: '\'' *)
 
-    string  = '"' ? sequence of characters that are not " ? '"'
+    string  = '"' (* sequence of characters that are not " *) '"'
     (* " should be escaped as in: "\"" *)
 
     list    = '[' ws ']'

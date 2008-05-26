@@ -168,9 +168,7 @@ For an expression with single value, evaluate the value.
 >         fun@(Prim name remaining args) -> do
 >             arg1 <- eval $ firstArg
 >             evalPrim name arg1 restArgs args remaining
->         otherwise -> do
->             pos <- getSourcePos
->             E.throwError $ Err pos ("not function: " ++ show f)
+>         otherwise -> throwErr ("not function: " ++ show f)
 
 For expressions that has at least two values,
 evaluate the first value.
@@ -178,7 +176,7 @@ When it is a function (built-in or not), evaluate the second value
 (1st argument to the function).
 And curry (return a function object that has the argument
 applied).
-If the first value is not a function, throwError.
+If the first value is not a function, throw error.
 
 .. sc:: lhs
 
@@ -248,9 +246,7 @@ bound to the key.
 >             withEnv env'(eval body)
 >         else
 >             return $ Fun env' rst body
-> apply e _ = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("not function: " ++ show e)
+> apply e _ = throwErr ("not function: " ++ show e)
 
 apply applies 1 argument to the given function object.
 When no more argument is left to apply, body of the function object is called.

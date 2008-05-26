@@ -31,6 +31,7 @@ that provides actions declared in MonadPos interface.
 > import PosMonadClass
 > import TIMonad
 > import EvalMonad
+> import Error
 >
 > newtype Pos a = Pos {
 >     runPos :: PosT I.Identity a
@@ -85,4 +86,5 @@ is just delegation to State actions: put and get.
 Above instances enable magic lift.
 In PostT m monad, one can use setSourcePos, getSubst, getEnv...etc
 without explicit lift.
+
 

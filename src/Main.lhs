@@ -11,6 +11,8 @@ Main module is LIPL interpreter entry point.
 
 > module Main where
 >
+> import qualified Control.Monad.Error as E
+>
 > import System.IO
 > import System.Environment (getArgs)
 > import MainUtils
@@ -21,10 +23,10 @@ Main module is LIPL interpreter entry point.
 >     fn <- getArgs
 >     if length fn > 0
 >         then do
->             run (do
+>             run ((do
 >                 loadPrelude
 >                 loadFile (fn !! 0)
->                 return ())
+>                 return ()) `E.catchError` (\e -> println (show e)))
 >         else do
 >             hSetBuffering stdout LineBuffering
 >             putStrLn "Starting REPL..."

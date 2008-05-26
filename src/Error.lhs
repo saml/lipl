@@ -22,7 +22,7 @@ Module Error defines Err type that is used in the interpreter.
 > data Err = Err P.SourcePos ErrMsg | Default ErrMsg
 
 Err in ``data Err`` is a type constructor. Err after ``=`` is
-data constructor.
+a data constructor.
 Type constructor is used to construct a type (in this case type Err).
 And, data constructor is used to construct a value or data of some type.
 So, a value of type Err can be constructed using Err data constructor.
@@ -61,7 +61,7 @@ Typeclass
 
 Haskell has notion of typeclasses.
 
-A typeclass can be declared::
+A typeclass can be declared using ``class`` keyword::
 
     class Foo a where
         bar :: a -> Int
@@ -77,13 +77,18 @@ All instances of Foo should implement those 2 functions::
         foo (Bar _ s) = s
 
 Bar is an instance of Foo and it implements bar and foo.
-A value of type Bar can be used anywhere where class Foo is expected::
+A value of type Bar can be used anywhere where
+a value of an instance of class Foo is expected::
 
     func :: (Foo a) => a -> (String, Int)
     func a = (foo a, bar a)
 
     func (Bar 1 "1")
     ==> ("1", 1)
+
+``func :: (Foo a) => a -> (String, Int)``
+means that the function func has type ``a -> (String, Int)``
+where a is an instance of Foo (an instance of a class is a type).
 
 If there were another instance of Foo, it could be passed to func::
 

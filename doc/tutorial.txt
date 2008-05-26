@@ -243,11 +243,13 @@ and an empty list is returned.
 
 .. sc:: scheme
 
-
-    (def isInt (s) (all isNum s))
+    (def isInt (s)
+        (if (isEmpty s)
+            False
+            (all isNum (if (== '-' (head s)) (tail s) s))))
 
 isInt checks if a string is made of all numeric characters
-('0', '1', '2', ..., '9').
+('0', '1', '2', ..., '9') with optional leading ``-``.
 isNum checks if a character is numeric.
 all takes a function and a list and checks if all elements in the
 list satisfies the given function::
@@ -280,7 +282,7 @@ Evaluator
                 (eval (clearOp st) xs)
             (if (isInt x)
                 (eval (cons (readInt x) st) xs)
-                (seq (println "only integers are supported") st)))))))))))))
+                (seq (println (concat "not integer: " x)) st)))))))))))))
 
 eval takes 2 lists (st and l).
 When l is empty, it returns st.

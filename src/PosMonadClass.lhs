@@ -17,6 +17,9 @@ location of error.
 >
 > import qualified Text.ParserCombinators.Parsec as P
 > import qualified Text.ParserCombinators.Parsec.Pos as P
+> import qualified Control.Monad.Error as E
+>
+> import Error
 >
 > class (Monad m) => MonadPos m where
 >     setSourcePos :: P.SourcePos -> m ()
@@ -33,4 +36,12 @@ can use something other than State monad in the future.
 Then, existing code need not be changed (If existing codes
 used get and put action from State monad, those actions should
 be replaced with different actions when one refactors).
+
+.. sc:: lhs
+
+> throwErr msg = do
+>     pos <- getSourcePos
+>     E.throwError $ Err pos msg
+
+throwErr takes a String and throws an Err with current SourcePos.
 

@@ -10,5 +10,6 @@ Data-Files: lib/core.lipl, lib/calc.lipl
 Executable: lipl
 Main-is: Main.lhs
 Hs-Source-Dirs: src
+GHC-Options: -O
 Build-Depends: base, parsec, containers, filepath
     , pretty, mtl, directory

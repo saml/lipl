@@ -440,10 +440,12 @@ Algorithms in the source code can be buggy and comments faulty.
 .. _`MainUtils.lhs`: MainUtils.html
 .. _`Main.lhs`: Main.html
 
-- `core.lipl`_ is a prelude library written in LIPL that is loaded
-  when the interpreter starts.
-- `calc.lipl`_ is a postfix calculator written in LIPL.
-  `LIPL Tutorial`_ is based on this.
+Below are example programs written in LIPL:
+
+#. `core.lipl`_ is a prelude library written in LIPL that is loaded
+   when the interpreter starts.
+#. `calc.lipl`_ is a postfix calculator written in LIPL.
+   `LIPL Tutorial`_ is based on this.
 
 .. _`core.lipl`: core.html
 .. _`calc.lipl`: calc.html

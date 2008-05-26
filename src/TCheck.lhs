@@ -32,7 +32,8 @@ using unification.
 
 For Val value constructed with At data constructor,
 set current SourcePos to the given pos and type infer e.
-When something fails, saved SourcePos can be retrieved and reported.
+When something fails later on,
+the saved SourcePos can be retrieved and be reported.
 
 .. sc:: lhs
 
@@ -53,15 +54,13 @@ corresponding built-in types (Int, Bool, ...).
 >         Just ts -> do
 >             t <- toType ts
 >             return t
->         otherwise -> do
->             pos <- getSourcePos
->             E.throwError
->                 $ Err pos ("primitive function not found: " ++ x)
+>         otherwise -> throwErr ("primitive function not found: " ++ x)
 
 For built-in functions (PrimFun),
 find the type of it in the current substitution (type variable
 and type mapping).
-When it's not found, throwError.
+When it's not found, throwErr (it throws error with
+current SourcePos).
 When it's found, instantiate the bound type scheme using toType.
 For example, built-in function ``fst`` has type ``(a, b) -> a``
 where a and b are universally quantified (``forall a b. (a, b) -> a``).
@@ -89,10 +88,7 @@ Type of an empty list is ``[a]`` where a is a fresh type variable.
 >         then
 >             return (list (head ts))
 >         else
->             do
->                 pos <- getSourcePos
->                 E.throwError
->                     $ Err pos ("not homogeneous list: " ++ show (List l))
+>             throwErr ("not homogeneous list: " ++ show (List l))
 
 To check homogeneousity of a list l,
 tInfer is called on every element in l. Then, allEqWith
@@ -122,9 +118,7 @@ inferred and returned.
 >             t <- toType ts
 >             s <- getSubst
 >             return (apply s t)
->         otherwise -> do
->             pos <- getSourcePos
->             E.throwError $ Err pos ("not found in assumptions: " ++ x)
+>         otherwise -> throwErr ("not found in assumptions: " ++ x)
 
 To type check a variable, type of the variable is looked up in
 current Subst. If the variable has no bound type, error is thrown
@@ -154,12 +148,12 @@ The expression is converted to App version before it is type inferred::
 >     s <- getSubst
 >     return (apply s v)
 
-To infer type of App value, type of the function is inferred first.
-Then, type of the argument is inferred.
-Then type of the function is unified with ``type of argument -> a``
+To infer type of App value, type of the function is inferred first (tF).
+Then, type of the argument is inferred (tX).
+Then type of the function is unified with ``tX -> a``
 where a is a fresh type variable::
 
-    App (function of type a -> b -> c) (function of type d -> e)
+    App (a -> b -> c) (d -> e)
     ==> unify (a -> b -> c) ((d -> e) -> f) where f is fresh
         ==> [("a", d -> e), ("f", b -> c)]
     ==> b -> c
@@ -180,7 +174,7 @@ is converted to App value during type inference.
 >     return (apply s tFalse)
 
 Type of if expression is inferred so that pred has type Bool
-and types of true case and false case are unified.
+and types of true case (tTrue) and false case (tFalse) are unified.
 The unified type of true case and false case is the type of the if
 expression.
 
@@ -205,12 +199,12 @@ is just type of body expression.
 Type of a lambda expression λx.e is inferred in an environment (Subst)
 where x is bound to a fresh type variable.
 After inferring type of e, the environment is updated to have
-proper type of x.
+proper type of x (since x can appear in e).
 Actual type of the lambda is ``type of x -> type of e``.
 
 When inferring type of e, localSubst is used that runs type inference
 on the given Subst, sF, instead of current global Subst.
-localSubst stores types of variables that conflict with sF then restores
+localSubst stores types of variables that conflict with sF. Then it restores
 them upon exit::
 
     localSubst [("x", Int)]
@@ -227,9 +221,7 @@ them upon exit::
 >     then
 >         tInfer (simplifyLambda lam)
 >     else
->         do
->             pos <- getSourcePos
->             E.throwError $ Err pos ("duplicate argument: " ++ show lam)
+>         throwErr ("duplicate argument: " ++ show lam)
 
 When lambda has more than 1 parameter, it is turned to
 a lambda with 1 parameter and type inferred::
@@ -270,7 +262,7 @@ For example::
              |         +------------- x of let      x2
              +----------------------- x of lambda   x1
 
-while inferring type of x3 (x of lambda), it can get type variable t0
+While inferring type of x3 (x of lambda), it can get type variable t0
 (during type inferencing the outer lambda,
 x gets type variable t0, for example).
 Then when extending Subst with ``x2 +-> t0``
@@ -285,7 +277,7 @@ to have enough information about k to infer type of k.
 Type of k is inferred (tK) and is unified with tV.
 During unification, Subst is modified to contain most general unifier
 of tK and tV. Using the modified Subst, type of e (tE) is
-finalized (normalized).
+finalized.
 
 .. sc:: lhs
 
@@ -319,15 +311,13 @@ let expressions, and key value assignments are evaluated in sequence.
 >             extendSubst (name +-> mkPolyType result)
 >             return result
 >     else
->         do
->             pos <- getSourcePos
->             E.throwError $ Err pos ("duplicate argument: " ++ show e)
+>         throwErr ("duplicate argument: " ++ show e)
 
 For a function definition, parameters are checked to make sure
 they don't contain duplicates.
 Then, Subst is extended with function name bound to a new type variable.
-mkMonoType is used because function name should be instantiated
-with one type only (for recursive functions).
+mkMonoType is used because the function name should be instantiated
+with one type only in the function body (for recursive functions).
 Then, using parameters and function body, a lambda expression is formed
 and type of the lambda is inferred (tF).
 After unifying tF with the new type variable bound to function name (v),
@@ -338,22 +328,37 @@ type.
 
 .. sc:: lhs
 
-> typeInfer (At _ e@(FunDef _ _ _)) = typeInfer e
-> typeInfer e@(FunDef name args body) = do
->     t <- M.liftM tSanitize (locally (tInfer e))
->     extendSubst (name +-> mkPolyType t)
->     return t
+> typeInfer v = typeInfer' v `E.catchError`
+>     (\e -> case e of
+>         Err _ _ -> E.throwError e
+>         otherwise -> throwErr (show e))
+>     where
+>         typeInfer' (At _ e@(FunDef _ _ _)) = typeInfer' e
+>         typeInfer' e@(FunDef name args body) = do
+>             t <- M.liftM tSanitize (locally (tInfer e))
+>             extendSubst (name +-> mkPolyType t)
+>             return t
 >
-> typeInfer (At _ (Expr [e])) = typeInfer e
-> typeInfer (Expr [e]) = typeInfer e
-> typeInfer e = do
->     t <- locally (tInfer e)
->     return (tSanitize t)
+>         typeInfer' (At _ (Expr [e])) = typeInfer' e
+>         typeInfer' (Expr [e]) = typeInfer' e
+>         typeInfer' e = do
+>             t <- locally (tInfer e)
+>             return (tSanitize t)
 
 typeInfer uses tInfer but after inferring type of given LIPL value,
-it brings Subst to previous state (using locally combinator).
+it brings Subst to previous state (using locally function).
 Only when the Val is function definition, Subst is extended
 to register type of the function.
+When an error is thrown during type inference, it is caught
+and re-thrown. When the error caught does not already have
+SourcePos, current SourcePos is retrieved and the error
+re-thrown (using throwErr).
+
+::
+
+    ghci> :m + Control.Monad
+    ghci> :t liftM
+    liftM :: (Monad m) => (a1 -> r) -> m a1 -> m r
 
 liftM takes a transformation function (a function of type ``a -> b``)
 and transforms the value inside a monad.
@@ -393,7 +398,7 @@ values of each monad in a list.
 
 locally caches current state of TI monad.
 Then it executes the given action.
-And it restores cached state before returning.
+And it restores the cached state before returning.
 
 .. sc:: lhs
 
@@ -426,7 +431,7 @@ After running the given action, cached types are restored.
 > initialSubst = defaultSubst `Map.union` toSubst builtinSubst
 
 initialSubst has types of built-in functions (``+``, ``-``, head, ...)
-and built-in types (Int, Float, ...).
+and base type constants (Int, Float, ...).
 
 .. sc:: lhs
 

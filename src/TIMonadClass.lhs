@@ -5,7 +5,37 @@ TIMonadClass.lhs
 .. sectnum::
 .. contents::
 
-TIMonadClass declares interface for MonadTI.
+TIMonadClass declares class MonadTI.
+
+During type inference of LIPL expressions, a Subst
+should be maintained that contains type information of
+various type variables.
+During evaluation of LIPL expressions, an EnvStack
+should be maintained that contains variables
+and values bound to them.
+While the interpreter is running, various errors should be reported.
+
+A monad can be used to manage a Subst for type inference,
+an EnvStack for evaluation, and also handle error reporting.
+For modularity, however, different monads are created each of which is
+responsible for the Subst, the EnvStack, and error reporting.
+Then, a huge monad is constructed by composing those modular monads.
+
+For composition of monads, monad transformers are defined and used,
+in a similar fashion that can be found in mtl (Monad Transformer Library.
+Comes with GHC): definition of a monad is done over 2 modules:
+class module and monad module.
+For example, Reader monad in mtl is defined in 2 modules:
+
+- Control.Monad.Reader.Class: provides interface MonadReader
+- Control.Monad.Reader: provides Reader monad and ReaderT
+  monad transformer.
+
+Similarly, TIMonadClass module and TIMonad module
+are responsible for TI monad:
+
+- TIMonadClass: provides interface MonadTI
+- TIMonad: provides TI monad and TIT monad transformer.
 
 .. sc:: lhs
 
@@ -30,7 +60,12 @@ listed above: getSubst, putSubst, ...
   The Subst being merged into shadows current Subst.
   For example, if ``[("a", tNew)]`` is passed to extendSubst
   and current Subst has ``("a", tOld)``, then a is bound to
-  tNew.
+  tNew::
+
+    current Subst:     [(a, tOld), ...]
+    extendSubst        [(a, tNew)]
+    ==> current Subst: [(a, tNew), ...]
+
 - getN returns an Int in the monad.
 - putN puts an Int to the monad.
 - newId returns a new Id (String). It should be unique.

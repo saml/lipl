@@ -39,7 +39,8 @@ So, Stack is a type constructor that takes 1 parameter, a.
 Once it has taken the parameter, it can construct a concrete type,
 e.g. a list of Int.
 
-Types and type constructors must start with an uppercase letter.
+Types and type constructors must start with an uppercase letter,
+unlike normal functions.
 
 One can annotate type of a function::
 
@@ -92,11 +93,12 @@ a pair of a and a list of a's.
     ghci> (1, 1) :: (Int, Float)
     (1, 1.0)
 
-You can also annotate type of an expression with ``::``.
+You can also annotate type of an expression with ``::`` .
 
 Definition of pop uses pattern.
 A pattern can be a literal or
-something that starts with a function or a data constructor.
+something that starts with (or includes) a function
+(normal function, type constructor, data constructor, operator).
 ``:`` in ``(x:xs)`` is a data constructor for list types::
 
     ghci> :t (:)

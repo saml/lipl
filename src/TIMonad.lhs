@@ -5,8 +5,9 @@ TIMonad.lhs
 .. sectnum::
 .. contents::
 
-TIMonad module implements MonadTI class.
-Type inference will use (run in) TIMonad.
+TIMonad module implements MonadTI class and provides TI monad
+and TIT monad transformer.
+TI stands for Type Inference.
 
 .. sc:: lhs
 
@@ -53,9 +54,11 @@ and all top level functions defined in this module (TIMonad).
 More About Monads
 =================
 
+.. sc:: lhs
+
 > newtype TI a = TI { runTI :: Subst -> Int -> (Subst, Int, a) }
 
-Unlike type synonym, newtype declares a brand new type.
+Unlike type synonym, newtype defines a brand new type.
 For example, after defining type synonym ``type MyInt = Int``,
 MyInt can be used where Int can be used.
 However, after ``newtype MyInt = MyInt Int``, MyInt is a different type.
@@ -169,16 +172,19 @@ TI being a Monad, it can now be an instance of MonadTI.
   of the tuple.
 - putSubst ignores current Subst being passed to (_). And passes s
   on to the next TI action (by putting s on 1st place of the tuple).
-- extendSubst modifies s passed from the previous TI action
-  and passes out the modified Subst.
+- extendSubst takes a Subst (s') and
+  modifies s passed from the previous TI action
+  and passes out the modified Subst (``s @@ s'``).
 - newId returns "tN" where N is Int came from the previous TI action.
   And it passes successor of n to the next TI action.
+  The next TI action will get a brand new Int (successor of
+  the previous Int).
 - getN returns n passed from the previous TI action.
 - putN passes n onto the next TI action.
 
 So, TI monad threads (gets values from previous TI action and passes
 out values to the next TI action) Subst and Int values, while
-returning arbitrary value.
+returning a value of arbitrary type.
 This gives illusion of having global Subst and Int,
 in addition to a value of arbitrary type, inside TI monad.
 
@@ -296,7 +302,8 @@ that takes it and computes action2)::
     ghci> :t (>>=)
     (>>=) :: (Monad m) => m a -> (a -> m b) -> m b
 
-Using ``<-`` do notation would transform concatenation
+Using ``<-`` in do notation would transforms concatenation
+of aligned actions
 into ``>>=`` while other concatenations would be transformed
 into ``>>``::
 
@@ -325,7 +332,7 @@ into ``>>``::
 
 TI can also be a Functor: f is called on the 3rd value of the tuple
 (which is return value). Functor's interface, fmap, can be used
-to transform value inside monad.
+to transform a value inside a monad.
 
 .. sc:: lhs
 
@@ -379,10 +386,10 @@ to make IO actions available::
 Actually, TIT IO is the new monad (shown above)
 that supports IO actions and TI actions.
 Above diagram is misleading because there is no TI monad
-at the top of the stack. Because TIT m is also an instance
+at the top of the stack. It is because TIT m is also an instance
 of MonadTI (that provides getSubst, newId, ...) for all
 m such that m is an instance of Monad class (that provides
-return, ``>>=``, ...), TIT IO both supports all IO actions
+return, ``>>=``, ...) that TIT IO both supports all IO actions
 and actions declared in MonadTI class.
 
 In mtl (monad transformer library), following convention is used:
@@ -438,7 +445,7 @@ So, one can imagine TIT taking a monad (can be a type
 constructor of kind ``* -> *``, just like State String)
 and a type (like Int),
 and transforming the monad into another monad by adding
-TI monad on top of it::
+MonadTI actions on top of it (TIT m is also an instance of MonadTI)::
 
     ghci> :m + Control.Monad.State
     ghci> :l TIMonad
@@ -451,17 +458,17 @@ TI monad on top of it::
     ghci> :k TI
     * -> *
 
+``:m + ModuleName`` makes exported names of ModuleName
+available to GHCi (importing/appending ModuleName).
+
 So, ``TIT (State String)`` is a monad that looks like::
 
     +--------------+ a new monad.
-    | TI           | TI monad provides putSubst, getN, ...etc
-    |--------------|
+    | TIT          | TIT m provides putSubst, getN, ...etc
+    |--------------|     where m is a monad.
     | State String | State String provides put and get
     +--------------+ that puts a String and returns a String
                      respectively.
-
-Again, above diagram is misleading (there's no TI monad at the top.
-TIT m is an instance of MonadTI, which will be shown soon).
 
 A ``TIT (State String)`` action can return any type inside.
 And it can use all actions TI and State String
@@ -501,9 +508,9 @@ runTI returns (Subst, Int, a) while runTIT returns m (Subst, Int, a):
 >         (s', n', x) <- runTIT m s n
 >         return (s', n', f x))
 
-Similarly, return values above are turned to a monad
+Similarly, the return value above is turned to a monad
 (a tuple in a monad) instead of
-flat tuples.
+flat a tuple.
 
 .. sc:: lhs
 
@@ -523,8 +530,8 @@ to stack up M1 on top of existing monad (stack)::
 
     this is monad M
     +----+
-    | M1 | M1 supports m1Action
-    |----|
+    | M1T| M1T m supports m1Action
+    |----|     where m is any monad.
     | .. | existing monad stack
     +----+
 
@@ -597,7 +604,7 @@ by being an instance of MonadError e.
 
 So, throwError takes an error of type e and returns a monad
 that reflects occurrence of the error.
-For TIT m, throwError is implemented so that error ridden m a
+For TIT m, throwError is implemented so that the error ridden m a
 (returned by call of throwError) is lifted to TIT m.
 catchError runs m. In case of error, handler h is called.
 
@@ -611,14 +618,14 @@ catchError runs m. In case of error, handler h is called.
 >     get = T.lift S.get
 >     put = T.lift . S.put
 >
-> {-instance (W.MonadWriter w m) => W.MonadWriter w (TIT m) where
+> instance (W.MonadWriter w m) => W.MonadWriter w (TIT m) where
 >     tell = T.lift . W.tell
 >     listen m = TIT (\s n -> do
 >         ((s', n', x), w) <- W.listen (runTIT m s n)
 >         return (s', n', (x, w)))
 >     pass m = TIT (\s n -> W.pass (do
 >         (s', n', (x, f)) <- runTIT m s n
->         return ((s', n', x), f)))-}
+>         return ((s', n', x), f)))
 >
 > instance (MonadEval m) => MonadEval (TIT m) where
 >     getEnv = T.lift getEnv
@@ -632,7 +639,7 @@ catchError runs m. In case of error, handler h is called.
 >     getSourcePos = T.lift getSourcePos
 
 Similarly, different classes are implemented for TIT m so that
-various actions can be used inside TIT m.
+various actions can be used inside TIT m without explicit lift.
 
 MonadEval and MonadPos are to be defined in EvalMonadClass
 and PosMonadClass modules respectively.

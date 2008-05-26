@@ -11,7 +11,7 @@ Literate Haskell
 A Haskell program is made of multiple modules.
 A module can be defined in a file.
 Name of the file can end with ``.hs`` or ``.lhs``.
-When it ends with ``.lhs``, the file is a literate Haskell source code:
+When it ends with ``.lhs``, the file is a literate Haskell file:
 lines that start with ``>`` are considered to be Haskell source code.
 Other lines are ignored.
 In literate Haskell, one can enclose Haskell source code
@@ -81,7 +81,7 @@ Note that one would not need to define g before it can be used
 > sPATH = sLANGNAME ++ "PATH"
 
 So, these define 4 functions: sBASEDIR, sPRELUDE, ...
-A function name should start with a lowercase letter.
+A normal function name should start with a lowercase letter.
 Then, uppercase letters and ``'`` or ``_`` can follow::
 
     aPple, aP_pLE, apple', a_ppL''_'_E
@@ -116,7 +116,7 @@ Similarly, an operator can be turned into a function by enclosing it in
     sLANGNAME ++ "PATH"
     ==> "LIPLPATH" where sLANGNAME is "LIPL"
 
-So, strings in Haskell are list of characters.
+So, a string in Haskell is a list of characters.
 Strings can be written as::
 
     ['a', 'p', 'p', 'l', 'e']
@@ -151,9 +151,9 @@ To start GHCi::
     shell> ghci
     ghci>
 
-``lipl>`` is a LIPL prompt::
+``LIPL>`` is a LIPL prompt::
 
-    lipl> (+ 1 2)
+    LIPL> (+ 1 2)
     type: Int
     3
 

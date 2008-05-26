@@ -56,10 +56,8 @@ built-in functions (getBuiltinFun) in Builtin than to use Rank2Type.
 .. sc:: lhs
 
 > funcall fname args = case Map.lookup fname primitives of
->     Nothing -> do
->         pos <- getSourcePos
->         E.throwError
->             $ Err pos ("Unrecognizable primitive function: " ++ fname)
+>     Nothing ->
+>         throwErr ("Unrecognizable primitive function: " ++ fname)
 >     Just f -> (getBuiltinFun f) args
 
 Given a function name and list of Vals (arguments),
@@ -176,9 +174,7 @@ in the list::
 >     ab1 <- compareOp op [a1, b1]
 >     ab2 <- compareOp op [a2, b2]
 >     return $ Bool (unpackBool ab1 && unpackBool ab2)
-> compareOp _ [a,b] = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("can't compare these two: "
+> compareOp _ [a,b] = throwErr ("can't compare these two: "
 >         ++ show a ++ ", " ++ show b)
 
 compareOp compares two LIPL values.
@@ -191,27 +187,21 @@ would be False.
 
 .. sc:: lhs
 
-> --compareEq :: (Monad m) => [Val] -> m Val
 > compareEq :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareEq = compareOp (isIn [EQ])
 >
-> --compareNeq :: (Monad m) => [Val] -> m Val
 > compareNeq :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareNeq = compareOp (isIn [LT, GT])
 >
-> --compareLt :: (Monad m) => [Val] -> m Val
 > compareLt :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareLt = compareOp (isIn [LT])
 >
-> --compareLte :: (Monad m) => [Val] -> m Val
 > compareLte :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareLte = compareOp (isIn [LT, EQ])
 >
-> --compareGt :: (Monad m) => [Val] -> m Val
 > compareGt :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareGt = compareOp (isIn [GT])
 >
-> --compareGte :: (Monad m) => [Val] -> m Val
 > compareGte :: (MonadPos m, E.MonadError Err m) => [Val] -> m Val
 > compareGte = compareOp (isIn [GT, EQ])
 
@@ -252,28 +242,16 @@ boolNot flips True to False and vice versa.
 > listLength [Str x] = return $ Int (toInteger $ length x)
 >
 > listHead [List (x:xs)] = return x
-> listHead [e@(List [])] = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("need non empty list: " ++ show e)
+> listHead [e@(List [])] = throwErr ("need non empty list: " ++ show e)
 > listHead [Str (x:xs)] = return $ Char x
-> listHead [e@(Str "")] = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("need non empty string: " ++ show e)
-> listHead [x] = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("need non empty list: " ++ show x)
+> listHead [e@(Str "")] = throwErr ("need non empty string: " ++ show e)
+> listHead [x] = throwErr ("need non empty list: " ++ show x)
 >
 > listTail [List (x:xs)] = return $ List xs
-> listTail [e@(List [])] = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("need non empty list: " ++ show e)
+> listTail [e@(List [])] = throwErr ("need non empty list: " ++ show e)
 > listTail [Str (x:xs)] = return $ Str xs
-> listTail [e@(Str [])] = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("need non empty string: " ++ show e)
-> listTail [x] = do
->     pos <- getSourcePos
->     E.throwError $ Err pos ("need non empty list: " ++ show x)
+> listTail [e@(Str [])] = throwErr ("need non empty string: " ++ show e)
+> listTail [x] = throwErr ("need non empty list: " ++ show x)
 >
 > listCons [x, List []] = return $ List [x]
 > listCons [x, List xs] = return $ List (x:xs)

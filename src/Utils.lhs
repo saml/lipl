@@ -5,6 +5,8 @@ Utils.lhs
 .. sectnum::
 .. contents::
 
+Utils module defines useful functions used by many other modules.
+
 .. sc:: lhs
 
 > module Utils where
@@ -13,9 +15,8 @@ A module can import other modules using ``import MonduleName``.
 
 .. sc::  haskell
 
-> import qualified Data.Map as Map
 > import qualified Data.List as List
-> import qualified Data.Set as Set
+> import qualified Data.Map as Map
 
 with ``import qualified ModuleName as Blah``,
 all top level functions defined in ModuleName are accessible
@@ -23,19 +24,6 @@ through ``Blah.nameOfFunction``. For example,
 a function, empty, in ``Data.Map`` can be accessed as ``Map.empty``.
 Descriptions of each module (Map, List, ...) can be found in
 http://haskell.org/ghc/docs/latest/html/libraries/index.html
-
-.. sc:: lhs
-
-> import Data.Set ((\\), union)
-
-with ``import ModuleName (func1, func2, func3)``,
-only func1, func2, and func3 are accessible directly.
-Other functions in MouduleName are not accessible from this module.
-So, one can call union and ``\\`` on this module
-(note the parenthesis around ``\\``).
-But other functions defined in ``Data.Set`` module
-should be called as ``Set.functionName`` (because Data.Set
-module was qualified as Set).
 
 .. sc:: lhs
 
@@ -50,11 +38,11 @@ module was qualified as Set).
 ::
 
     ghci> :l Utils
-    ghci> let l = [("a", 1), ("b", 1)]
+    ghci> let l = [("a", 2), ("b", 1)]
     ghci> getKeys l
     ["a", "b"]
     ghci> getVals l
-    [1,1]
+    [2,1]
 
 .. sc:: lhs
 
@@ -102,9 +90,11 @@ items from the Map that are mapped to keys::
     foldr Map.delete m ["c", "b", "a"]
     ==> Map.delete "c" (Map.delete "b" (Map.delete "a" m))
     ==> Map.delete "c" (Map.delete "b" m')
-        where m' is Map.fromList [("b",2)], ("a",1) is deleted.
+        where m' is Map.fromList [("b",2)],
+        for ("a",1) is deleted by Map.delete "a" m.
     ==> Map.delete "c" m''
-        where m'' is Map.empty, ("b",2) is deleted.
+        where m'' is Map.empty,
+        for ("b",2) is deleted by Map.delete "b" m'.
     ==> Map.empty
 
 .. sc:: lhs
@@ -120,8 +110,16 @@ items from the Map that are mapped to keys::
 traceM can be used in a monad to print out msg::
 
     do
+        ...
         traceM "hello"
         ...
+
+    ==> prints hello to screen
+
+``do`` is Haskell keyword that starts a do block.
+do block (or do notation) is related to monads, which
+will be discussed later.
+
 
 .. sc:: lhs
 
@@ -135,7 +133,39 @@ traceM can be used in a monad to print out msg::
 
 splitOn splits a list (including string) on an element (character)::
 
+    splitOn '.' "www.example.com"
+    ==> f (break (== '.') "www.example.com")
+    ==> f ("www", ".example.com")
+    ==> "www" : splitOn '.' "example.com"
+    ==> "www" : splitOn '.' "example.com"
+    ==> "www" : f (break (== '.') "example.com")
+    ==> "www" : f ("example", ".com")
+    ==> "www" : "example" : splitOn '.' "com"
+    ==> "www" : "example" : f (break (== '.') "com")
+    ==> "www" : "example" : f ("com", [])
+    ==> "www" : "example" : ["com"]
+    ==> ["www", "example", "com"]
+
     ghci> :l Utils
     ghci> splitOn '.' "Utils.lhs"
     ["Utils", "lhs"]
+
+Layout
+======
+
+Haskell supports layout so that source code is not cluttered
+with ``{ }``, ``;``, ...etc.
+For example, above splitOn function could have been written as::
+
+    splitOn _ [] = []
+    splitOn chr l = f (break (== chr) l) where {
+        f (h, []) = [h];
+     f (h, (_:xs)) = h : splitOn chr xs;
+    }
+
+Note that two definitions of function f are not aligned.
+From now on layout will be used sometimes without explicit ``{ }``, ``;``, ...
+So, one would need to align source code properly
+when copying source code written here.
+
 

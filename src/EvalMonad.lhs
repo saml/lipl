@@ -44,7 +44,7 @@ Also, EvalT, a transformer of Eval, is defined.
 Eval monad is defined using EvalT transformer::
 
     +----------+
-    | Eval     | all MonadEval actions are supported
+    | EvalT    | EvalT m supports all MonadEval actions are supported
     |----------| (getEnv, putEnvs,...)
     | Identity | Identity monad is usually used as base monad.
     +----------+
@@ -58,13 +58,13 @@ Monad, Functor, MonadState EnvStack, and MonadEval classes.
 >     envs <- getEnvs
 >     case (catMaybes $ map (Map.lookup key) envs) of
 >         (x:_) -> return x
->         otherwise -> do
->             pos <- getSourcePos
->             E.throwError $ Err pos ("not found: " ++ key)
+>         otherwise -> throwErr ("not found: " ++ key)
 
 getVal returns Val that is bound to key.
 Since Eval monad has a global EnvStack,
 the EnvStack is searched from top to bottom for a Val bound to key.
+When key is not found in the EnvStack,
+error is thrown using throwErr that also reports current SourcePos.
 
 ::
 
@@ -98,10 +98,7 @@ given list of keys::
 >     env <- getEnv
 >     if Map.member key env
 >         then
->             do
->                 pos <- getSourcePos
->                 E.throwError
->                     $ Err pos ("destructive update: " ++ key)
+>             throwErr ("destructive update: " ++ key)
 >         else
 >             pushEnv (Map.insert key val env)
 >
@@ -140,7 +137,7 @@ built with StateT EnvStack::
     | m               |
     +-----------------+
 
-EvalT alone expects a monad m to transform it to a new monad
+The type constructor EvalT expects a monad m to be transformed to a new monad
 by adding State monad on top of it.
 So, EvalT Identity (which is how Eval monad is built)
 would be a monad that is very similar to
@@ -177,7 +174,6 @@ EvalT derives them.
 
 > instance T.MonadTrans EvalT where
 >     lift m = EvalT (T.lift m)
->     -- lift = EvalT . T.lift
 
 To function as a transformer, EvalT should implement lift function
 that turns a monadic action m to EvalT t action
@@ -219,15 +215,11 @@ popEnv does not do anything when the EnvStack is already empty
 >     putN = T.lift . putN
 
 By making EvalT m an instance of MonadTI for all m that is an instance
-of MonadTI, EvalT m can use MonadTI actions (getSubst, putSubst,...).
+of MonadTI, EvalT m can use MonadTI actions (getSubst, putSubst,...)
+as long as m is an instance of MonadTI.
 
 .. sc:: lhs
 
-> {- instance (E.MonadError e m) => E.MonadError e (EvalT m) where
->     throwError = T.lift . E.throwError
->     m `catchError` h = EvalT (runEvalT m `E.catchError`
->         (\e -> runEvalT (h e)))
-> -}
 > instance (MonadPos m) => MonadPos (EvalT m) where
 >     setSourcePos = T.lift . setSourcePos
 >     getSourcePos = T.lift getSourcePos

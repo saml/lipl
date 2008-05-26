@@ -32,7 +32,10 @@
         (seq (println "nothing to clear") [])
         (seq (printStack st) [])))
 
-(def isInt (s) (all isNum s))
+(def isInt (s)
+    (if (isEmpty s)
+        False
+        (all isNum (if (== '-' (head s)) (tail s) s))))
 
 (def eval (st l) (if (isEmpty l)
     st
@@ -51,7 +54,7 @@
             (eval (clearOp st) xs)
         (if (isInt x)
             (eval (cons (readInt x) st) xs)
-            (seq (println "only integers are supported") st)))))))))))))
+            (seq (println (concat "not integer: " x)) st)))))))))))))
 
 (def prompt (x) (seq (print x) getLine))
 

@@ -27,7 +27,7 @@ for type inference and a way to represent types.
 >     | TApp Type Type
 >     deriving (Eq, Ord)
 
-Type is represented by values of type Type.
+Type of a LIPL expression is represented by values of type Type.
 TVar constructs values that represent type variables.
 TConst represents type constants.
 TApp represents application of a type to another.
@@ -61,8 +61,7 @@ For example, when a Type value has pattern::
 
     TApp (TApp (TConst "(,)") a) b
 
-this represents a pair ``(a,b)``. So, it is converted to
-Doc (pretty printer type) accordingly.
+it is shown as ``(a,b)``.
 
 For function types::
 
@@ -70,27 +69,19 @@ For function types::
 
 parenthesis used when a is a function type too.
 So, it can insert parenthesis like ``(a) -> b`` when a is a function.
-Of course, a would get expended to something like: ``(x -> y) -> b``
+Of course, it would get expended to something like: ``(x -> y) -> b``
 when a were of type ``x -> y``.
 
 .. sc:: lhs
 
 > isFun (TApp (TApp (TConst "->") _) _) = True
 > isFun _ = False
-
-> getTVars v = List.nub (getTVars' v)
->     where
->         getTVars' (TVar v) = [v]
->         getTVars' (TApp t1 t2) = getTVars' t1 ++ getTVars' t2
->         getTVars' _ = []
 >
 > tSanitize t =
->     subst [(v, "t" ++ show i) | (i,v) <- zip [0..] (getTVars t)] t
+>     subst [(v, "t" ++ show i) | (i,v) <- zip [0..] (tv t)] t
 
-getTVars returns type variables in a type expression::
-
-    a -> Int -> b -> Char
-    ==> [a,b]
+isFun returns True if a given Type is a function type.
+It returns False otherwise.
 
 tSanitize normalizes type variables by replacing them in a uniform way.
 All type variables in a type expression become t0, t1, ...etc.
@@ -103,6 +94,18 @@ And, it actually makes substitution for each varI with tI::
 
     a -> Int -> b -> Char
     ==> t0 -> Int -> t1 -> Char
+
+``[e | x <- l]`` is list comprehension syntax where ``x <- l``
+is a generator generating values and e is an expression using
+those values. For example::
+
+    ghci> [x + 1 | x <- [1..10]]
+    [2,3,4,5,6,7,8,9,10,11]
+
+subst function defined in this module is used
+to substitute type variables.
+tv function (also defined in this module) is used to get
+all type variables in a type.
 
 .. sc:: lhs
 
@@ -190,14 +193,14 @@ list-of types and pair types.
 >     else
 >         PP.fsep [PP.text "forall", PP.fsep (map PP.text l), PP.text "."]
 
-TScheme holds a list of free type variables and a type.
+TScheme holds a list of free type variables (freely instantiated) and a type.
 Free type variables can be instantiated many times::
 
     id :: a -> a
     (id 1, id "1")
 
 The type variable a will be instantiated to Int for ``id 1``.
-Then, type if id would be ``Int -> Int``.
+Then, type id would be ``Int -> Int``.
 So, ``id "1"`` becomes illegal because id now expects an Int, not a String.
 So, the type variable a in the type of id should be instantiated multiple
 times (once for Int and then for String).
@@ -210,7 +213,8 @@ Using TScheme, type of id can be represented as::
 
     id :: TVar "a" `fn` TVar "a"
 
-During type instantiation, TScheme can tell the type variable "a"
+During type instantiation, TScheme can tell that the type variable "a",
+which is the only type variable in the free type variable list,
 can be instantiated again.
 
 .. sc:: lhs
@@ -259,7 +263,7 @@ mapped into type (scheme) b.
 
 fromIdType converts ``[(Id, Type)]`` to
 ``[(Id, TScheme)]`` in a way that each Type bound to Id
-is polytype (type variables can be instantiated more than once).
+is a polytype (type variables can be instantiated more than once).
 And toSubst converts ``[(Id, Type)]`` to Subst
 such that each Type becomes polytype.
 
@@ -273,7 +277,7 @@ Class Types provide 2 functions:
 
 apply
     takes a Subst and a type and applies the Subst to the type
-    by replacing all type variables in the type with types mapped
+    by replacing all type variables in the type with types bound
     according to the Subst.
 
 tv
@@ -311,12 +315,14 @@ A list of Types is also Types.
 >     tv (TScheme l e) = tv e
 
 TScheme is also Types.
+When a Subst is applied to a TScheme, type variables
+that can be instantiated many times are not touched.
 
 .. sc:: lhs
 
 > s1 @@ s2 = Map.union s2 s1
 
-``@@`` operator is composition of 2 Subst's::
+``@@`` operator performs composition of 2 Subst's::
 
     apply (s1 @@ s2) t
     ==> apply s1 (apply s2 t)
@@ -355,7 +361,10 @@ mgu takes 2 types and finds the most general unifier::
     ==> [(a, Int)]
 
 The most general unifer of 2 types
-is a Subst that can be applied to the 2 types to result in the same type::
+is a unifier:
+a Subst that can be applied to the 2 types to make them the same type.
+And any other unifiers can be constructed by composing the most general
+unifier with some other Subst::
 
     ghci> :l Type
     ghci> let t1 = TVar "a" `fn` TVar "b"
@@ -394,7 +403,7 @@ Monad
 =====
 
 mgu is a monadic function.
-Unlike normal function, monadic function returns a value using
+Unlike normal functions, a monadic function returns a value using
 ``return`` function: ``return 1``, for example.
 The return function puts the value inside the monad.
 
@@ -406,7 +415,8 @@ To retrieve the value inside a monad, one can use ``<-``::
     fromList [("a", Int)]
 
 GHCi itself is running inside a monad called IO. That's why ``<-``
-works::
+works (``<-`` only works inside a monad. Actually, in a do block.
+But GHCi prompt is special)::
 
     ghci> let f = s <- mgu tInt (TVar "a")
     <interactive>:1:10: parse error on input `<-'
@@ -460,7 +470,14 @@ Another monadic bind operator is ``>>=``::
         to (\ resultOfG -> h) that takes the result and computes
         h (that might use the result).
 
-If one does not want to align expressions in do block, one can use
+A lambda expression (a nameless function) has syntax::
+
+    \ v1 v2 ... vN -> e
+
+where ``\`` flags start of a lambda expression,
+v1, v2, ..., vN are parameters to the function, and e is function body.
+
+If one does not want to align expressions (layout) in do block, one can use
 explicit braces and semicolons::
 
     do {

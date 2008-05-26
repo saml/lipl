@@ -5,7 +5,6 @@ from docutils import nodes, parsers
 from docutils.parsers.rst import directives
 from docutils.core import publish_parts
 
-
 def get_highlighter(language):
 
     from pygments import lexers, util, highlight, formatters
@@ -102,10 +101,9 @@ TEMPLATE = u'''
 def render_str(s, fn, dst):
     name = os.path.join(dst, fn)
     print "writing", name
-    f = codecs.open(fn, encoding=default_enc)
     output = pub(s)
     output.setdefault('encoding', default_enc)
-    outf = codecs.open(name, 'w', encoding=default_enc)
+    outf = codecs.open(name, mode='w', encoding=default_enc)
     outf.write(TEMPLATE  % output)
     outf.close()
 
@@ -139,7 +137,7 @@ argv[1] = destination to put the converted html (optional)'''
 
     output = pub(''.join(new))
     output.setdefault('encoding', default_enc)
-    outf = codecs.open(name, 'w', encoding=default_enc)
+    outf = codecs.open(name, mode='w', encoding=default_enc)
     #output = dictEncode(output)
     outf.write(TEMPLATE
 

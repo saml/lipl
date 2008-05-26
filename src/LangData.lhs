@@ -5,15 +5,20 @@ LangData.lhs
 .. sectnum::
 .. contents::
 
+LangData module defines Val type, which represent
+values used inside LIPL interpreter.
+
 ``module ModuleName (func1, func2) where``
-creates a module ModuleName where func1, func2 are exported.
+creates a module ModuleName where func1, func2 are exported
+(``(fun1, func2)`` is called an export list).
 So, in another module::
 
     import ModuleName
 
     f = func1 -- this is fine
     g = func2 -- also fine because ModuleName exports these.
-    h = func3 -- is not fine because ModuleName hides func3.
+    h = func3 -- is not fine because func3 is not exported by
+                 the module, ModuleName.
 
 .. sc:: lhs
 
@@ -55,8 +60,10 @@ initialPos is default source position used in the interpreter
 ppKeyVal takes a pair (Key, Val) and converts them to Doc
 (PrettyPrint data type that is used to pretty print values)::
 
-    ppKeyVal ("a", Int 1) will eventually be printed as:
+    ppKeyVal ("a", Int 1)
     ==> a = 1
+
+``ppKeyVal ("a", Int1)`` will eventually be printed as: ``a = 1``.
 
 .. sc::haskell
 
@@ -90,6 +97,15 @@ EnvStack is a Stack of (hence a list of) Env (or Map.Map Key Val).
 > ppArgs args = PP.parens $ PP.fsep $ ppStrList args
 
 Above funcitons all facilitate pretty printing of Env, EnvStack, and Val.
+
+Many functions from PrettyPrint library (PP.render, PP.text, ...etc)
+are documented at:
+http://haskell.org/ghc/docs/latest/html/libraries/pretty/Text-PrettyPrint.html
+
+Hoogle_ is a great resource to look up a function and find
+documentation about it.
+
+.. _Hoogle: http://www.haskell.org/hoogle/
 
 .. sc:: lhs
 
@@ -147,7 +163,11 @@ any of the given data constructors above::
 
 These all construct a value of type Val.
 Note that Val is a type constructor and can't be used to construct
-a value (data) of type Val.
+a value (data) of type Val::
+
+    ghci> :l LangData
+    ghci> Val
+    <interactive>:1:0: Not in scope: data constructor `Val'
 
 A data constructor ``Bool Bool`` is same as ``Bool { unpackBool :: Bool }``.
 The latter is using record syntax.
@@ -174,8 +194,21 @@ of one field is easy::
         Foo a' _ -> Foo a' "bye"
     ==> Foo 1 "bye"
 
-Deriving clause (deriving (Ord, Eq)) makes values of type Val
+Deriving clause (``deriving (Ord, Eq)``) makes values of type Val
 to be comparable (can use ``==``, ``>``, ... operators on Val).
+
+Ord and Eq are typeclasses in Haskell.
+A typeclass declares functions.
+One can make a type (such as Val) an instance of a typeclass
+by implementing those declared functions (or derive it using
+``derive`` kewword).
+To instantiate a typeclass, one can use ``instance`` keyword::
+
+    instance Class1 Type1 where
+        funcClass1DeclaresA = ...
+        funcClass1DeclaresB = ...
+
+Type1 is now an instance of Class1.
 
 .. sc:: lhs
 
@@ -204,11 +237,8 @@ can be converted to String and printed.
 >         , ppArgs args
 >         , ppVal body]
 > ppVal (PrimFun name) = PP.text name
-> ppVal (Prim name _ _) = PP.text "<builtin:" <+> PP.text name <> PP.text ">"
-> --ppVal (Fun _ _ _) = PP.text "<function>"
-> --ppVal (Lambda _ _) = PP.text "<lambda>"
-> --ppVal (Prim name _ _) = PP.text "<builtin>"
-> --ppVal (FunDef name _ _) = PP.text "<fundef>"
+> ppVal (Prim name _ _) = PP.text "<builtin:"
+>     <+> PP.text name <> PP.text ">"
 > ppVal (List l@(Char c:xs)) = ppVal (toStr l)
 > ppVal (List xs) = PP.brackets
 >     (PP.fsep $ PP.punctuate PP.comma (ppValList xs))
@@ -223,6 +253,41 @@ can be converted to String and printed.
 > ppVal (App f x) = PP.parens (PP.fsep [ppVal f, ppVal x])
 
 ppVal is used to pretty print values of type Val.
+It is defined case by case for different patterns.
+From the top to bottom, given a Val, the Val is matched
+against Null, ``At _ e``,  ``Ident s``, ..., ``App f x``.
+When a match is found, the body (the expression after ``=``) is evaluated
+in an environment where variables in the pattern are bound to actual values
+matched.
+For example::
+
+    ppVal (Prim "+" 3 [Int 1, Str "hello"])
+
+will fail to match all patterns until it matches the pattern
+``ppVal (Prim name _ _)``  (``_`` matches anything).
+So, the body expression of the pattern will be evaluated with "+"
+bound to the variable, name::
+
+
+    function call: ppVal (Prim "+" 3 [Int 1, Str "hello"])
+                     ^     ^    ^  ^   ^
+                     |     |    |   \ /
+                     |     |    |   | |
+    pattern:       ppVal (Prim name _ _)
+                                |   | +--> _ is not a variable
+                                |   +----> _ is not a variable
+                                +--------> name gets "+"
+
+ppVal could have written using ``case`` expression::
+
+    ppVal v = case v of
+        Null    -> ...
+        At _ e  -> ...
+        Ident s -> ...
+        ...
+        App f x -> ...
+
+
 
 .. sc:: lhs
 

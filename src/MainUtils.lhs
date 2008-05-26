@@ -21,6 +21,7 @@ MainUtils implements various actions used in Main program.
 > import qualified Control.Monad.Trans as T
 > import qualified Control.Monad as M
 > import qualified Text.ParserCombinators.Parsec as P
+> import Text.ParserCombinators.Parsec.Pos (SourceName)
 >
 > import Evaluator
 > import Parser
@@ -123,14 +124,17 @@ println is short hand for ``liftIO . putStrLn``.
 .. sc:: lhs
 
 > repl :: REPL ()
-> repl = do
+> repl = (do
 >     line <- M.liftM (unwords . words)
 >         $ T.liftIO $ prompt (sLANGNAME ++ "> ")
 >     if length line == 0
 >         then
 >             repl
 >         else
->             processInput line
+>             processInput line) `E.catchError`
+>                 (\e -> do
+>                     println (show e)
+>                     repl)
 
 repl is read eval print loop. It runs in REPL monad.
 
@@ -139,14 +143,13 @@ repl is read eval print loop. It runs in REPL monad.
 > loadFile fileName = do
 >     result <- (interpret fileName >>
 >         return (fileName ++ " loaded"))
->         `E.catchError`
->         (\e -> return (show e))
 >     return result
 
 loadFile loads a LIPL file.
 
 .. sc:: lhs
 
+> interpret :: FilePath -> REPL ()
 > interpret file = do
 >     isValidFile <- T.liftIO $ doesFileExist file
 >     if isValidFile
@@ -155,10 +158,7 @@ loadFile loads a LIPL file.
 >                 prog <- T.liftIO $ readFile file
 >                 rollBackOnErr (parseAndEvalMultiple file prog)
 >                 return ()
->         else
->             do
->                 pos <- getSourcePos
->                 E.throwError $ Err pos ("can't find file: " ++ file)
+>         else E.throwError $ Default ("can't find file: " ++ file)
 
 interpret interprets a LIPL file
 by evaluating one LIPL expression at a time, expanding
@@ -219,8 +219,6 @@ REPL monad's state is committed.
 >             repl
 >         otherwise -> do
 >             result <- (show `fmap` rollBackOnErr (parseAndEval line))
->                 `E.catchError`
->                 (\e -> return (show e))
 >             println result
 >             repl
 
@@ -248,6 +246,7 @@ does.
 
 .. sc:: lhs
 
+> parseAndEval :: String -> REPL Val
 > parseAndEval input = case parseSingle input of
 >     Left err -> do
 >         E.throwError $ Default (show err)
@@ -256,6 +255,7 @@ does.
 >         println ("type: " ++ show t)
 >         evaluate val
 >
+> parseAndEvalMultiple :: SourceName -> String -> REPL Val
 > parseAndEvalMultiple fn input = case parseMultiple fn input of
 >     Left err -> do
 >         E.throwError $ Default (show err)
@@ -276,7 +276,7 @@ function definition registers both type information and
 value information for the function name).
 
 Because of how parseAndEvalMultiple is implemented
-(using mapM), a LIPL file is executed top to bottom.
+(using mapM), a LIPL file is executed from top to bottom.
 So, one must define a function before it can be used.
 
 .. sc:: lhs
