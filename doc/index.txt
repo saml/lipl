@@ -20,7 +20,13 @@ About
 
 This is a term project for cs731, offered in Spring 2008 semester.
 An interpreter of LIPL, a tiny functional programming language,
-is implemented in Haskell programming language.
+is designed and its interpreter is implemented
+in Haskell programming language.
+The LIPL interpreter has following features:
+
+- Eager evaluation
+- Hindley-Milner style type inference
+
 Objective of the project is to learn about
 software development using functional programming style
 and Haskell programming language.
@@ -73,8 +79,9 @@ To install LIPL interpreter, you need to follow the following steps:
    a directory included in PATH environment variable).
 #. Copy ``lib/core.lipl`` to a directory where the interpreter
    can find:
-   - any directory listed in LIPLPATH environment variable
-   - ``~/.lipl`` directory
+
+    - any directory listed in LIPLPATH environment variable
+    - ``~/.lipl`` directory
 
 __ `Using Cabal`_
 __ `Manual Build`_
@@ -107,7 +114,7 @@ To build and install the interpreter, a Haskell compiler is required.
 Since the project is a Cabal package,
 Cabal can be used to build and install the interpreter.
 Cabal is included in GHC version 6.8.* , so no separate installation
-is needed.
+for Cabal is needed.
 
 .. _Cabal: http://www.haskell.org/cabal
 
@@ -237,6 +244,7 @@ Or, you can type ``:?`` to print help menu::
 
 ``:s``
   prints types of currently available functions
+  (type substitution environment)
 
 ``:q``
   quits the repl
@@ -450,6 +458,24 @@ Below are example programs written in LIPL:
 .. _`core.lipl`: core.html
 .. _`calc.lipl`: calc.html
 
+Epilogue
+========
+
+Learning Haskell and functional programming was enjoyable experience.
+Some of the impressions I had as a new comer to Haskell include:
+
+- Debugging a Haskell program can be difficult
+- Modularity improves debug-ability
+- Monad transformers improve modularity
+- Unwrapping monad transformers and making magic lift work
+  can be tedious (an IDE might help)
+
+Things that I should have done but did not include:
+
+- Writing unit tests
+- Allowing recursive let expressions in LIPL
+- Adding ADT and pattern matching to LIPL
+
 Document Generation
 ===================
 
@@ -457,8 +483,8 @@ To generate HTML documents (including this),
 go to ``lipl/doc/tools`` directory
 and run gen.py::
 
-    shell> cd doc/tools
-    shell> python gen.py
+    shell> cd lipl # to project root
+    shell> python doc/tools/gen.py
 
 Python_, Docutils_, and Pygments_ are needed to run gen.py.
 
@@ -472,48 +498,48 @@ References
 To learn about Haskell programming and functional programming in
 general, these resources were used:
 
-- Daumé III, Hal (2002) Yet Another Haskell Tutorial.
-  Retrieved January 1, 2008, from
-  http://darcs.haskell.org/yaht/yaht.pdf
-- Grabmüller, Martin (2006) Monad Transformers Step by Step.
-  Retrieved March 1, 2008 from
-  http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html
-- Hudak, Paul (1989) Conception, Evolution, and Application
-  of Functional Programming Languages. ACM Computing Surveys 21 (3):
-  359-411
-- Hudak, Paul et al. (2000) A Gentle Introduction to Haskell,
-  Version 98. Retrieved January 1, 2008 from
-  http://www.haskell.org/tutorial/
-- Newbern, Jeff. All About Monads.
-  Retrieved April 1, 2008 from
-  http://www.haskell.org/all_about_monads/html/index.html
-- O'Sullivan, Bryan et al. (2007) Real World Haskell (beta).
-  Retrieved May 1, 2008 from
-  http://book.realworldhaskell.org/beta/
-- Wadler, Philip (1992) The Essence of Functional Programming.
-  Invited Talk, 19th Symposium on Principles of Programming Languages,
-  ACM Press, Albuquerque.
-  Retrieved March 1, 2008 from
-  http://homepages.inf.ed.ac.uk/wadler/papers/essence/essence.ps
+.. [DAUME] Daumé III, Hal (2002) Yet Another Haskell Tutorial.
+   Retrieved January 1, 2008, from
+   http://darcs.haskell.org/yaht/yaht.pdf
+.. [GRABMULLER] Grabmüller, Martin (2006) Monad Transformers Step by Step.
+   Retrieved March 1, 2008 from
+   http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html
+.. [HUDAK89] Hudak, Paul (1989) Conception, Evolution, and Application
+   of Functional Programming Languages. ACM Computing Surveys 21 (3):
+   359-411
+.. [HUDAK] Hudak, Paul et al. (2000) A Gentle Introduction to Haskell,
+   Version 98. Retrieved January 1, 2008 from
+   http://www.haskell.org/tutorial/
+.. [NEWBERN] Newbern, Jeff. All About Monads.
+   Retrieved April 1, 2008 from
+   http://www.haskell.org/all_about_monads/html/index.html
+.. [OSULLIVAN] O'Sullivan, Bryan et al. (2007) Real World Haskell (beta).
+   Retrieved May 1, 2008 from
+   http://book.realworldhaskell.org/beta/
+.. [WADLER] Wadler, Philip (1992) The Essence of Functional Programming.
+   Invited Talk, 19th Symposium on Principles of Programming Languages,
+   ACM Press, Albuquerque.
+   Retrieved March 1, 2008 from
+   http://homepages.inf.ed.ac.uk/wadler/papers/essence/essence.ps
 
 For implementation of LIPL evaluator and type inference,
 these resources were used:
 
-- Cardelli, Luca and Wegner, Peter (1985)
-  On Understanding Types, Data Abstraction, and
-  Polymorphism. ACM Computing Surveys 17 (4): 471-522
-- Cardelli, Luca (1987) Basic Polymorphic Typechecking.
-  Retrieved April 1, 2008 from
-  http://lucacardelli.name/Papers/BasicTypechecking.pdf
-- Henderson, Peter (1980) Functional Programming: Application and
-  Implementation. Prentice Hall.
-- Peyton Jones, Simon (1987) The Implementation of Functional
-  Programming Languages. Prentice Hall.
-  Retrieved May 1, 2008 from
-  http://research.microsoft.com/~simonpj/papers/slpj-book-1987/index.htm
-- P. Jones, Mark (2000) Typing Haskell in Haskell.
-  Retrieved April 1, 2008 from
-  http://web.cecs.pdx.edu/~mpj/thih/
-- Tang, Jonathan. Write Yourself a Scheme in 48 Hours: A Haskell Tutorial.
-  Retrieved January 1, 2008 from
-  http://halogen.note.amherst.edu/~jdtang/scheme_in_48/tutorial/overview.html
+.. [CARDELLI85] Cardelli, Luca and Wegner, Peter (1985)
+   On Understanding Types, Data Abstraction, and
+   Polymorphism. ACM Computing Surveys 17 (4): 471-522
+.. [CARDELLI] Cardelli, Luca (1987) Basic Polymorphic Typechecking.
+   Retrieved April 1, 2008 from
+   http://lucacardelli.name/Papers/BasicTypechecking.pdf
+.. [HENDERSON] Henderson, Peter (1980) Functional Programming: Application and
+   Implementation. Prentice Hall.
+.. [PEYTONJONES] Peyton Jones, Simon (1987) The Implementation of Functional
+   Programming Languages. Prentice Hall.
+   Retrieved May 1, 2008 from
+   http://research.microsoft.com/~simonpj/papers/slpj-book-1987/index.htm
+.. [PJONES] P. Jones, Mark (2000) Typing Haskell in Haskell.
+   Retrieved April 1, 2008 from
+   http://web.cecs.pdx.edu/~mpj/thih/
+.. [TANG] Tang, Jonathan. Write Yourself a Scheme in 48 Hours: A Haskell Tutorial.
+   Retrieved January 1, 2008 from
+   http://halogen.note.amherst.edu/~jdtang/scheme_in_48/tutorial/overview.html

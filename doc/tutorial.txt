@@ -258,6 +258,10 @@ list satisfies the given function::
     ==> False because of the last element, 2.
     (all isNum "00002342")
     ==> True
+    (all isNum "-030424")
+    ==> True
+    (all isNum "-0a")
+    ==> False
 
 Evaluator
 =========

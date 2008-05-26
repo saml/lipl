@@ -804,4 +804,7 @@ Evaluation of ``(twice twice succ 0)`` is::
     ==> (succ 3)
     ==> 4
 
+For more examples, look at `LIPL Tutorial`_ .
+
+.. _`LIPL Tutorial`: tutorial.html
 

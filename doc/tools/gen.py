@@ -23,8 +23,10 @@ def want_to(f):
     return False
 
 def source_code(fn, kind='.. sc:: scheme'):
+    title = os.path.basename(fn)
+    line = ('=' * len(title)) + '\n'
+    newf = [line, title, '\n',  line, kind, '\n\n']
     f = open(fn)
-    newf = [kind, '\n\n']
     for x in f:
         newf.append(''.join(['    ', x]))
     return ''.join(newf)
