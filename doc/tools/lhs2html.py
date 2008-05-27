@@ -81,8 +81,7 @@ def dictEncode(d):
         result[k] = tounicode(v)
     return result
 
-TEMPLATE = u'''
-<?xml version="1.0" encoding="%(encoding)s" ?>
+TEMPLATE = u'''<?xml version="1.0" encoding="%(encoding)s" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
@@ -95,8 +94,20 @@ TEMPLATE = u'''
 <div id="wrap">
 %(html_body)s
 </div>
+%(google)s
 </body>
+</html>
 '''
+
+GOOGLE = {'google': '''<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>'''}
 
 def render_str(s, fn, dst):
     name = os.path.join(dst, fn)
@@ -104,6 +115,7 @@ def render_str(s, fn, dst):
     output = pub(s)
     output.setdefault('encoding', default_enc)
     outf = codecs.open(name, mode='w', encoding=default_enc)
+    output.update(GOOGLE)
     outf.write(TEMPLATE  % output)
     outf.close()
 
@@ -139,9 +151,8 @@ argv[1] = destination to put the converted html (optional)'''
     output.setdefault('encoding', default_enc)
     outf = codecs.open(name, mode='w', encoding=default_enc)
     #output = dictEncode(output)
-    outf.write(TEMPLATE
-
-            % output)
+    output.update(GOOGLE)
+    outf.write(TEMPLATE % output)
     outf.close()
 
 if __name__ == "__main__":
