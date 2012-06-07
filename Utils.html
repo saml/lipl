@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Utils.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="utils-lhs">
+<h1 class="title">Utils.lhs</h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#layout" id="id1">1&nbsp;&nbsp;&nbsp;Layout</a></li>
+</ul>
+</div>
+<p>Utils module defines useful functions used by many other modules.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Utils</span> <span class="kr">where</span>
+</pre></div>
+
+</div>
+<p>A module can import other modules using <tt class="docutils literal">import MonduleName</tt>.</p>
+<div class="syntax haskell">
+<div class="highlight"><pre><span class="o">&gt;</span> <span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.List</span> <span class="k">as</span> <span class="n">List</span>
+<span class="o">&gt;</span> <span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">Map</span>
+</pre></div>
+
+</div>
+<p>with <tt class="docutils literal">import qualified ModuleName as Blah</tt>,
+all top level functions defined in ModuleName are accessible
+through <tt class="docutils literal">Blah.nameOfFunction</tt>. For example,
+a function, empty, in <tt class="docutils literal">Data.Map</tt> can be accessed as <tt class="docutils literal">Map.empty</tt>.
+Descriptions of each module (Map, List, ...) can be found in
+<a class="reference external" href="http://haskell.org/ghc/docs/latest/html/libraries/index.html">http://haskell.org/ghc/docs/latest/html/libraries/index.html</a></p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="k">as</span> <span class="n">PP</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="p">(</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="o">&lt;&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">&lt;+&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">$$</span><span class="p">),</span> <span class="p">(</span><span class="o">$+$</span><span class="p">)</span> <span class="p">)</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Debug.Trace</span> <span class="p">(</span><span class="nf">trace</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">getKeys</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">fst</span>
+<span class="cs">&gt; </span><span class="nf">getVals</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">snd</span>
+</pre></div>
+
+</div>
+<pre class="literal-block">
+ghci&gt; :l Utils
+ghci&gt; let l = [(&quot;a&quot;, 2), (&quot;b&quot;, 1)]
+ghci&gt; getKeys l
+[&quot;a&quot;, &quot;b&quot;]
+ghci&gt; getVals l
+[2,1]
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">allEqWith</span> <span class="n">eq</span> <span class="n">l</span> <span class="ow">=</span> <span class="n">all</span> <span class="p">(</span><span class="o">==</span> <span class="kt">True</span><span class="p">)</span> <span class="o">$</span> <span class="n">zipWith</span> <span class="n">eq</span> <span class="n">l</span> <span class="p">(</span><span class="n">tail</span> <span class="n">l</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>allEqWith tests if the list l has all same elements, where equality
+is defined by function eq:</p>
+<pre class="literal-block">
+l:                  [e1,e2,...,eN]
+tail l:             [e2,e3,...]
+zipWith eq ...  :   [e1 `eq` e2, e2 `eq` e3, ..., eN-1 `eq` eN]
+all (== True) ... : \-    are they all True ??               -/
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">allEq</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">Eq</span> <span class="n">a</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Bool</span>
+<span class="cs">&gt; </span><span class="nf">allEq</span> <span class="ow">=</span> <span class="n">allEqWith</span> <span class="p">(</span><span class="o">==</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>allEq tests if the list l has all same elements where equality
+is checked by <tt class="docutils literal">==</tt>.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">noDup</span> <span class="n">l</span> <span class="ow">=</span> <span class="n">length</span> <span class="n">l</span> <span class="o">==</span> <span class="n">length</span> <span class="p">(</span><span class="kt">List</span><span class="o">.</span><span class="n">nub</span> <span class="n">l</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>noDup tests if l has no duplicate:</p>
+<pre class="literal-block">
+l: [e1, e2, ..., eN]
+length l: N
+List.nub l: [e1, e2, ..., eM] where all duplicates are removed.
+</pre>
+<p>So, when length of l is same as length of <tt class="docutils literal">List.nub l</tt>, l did not have
+duplicates to begin with.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">subtractMap</span> <span class="n">kv</span> <span class="n">k</span> <span class="ow">=</span> <span class="n">foldr</span> <span class="kt">Map</span><span class="o">.</span><span class="n">delete</span> <span class="n">kv</span> <span class="n">k</span>
+</pre></div>
+
+</div>
+<p>subtractMap takes a Map and a list of keys. And it deletes
+items from the Map that are mapped to keys:</p>
+<pre class="literal-block">
+let m = Map.fromList [(&quot;a&quot;,1), (&quot;b&quot;,2)]
+
+foldr Map.delete m [&quot;c&quot;, &quot;b&quot;, &quot;a&quot;]
+==&gt; Map.delete &quot;c&quot; (Map.delete &quot;b&quot; (Map.delete &quot;a&quot; m))
+==&gt; Map.delete &quot;c&quot; (Map.delete &quot;b&quot; m')
+    where m' is Map.fromList [(&quot;b&quot;,2)],
+    for (&quot;a&quot;,1) is deleted by Map.delete &quot;a&quot; m.
+==&gt; Map.delete &quot;c&quot; m''
+    where m'' is Map.empty,
+    for (&quot;b&quot;,2) is deleted by Map.delete &quot;b&quot; m'.
+==&gt; Map.empty
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">traceM</span> <span class="n">msg</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">isDebugSet</span>
+<span class="cs">&gt;     </span><span class="kr">then</span>
+<span class="cs">&gt;         </span><span class="nf">trace</span> <span class="n">msg</span> <span class="p">(</span><span class="n">return</span> <span class="nb">()</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="kr">else</span>
+<span class="cs">&gt;         </span><span class="nf">return</span> <span class="nb">()</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">isDebugSet</span> <span class="ow">=</span> <span class="kt">True</span>
+</pre></div>
+
+</div>
+<p>traceM can be used in a monad to print out msg:</p>
+<pre class="literal-block">
+do
+    ...
+    traceM &quot;hello&quot;
+    ...
+
+==&gt; prints hello to screen
+</pre>
+<p><tt class="docutils literal">do</tt> is Haskell keyword that starts a do block.
+do block (or do notation) is related to monads, which
+will be discussed later.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="c1">-- | &quot;Foo.bar&quot; ==&gt; [&quot;Foo&quot;, &quot;bar&quot;]</span>
+<span class="cs">&gt; </span><span class="nf">splitOn</span> <span class="kr">_</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="kt">[]</span>
+<span class="cs">&gt; </span><span class="nf">splitOn</span> <span class="n">chr</span> <span class="n">l</span> <span class="ow">=</span> <span class="n">f</span> <span class="p">(</span><span class="n">break</span> <span class="p">(</span><span class="o">==</span> <span class="n">chr</span><span class="p">)</span> <span class="n">l</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">f</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="kt">[]</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[</span><span class="n">h</span><span class="p">]</span>
+<span class="cs">&gt;         </span><span class="nf">f</span> <span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="p">(</span><span class="kr">_</span><span class="kt">:</span><span class="n">xs</span><span class="p">))</span> <span class="ow">=</span> <span class="n">h</span> <span class="kt">:</span> <span class="n">splitOn</span> <span class="n">chr</span> <span class="n">xs</span>
+<span class="cs">&gt;</span>
+</pre></div>
+
+</div>
+<p>splitOn splits a list (including string) on an element (character):</p>
+<pre class="literal-block">
+splitOn '.' &quot;www.example.com&quot;
+==&gt; f (break (== '.') &quot;www.example.com&quot;)
+==&gt; f (&quot;www&quot;, &quot;.example.com&quot;)
+==&gt; &quot;www&quot; : splitOn '.' &quot;example.com&quot;
+==&gt; &quot;www&quot; : splitOn '.' &quot;example.com&quot;
+==&gt; &quot;www&quot; : f (break (== '.') &quot;example.com&quot;)
+==&gt; &quot;www&quot; : f (&quot;example&quot;, &quot;.com&quot;)
+==&gt; &quot;www&quot; : &quot;example&quot; : splitOn '.' &quot;com&quot;
+==&gt; &quot;www&quot; : &quot;example&quot; : f (break (== '.') &quot;com&quot;)
+==&gt; &quot;www&quot; : &quot;example&quot; : f (&quot;com&quot;, [])
+==&gt; &quot;www&quot; : &quot;example&quot; : [&quot;com&quot;]
+==&gt; [&quot;www&quot;, &quot;example&quot;, &quot;com&quot;]
+
+ghci&gt; :l Utils
+ghci&gt; splitOn '.' &quot;Utils.lhs&quot;
+[&quot;Utils&quot;, &quot;lhs&quot;]
+</pre>
+<div class="section" id="layout">
+<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Layout</a></h1>
+<p>Haskell supports layout so that source code is not cluttered
+with <tt class="docutils literal">{ }</tt>, <tt class="docutils literal">;</tt>, ...etc.
+For example, above splitOn function could have been written as:</p>
+<pre class="literal-block">
+splitOn _ [] = []
+splitOn chr l = f (break (== chr) l) where {
+    f (h, []) = [h];
+ f (h, (_:xs)) = h : splitOn chr xs;
+}
+</pre>
+<p>Note that two definitions of function f are not aligned.
+From now on layout will be used sometimes without explicit <tt class="docutils literal">{ }</tt>, <tt class="docutils literal">;</tt>, ...
+So, one would need to align source code properly
+when copying source code written here.</p>
+</div>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

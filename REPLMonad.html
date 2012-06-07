@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>REPLMonad.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="replmonad-lhs">
+<h1 class="title">REPLMonad.lhs</h1>
+<p>REPLMonad defines REPL monad that supports
+useful actions: getSubst, putEnv, ...
+to build the LIPL interpreter (including read eval print loop).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="cm">{-# LANGUAGE GeneralizedNewtypeDeriving</span>
+<span class="cs">&gt;     </span><span class="cm">, FlexibleInstances #-}</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">REPLMonad</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Trans</span> <span class="k">as</span> <span class="n">T</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.State</span> <span class="k">as</span> <span class="n">S</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Writer</span> <span class="k">as</span> <span class="n">W</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Reader</span> <span class="k">as</span> <span class="n">R</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">TIMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">EvalMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Error</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">TCheck</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">PosMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span> <span class="p">(</span><span class="nf">emptyEnvStack</span><span class="p">,</span> <span class="nf">initialPos</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">newtype</span> <span class="kt">REPL</span> <span class="n">a</span> <span class="ow">=</span> <span class="kt">REPL</span> <span class="p">{</span>
+<span class="cs">&gt;     </span><span class="nf">runREPL</span> <span class="ow">::</span> <span class="kt">E</span><span class="o">.</span><span class="kt">ErrorT</span> <span class="kt">Err</span> <span class="p">(</span><span class="kt">TIT</span> <span class="p">(</span><span class="kt">EvalT</span> <span class="p">(</span><span class="kt">PosT</span> <span class="kt">IO</span><span class="p">)))</span> <span class="n">a</span>
+<span class="cs">&gt;     </span><span class="p">}</span> <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Monad</span><span class="p">,</span> <span class="kt">Functor</span><span class="p">,</span> <span class="kt">MonadEval</span><span class="p">,</span> <span class="kt">MonadTI</span><span class="p">,</span> <span class="kt">MonadPos</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span><span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="kt">MonadIO</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>REPL looks like this:</p>
+<pre class="literal-block">
++--------+
+| ErrorT | provides MonadError: throwError and catchError
+|--------|
+| TIT    | provides MonadTI: getSubst, newId,...
+|--------+
+| EvalT  | provides MonadEval: getEnv, putEnvs, ...
+|--------|
+| PosT   | provides MonadPos: getSourcePos and setSourcePos
+|--------|
+| IO     | provides IO actions: putStrLn, getLine, ...
++--------+
+</pre>
+<p>So, in REPL, any of those actions can be used.</p>
+<p>ErrorT is at the top of the monad stack because any monad
+transformer on top of ErrorT layer might loose their values.
+For example:</p>
+<pre class="literal-block">
+ghci&gt; :m + Control.Monad.Error
+ghci&gt; :m + Control.Monad.State
+ghci&gt; :t runState (runErrorT (return 0)) &quot;&quot;
+... :: (Error e, Num t)
+       =&gt; (Either e t, [Char])
+             |           +---- state value is intact
+             +---------------- this can be Left e.
+
+ghci&gt; :t runErrorT (runStateT (return 0) &quot;&quot;)
+... :: (Error e, Monad m, Num t)
+       =&gt; m (Either e (t, [Char]))
+                      +------------ this whole thing might be Left e
+                                    in which case the state value,
+                                    of type [Char], is lost.
+</pre>
+<p>The first case, <tt class="docutils literal">runState (runErrorT <span class="pre">...)</span></tt>
+is when ErrorT is above State monad.
+The return value of it does have state value intact (<tt class="docutils literal">[Char]</tt>).
+Only the return value (of type t, an instance of Num) might
+be lost (it could be Left e, not Right t).
+The second case can return <tt class="docutils literal">Right (t, [Char])</tt> with state value
+intact. But it could also return <tt class="docutils literal">Left e</tt>, losing <tt class="docutils literal">[Char]</tt> value.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">MonadTI</span> <span class="p">(</span><span class="kt">E</span><span class="o">.</span><span class="kt">ErrorT</span> <span class="kt">Err</span> <span class="p">(</span><span class="kt">TIT</span> <span class="p">(</span><span class="kt">EvalT</span> <span class="p">(</span><span class="kt">PosT</span> <span class="kt">IO</span><span class="p">))))</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getSubst</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">putSubst</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putSubst</span>
+<span class="cs">&gt;     </span><span class="nf">extendSubst</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">extendSubst</span>
+<span class="cs">&gt;     </span><span class="nf">getN</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getN</span>
+<span class="cs">&gt;     </span><span class="nf">putN</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putN</span>
+<span class="cs">&gt;     </span><span class="nf">newId</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">newId</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">MonadPos</span> <span class="p">(</span><span class="kt">E</span><span class="o">.</span><span class="kt">ErrorT</span> <span class="kt">Err</span> <span class="p">(</span><span class="kt">TIT</span> <span class="p">(</span><span class="kt">EvalT</span> <span class="p">(</span><span class="kt">PosT</span> <span class="kt">IO</span><span class="p">))))</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">setSourcePos</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">setSourcePos</span>
+<span class="cs">&gt;     </span><span class="nf">getSourcePos</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getSourcePos</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">MonadEval</span> <span class="p">(</span><span class="kt">E</span><span class="o">.</span><span class="kt">ErrorT</span> <span class="kt">Err</span> <span class="p">(</span><span class="kt">TIT</span> <span class="p">(</span><span class="kt">EvalT</span> <span class="p">(</span><span class="kt">PosT</span> <span class="kt">IO</span><span class="p">))))</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getEnv</span>  <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getEnv</span>
+<span class="cs">&gt;     </span><span class="nf">getEnvs</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getEnvs</span>
+<span class="cs">&gt;     </span><span class="nf">putEnvs</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putEnvs</span>
+<span class="cs">&gt;     </span><span class="nf">pushEnv</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">pushEnv</span>
+<span class="cs">&gt;     </span><span class="nf">popEnv</span>  <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">popEnv</span>
+</pre></div>
+
+</div>
+<p>Since ErrorT is at the top, the monad stack should be made
+instance of MonadTI, MonadPos, and MonadEval for magic lifting.
+Otherwise, one would have to write:</p>
+<pre class="literal-block">
+lift (lift (lift getSourcePos))
+</pre>
+<p>to use MonadPos actions in REPL monad, for example.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">rollBackOnErr</span> <span class="n">action</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">envs</span> <span class="ow">&lt;-</span> <span class="n">getEnvs</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">n</span> <span class="ow">&lt;-</span> <span class="n">getN</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="n">getSourcePos</span>
+<span class="cs">&gt;     </span><span class="nf">result</span> <span class="ow">&lt;-</span> <span class="n">action</span> <span class="p">`</span><span class="kt">E</span><span class="o">.</span><span class="n">catchError</span><span class="p">`</span> <span class="p">(</span><span class="nf">\</span><span class="n">e</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">putEnvs</span> <span class="n">envs</span>
+<span class="cs">&gt;         </span><span class="nf">putSubst</span> <span class="n">s</span>
+<span class="cs">&gt;         </span><span class="nf">putN</span> <span class="n">n</span>
+<span class="cs">&gt;         </span><span class="nf">setSourcePos</span> <span class="n">pos</span>
+<span class="cs">&gt;         </span><span class="kt">E</span><span class="o">.</span><span class="n">throwError</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">result</span>
+</pre></div>
+
+</div>
+<p>rollBackOnErr caches current state of the interpreter:
+Envs, Subst, Int, SourcePos, ...
+and executes the given action.
+In case of error, cached state is restored and the error
+re-thrown.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">run</span> <span class="n">action</span> <span class="ow">=</span> <span class="kt">S</span><span class="o">.</span><span class="n">runStateT</span> <span class="p">(</span><span class="n">runPosT</span> <span class="p">(</span><span class="kt">S</span><span class="o">.</span><span class="n">runStateT</span> <span class="p">(</span><span class="n">runEvalT</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="n">runTIT</span> <span class="p">(</span><span class="kt">E</span><span class="o">.</span><span class="n">runErrorT</span> <span class="p">(</span><span class="n">runREPL</span> <span class="n">action</span><span class="p">))</span> <span class="n">initialSubst</span> <span class="mi">0</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="nf">emptyEnvStack</span><span class="p">))</span> <span class="n">initialPos</span>
+</pre></div>
+
+</div>
+<p>run takes a REPL action and executes it, unwrapping all monad transformers,
+leaving IO monad, which is at the core of REPL monad.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

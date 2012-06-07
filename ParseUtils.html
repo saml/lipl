@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>ParseUtils.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="parseutils-lhs">
+<h1 class="title">ParseUtils.lhs</h1>
+<p>ParseUtils provide useful functions that can be used in Parser.
+Detailed documentation about Parsec library, that is used
+in this module, can be found at:
+<a class="reference external" href="http://research.microsoft.com/users/daan/parsec.html">http://research.microsoft.com/users/daan/parsec.html</a></p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">ParseUtils</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec.Token</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec.Expr</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec.Language</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="p">((</span><span class="o">&lt;|&gt;</span><span class="p">))</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">liplStyle</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">haskellStyle</span> <span class="p">{</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">commentLine</span> <span class="ow">=</span> <span class="s">&quot;#&quot;</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="kt">P</span><span class="o">.</span><span class="n">identLetter</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">alphaNum</span> <span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">oneOf</span> <span class="s">&quot;_&#39;-&quot;</span>
+<span class="cs">&gt;     </span><span class="p">}</span>
+</pre></div>
+
+</div>
+<p>liplStyle is a LanguageDef.
+It is based on haskellStyle but
+defines line comment to start with <tt class="docutils literal">#</tt>.
+And, identifers can include <tt class="docutils literal">-</tt> (in Haskell, identifiers can't include
+<tt class="docutils literal">-</tt>).
+Since liplStyle inherites most of the settings from haskellStyle,
+nested block comments (<tt class="docutils literal">{- <span class="pre">-}</span></tt>) are already defined.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">lexer</span>  <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">makeTokenParser</span> <span class="n">liplStyle</span>
+</pre></div>
+
+</div>
+<p>When a parser (CharParser, GenParser...etc)
+is built from above lexer (which is a TokenParser),
+the parser will get proper tokens:
+line comments starting with <tt class="docutils literal">#</tt> are discarded (so are
+nested block comments inside <tt class="docutils literal">{- <span class="pre">-}</span></tt>), identifiers
+are tokenized so that they can contain alphaNum or one of
+<tt class="docutils literal">_'-</tt>...etc.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">ws</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">whiteSpace</span> <span class="n">lexer</span>
+<span class="cs">&gt; </span><span class="nf">mustSpaces</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">skipMany1</span> <span class="kt">P</span><span class="o">.</span><span class="n">space</span> <span class="o">&gt;&gt;</span> <span class="n">ws</span>
+</pre></div>
+
+</div>
+<p>ws parses zero or more white spaces.
+musteSpace parses one or more white spaces.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">identStart</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">identStart</span> <span class="n">liplStyle</span>
+<span class="cs">&gt; </span><span class="nf">identLetter</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">identLetter</span> <span class="n">liplStyle</span>
+<span class="cs">&gt; </span><span class="nf">opLetter</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">opLetter</span> <span class="n">liplStyle</span>
+</pre></div>
+
+</div>
+<p>identStart parses 1 character that can start an identifier (alphabet
+character).
+identLetter parses 1 character that can be in an identifier
+(alphaNum, one of <tt class="docutils literal"><span class="pre">_-'</span></tt>).
+opLetter parses 1 character that can be in an operator
+(<tt class="docutils literal"><span class="pre">:!+./&lt;=&gt;?</span></tt>...etc)</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseHeadBody</span> <span class="n">headChar</span> <span class="n">bodyChar</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">h</span> <span class="ow">&lt;-</span> <span class="n">headChar</span>
+<span class="cs">&gt;     </span><span class="nf">b</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">many</span> <span class="n">bodyChar</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="n">h</span> <span class="kt">:</span> <span class="n">b</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Given 2 character parsers, parseHeadBody parses
+a string that starts with one of headChar and continues with
+one of bodyChar.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">nat</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">many1</span> <span class="kt">P</span><span class="o">.</span><span class="n">digit</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">lbracket</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;[&#39;</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">spaces</span>
+<span class="cs">&gt; </span><span class="nf">rbracket</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">spaces</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;]&#39;</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">comma</span> <span class="ow">=</span> <span class="p">(</span><span class="kt">P</span><span class="o">.</span><span class="n">spaces</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;,&#39;</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">spaces</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">lparen</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;(&#39;</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">spaces</span>
+<span class="cs">&gt; </span><span class="nf">rparen</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">spaces</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;)&#39;</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">lbrace</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;{&#39;</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">spaces</span>
+<span class="cs">&gt; </span><span class="nf">rbrace</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">spaces</span> <span class="o">&gt;&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;}&#39;</span>
+</pre></div>
+
+</div>
+<p>nat parses 1 or more digits.
+lbracket, rbracket, comma, lparen, rparen, lbrace, and rbrace
+parses <tt class="docutils literal"><span class="pre">[],(){}</span></tt> respectively with optional white spaces
+around them.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

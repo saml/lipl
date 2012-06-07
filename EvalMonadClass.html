@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>EvalMonadClass.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="evalmonadclass-lhs">
+<h1 class="title">EvalMonadClass.lhs</h1>
+<p>EvalMonadClass declares MonadEval class that provides
+actions useful for evaluation of LIPL expressions.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">EvalMonadClass</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">class</span> <span class="p">(</span><span class="kt">Monad</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadEval</span> <span class="n">m</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getEnv</span> <span class="ow">::</span> <span class="n">m</span> <span class="kt">Env</span>
+<span class="cs">&gt;     </span><span class="nf">getEnvs</span> <span class="ow">::</span> <span class="n">m</span> <span class="kt">EnvStack</span>
+<span class="cs">&gt;     </span><span class="nf">putEnvs</span> <span class="ow">::</span> <span class="kt">EnvStack</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt;     </span><span class="nf">pushEnv</span> <span class="ow">::</span> <span class="kt">Env</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt;     </span><span class="nf">popEnv</span> <span class="ow">::</span> <span class="n">m</span> <span class="nb">()</span>
+</pre></div>
+
+</div>
+<ul class="simple">
+<li>getEnv returns an Env (Map String Val).</li>
+<li>getEnvs returns a Stack of Envs (<tt class="docutils literal">[Env]</tt>).</li>
+<li>putEnvs replaces the Stack of Envs.</li>
+<li>pushEnv pushes an Env on top of the Stack of Envs.</li>
+<li>popEnv pops the top Env from the Stack of Envs.</li>
+</ul>
+<p>So, anything that is an instance of MonadEval
+would have a global Stack of Envs.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

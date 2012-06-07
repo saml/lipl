@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>EvalMonad.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="evalmonad-lhs">
+<h1 class="title">EvalMonad.lhs</h1>
+<p>EvalMonad creates a monad, Eval, that implements MonadEval class.
+Also, EvalT, a transformer of Eval, is defined.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="cm">{-# LANGUAGE GeneralizedNewtypeDeriving</span>
+<span class="cs">&gt;     </span><span class="cm">, FlexibleInstances, MultiParamTypeClasses #-}</span>
+<span class="cs">&gt; </span><span class="cm">{-# OPTIONS_GHC -fallow-undecidable-instances #-}</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">EvalMonad</span> <span class="p">(</span>
+<span class="cs">&gt;     </span><span class="nf">module</span> <span class="kt">EvalMonadClass</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="nf">module</span> <span class="kt">EvalMonad</span>
+<span class="cs">&gt; </span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Identity</span> <span class="k">as</span> <span class="n">I</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Trans</span> <span class="k">as</span> <span class="n">T</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.State</span> <span class="k">as</span> <span class="n">S</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Reader</span> <span class="k">as</span> <span class="n">R</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Writer</span> <span class="k">as</span> <span class="n">W</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad</span> <span class="k">as</span> <span class="n">M</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">Map</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Data.Maybe</span> <span class="p">(</span><span class="nf">catMaybes</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Error</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Stack</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">TIMonadClass</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">EvalMonadClass</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">PosMonadClass</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">newtype</span> <span class="kt">Eval</span> <span class="n">a</span> <span class="ow">=</span> <span class="kt">Eval</span> <span class="p">{</span> <span class="n">runEval</span> <span class="ow">::</span> <span class="kt">EvalT</span> <span class="kt">I</span><span class="o">.</span><span class="kt">Identity</span> <span class="n">a</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="kr">deriving</span> <span class="p">(</span><span class="kt">Monad</span><span class="p">,</span> <span class="kt">Functor</span>
+<span class="cs">&gt;         </span><span class="p">,</span>  <span class="kt">S</span><span class="o">.</span><span class="kt">MonadState</span> <span class="kt">EnvStack</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">MonadEval</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Eval monad is defined using EvalT transformer:</p>
+<pre class="literal-block">
++----------+
+| EvalT    | EvalT m supports all MonadEval actions are supported
+|----------| (getEnv, putEnvs,...)
+| Identity | Identity monad is usually used as base monad.
++----------+
+</pre>
+<p>Eval monad also derives (automatically implements)
+Monad, Functor, MonadState EnvStack, and MonadEval classes.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">getVal</span> <span class="n">key</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">envs</span> <span class="ow">&lt;-</span> <span class="n">getEnvs</span>
+<span class="cs">&gt;     </span><span class="kr">case</span> <span class="p">(</span><span class="n">catMaybes</span> <span class="o">$</span> <span class="n">map</span> <span class="p">(</span><span class="kt">Map</span><span class="o">.</span><span class="n">lookup</span> <span class="n">key</span><span class="p">)</span> <span class="n">envs</span><span class="p">)</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="kr">_</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="n">return</span> <span class="n">x</span>
+<span class="cs">&gt;         </span><span class="nf">otherwise</span> <span class="ow">-&gt;</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;not found: &quot;</span> <span class="o">++</span> <span class="n">key</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>getVal returns Val that is bound to key.
+Since Eval monad has a global EnvStack,
+the EnvStack is searched from top to bottom for a Val bound to key.
+When key is not found in the EnvStack,
+error is thrown using throwErr that also reports current SourcePos.</p>
+<pre class="literal-block">
+ghci&gt; :m + Data.Maybe
+ghci&gt; :t catMaybes
+catMaybes :: [Maybe a] -&gt; [a]
+ghci&gt; catMaybes [Just 1, Nothing, Just 2]
+[1,2]
+ghci&gt; catMaybes []
+[]
+ghci&gt; catMaybes [Nothing]
+[]
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">getEnvFor</span> <span class="n">keys</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">vals</span> <span class="ow">&lt;-</span> <span class="n">mapM</span> <span class="n">getVal</span> <span class="n">keys</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">env</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">fromList</span> <span class="o">$</span> <span class="n">zip</span> <span class="n">keys</span> <span class="n">vals</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">env</span>
+</pre></div>
+
+</div>
+<p>getEnvFor returns an Env that contains all Vals bound to
+given list of keys:</p>
+<pre class="literal-block">
+getEnvFor [&quot;a&quot;, &quot;b&quot;] -- in a monad that has environment
+                     -- {a = 1, b = &quot;hi&quot;, c = 3}
+==&gt; {a = 1, b = &quot;hi&quot;}
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">putVal</span> <span class="n">key</span> <span class="n">val</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">env</span> <span class="ow">&lt;-</span> <span class="n">getEnv</span>
+<span class="cs">&gt;     </span><span class="kr">if</span> <span class="kt">Map</span><span class="o">.</span><span class="n">member</span> <span class="n">key</span> <span class="n">env</span>
+<span class="cs">&gt;         </span><span class="kr">then</span>
+<span class="cs">&gt;             </span><span class="nf">throwErr</span> <span class="p">(</span><span class="s">&quot;destructive update: &quot;</span> <span class="o">++</span> <span class="n">key</span><span class="p">)</span>
+<span class="cs">&gt;         </span><span class="kr">else</span>
+<span class="cs">&gt;             </span><span class="nf">pushEnv</span> <span class="p">(</span><span class="kt">Map</span><span class="o">.</span><span class="n">insert</span> <span class="n">key</span> <span class="n">val</span> <span class="n">env</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">updateVal</span> <span class="n">key</span> <span class="n">val</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="n">env</span><span class="kt">:</span><span class="n">envs</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">getEnvs</span>
+<span class="cs">&gt;     </span><span class="nf">putEnvs</span> <span class="p">(</span><span class="kt">Map</span><span class="o">.</span><span class="n">insert</span> <span class="n">key</span> <span class="n">val</span> <span class="n">env</span> <span class="kt">:</span> <span class="n">envs</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>putVal takes a key and a Val and updates the top Env
+so that the Val is bound to the key.
+When key is already bound, it throws an exception
+(a key can be bound only once).
+updateVal, however, allows destructive update (a key can be bound
+multiple times).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">clearEnvs</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadEval</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt; </span><span class="nf">clearEnvs</span> <span class="ow">=</span> <span class="n">putEnvs</span> <span class="n">emptyEnvStack</span>
+</pre></div>
+
+</div>
+<p>clearEnvs clears the global EnvStack.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">newtype</span> <span class="kt">EvalT</span> <span class="n">m</span> <span class="n">a</span> <span class="ow">=</span> <span class="kt">EvalT</span> <span class="p">{</span>
+<span class="cs">&gt;     </span><span class="nf">runEvalT</span> <span class="ow">::</span>  <span class="p">(</span><span class="kt">S</span><span class="o">.</span><span class="kt">StateT</span> <span class="kt">EnvStack</span> <span class="n">m</span><span class="p">)</span> <span class="n">a</span>
+<span class="cs">&gt;     </span><span class="p">}</span> <span class="kr">deriving</span><span class="p">(</span><span class="kt">Monad</span><span class="p">,</span> <span class="kt">Functor</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">R</span><span class="o">.</span><span class="kt">MonadReader</span> <span class="n">r</span><span class="p">,</span> <span class="kt">W</span><span class="o">.</span><span class="kt">MonadWriter</span> <span class="n">w</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="n">e</span>
+<span class="cs">&gt;         </span><span class="p">,</span>  <span class="kt">S</span><span class="o">.</span><span class="kt">MonadState</span> <span class="kt">EnvStack</span><span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="kt">MonadIO</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>EvalT, used to build Eval monad, is defined to be a monad
+built with StateT EnvStack:</p>
+<pre class="literal-block">
++-----------------+
+| StateT EnvStack | MonadState actions supported: put, get, ...
+|-----------------|
+| m               |
++-----------------+
+</pre>
+<p>The type constructor EvalT expects a monad m to be transformed to a new monad
+by adding State monad on top of it.
+So, EvalT Identity (which is how Eval monad is built)
+would be a monad that is very similar to
+just plain State EnvStack monad.</p>
+<p>By deriving many classes (Monad, Functor, MonadReader,...),
+EvalT can be composed with other monad transformers (such as
+ReaderT, WriterT,...) to build a complicated monad
+while still allowing actions to be used without explicit lift:</p>
+<pre class="literal-block">
+newtype EvalT m a = EvalT (StateT EnvStack m) a
+</pre>
+<p>Given above declaration of EvalT:</p>
+<pre class="literal-block">
+do
+    put emptyEnvStack
+</pre>
+<p>one can't run above inside EvalT m monad when EvalT
+did not derive MonadState EnvStack.
+One should use explicit lift:</p>
+<pre class="literal-block">
+do
+    lift (put emptyEnvStack)
+</pre>
+<p>However, since EvalT derives MonadState EnvStack,
+one can use <tt class="docutils literal">put emptyEnvStack</tt> without explicit lift
+(it gets lifted magically).</p>
+<p>In the same way, MonadReader, MonadWriter, ... actions
+can be used without explicit lift in EvalT m monad since
+EvalT derives them.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">T</span><span class="o">.</span><span class="kt">MonadTrans</span> <span class="kt">EvalT</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">lift</span> <span class="n">m</span> <span class="ow">=</span> <span class="kt">EvalT</span> <span class="p">(</span><span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">m</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>To function as a transformer, EvalT should implement lift function
+that turns a monadic action m to EvalT t action
+by first lifting m to t m and wrapping t m in EvalT.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="p">(</span><span class="kt">Monad</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadEval</span> <span class="p">(</span><span class="kt">EvalT</span> <span class="n">m</span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getEnv</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">envs</span> <span class="ow">&lt;-</span> <span class="kt">S</span><span class="o">.</span><span class="n">get</span>
+<span class="cs">&gt;         </span><span class="nf">return</span> <span class="o">$</span> <span class="p">(</span><span class="n">fst</span> <span class="o">.</span> <span class="n">pop</span><span class="p">)</span> <span class="n">envs</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt;     </span><span class="nf">getEnvs</span> <span class="ow">=</span> <span class="kt">S</span><span class="o">.</span><span class="n">get</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt;     </span><span class="nf">putEnvs</span> <span class="ow">=</span> <span class="kt">S</span><span class="o">.</span><span class="n">put</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt;     </span><span class="nf">pushEnv</span> <span class="n">env</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">envs</span> <span class="ow">&lt;-</span> <span class="kt">S</span><span class="o">.</span><span class="n">get</span>
+<span class="cs">&gt;         </span><span class="kt">S</span><span class="o">.</span><span class="n">put</span> <span class="p">(</span><span class="n">push</span> <span class="n">env</span> <span class="n">envs</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt;     </span><span class="nf">popEnv</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">envs</span> <span class="ow">&lt;-</span> <span class="kt">S</span><span class="o">.</span><span class="n">get</span>
+<span class="cs">&gt;         </span><span class="kr">if</span> <span class="n">emptyEnvStack</span> <span class="o">==</span> <span class="n">envs</span>
+<span class="cs">&gt;             </span><span class="kr">then</span> <span class="n">return</span> <span class="nb">()</span>
+<span class="cs">&gt;             </span><span class="kr">else</span> <span class="kt">S</span><span class="o">.</span><span class="n">put</span> <span class="o">$</span> <span class="p">(</span><span class="n">snd</span> <span class="o">.</span> <span class="n">pop</span><span class="p">)</span> <span class="n">envs</span>
+</pre></div>
+
+</div>
+<p>MonadEval actions are implemented using MonadState actions (pop and get).
+popEnv does not do anything when the EnvStack is already empty
+(nothing to pop).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="p">(</span><span class="kt">MonadTI</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadTI</span> <span class="p">(</span><span class="kt">EvalT</span> <span class="n">m</span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getSubst</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">putSubst</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putSubst</span>
+<span class="cs">&gt;     </span><span class="nf">extendSubst</span>  <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">extendSubst</span>
+<span class="cs">&gt;     </span><span class="nf">newId</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">newId</span>
+<span class="cs">&gt;     </span><span class="nf">getN</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getN</span>
+<span class="cs">&gt;     </span><span class="nf">putN</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putN</span>
+</pre></div>
+
+</div>
+<p>By making EvalT m an instance of MonadTI for all m that is an instance
+of MonadTI, EvalT m can use MonadTI actions (getSubst, putSubst,...)
+as long as m is an instance of MonadTI.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="p">(</span><span class="kt">MonadPos</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadPos</span> <span class="p">(</span><span class="kt">EvalT</span> <span class="n">m</span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">setSourcePos</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">setSourcePos</span>
+<span class="cs">&gt;     </span><span class="nf">getSourcePos</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getSourcePos</span>
+</pre></div>
+
+</div>
+<p>EvalT m can use MonadPos actions, too.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

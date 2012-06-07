@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Stack.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="stack-lhs">
+<h1 class="title">Stack.lhs</h1>
+<p>This file defines Stack module</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Stack</span> <span class="kr">where</span>
+</pre></div>
+
+</div>
+<p><tt class="docutils literal">type</tt> keyword can be used to create type synonyms:</p>
+<pre class="literal-block">
+type MyInt = Int
+</pre>
+<p>makes MyInt an alias of built-in type Int.
+MyInt can be used in place of Int.
+MyInt is called a type constructor, just like Int.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">Stack</span> <span class="n">a</span> <span class="ow">=</span> <span class="p">[</span><span class="n">a</span><span class="p">]</span>
+</pre></div>
+
+</div>
+<p>defines a type synonym, Stack.
+Stack is synonym of <tt class="docutils literal">[a]</tt>, which is a list of a's.
+a is a type variable. It can be instantiated with different types:</p>
+<ul class="simple">
+<li><tt class="docutils literal">[Int]</tt> or <tt class="docutils literal">Stack Int</tt> is a list of Ints.
+The type variable a is instantiated with Int.</li>
+<li><tt class="docutils literal">[Float]</tt> or <tt class="docutils literal">Stack Float</tt> is a list of Floats.
+The type variable a is instantiated with Float.</li>
+<li><tt class="docutils literal">[Bool]</tt> or <tt class="docutils literal">Stack Bool</tt> is a list of Bools
+The type variable a is instantiated with Bool.</li>
+</ul>
+<p>So, Stack is a type constructor that takes 1 parameter, a.
+Once it has taken the parameter, it can construct a concrete type,
+e.g. a list of Int.</p>
+<p>Types and type constructors must start with an uppercase letter,
+unlike normal functions.</p>
+<p>One can annotate type of a function:</p>
+<pre class="literal-block">
+functionName :: Type
+</pre>
+<p>tells the compiler that the function functionName has type Type.
+<tt class="docutils literal">::</tt> is part of type annotation syntax.
+<tt class="docutils literal">a :: B</tt> says, &quot;a has type B&quot;.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">isEmpty</span> <span class="ow">::</span> <span class="kt">Stack</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">Bool</span>
+</pre></div>
+
+</div>
+<p>So, isEmpty has type <tt class="docutils literal">Stack a <span class="pre">-&gt;</span> Bool</tt>.
+<tt class="docutils literal">a <span class="pre">-&gt;</span> b</tt> means it is a function whose domain is type a and range is
+type b (a function that takes a value of type a and returns a value of
+type b).
+Hence, isEmpty is a function that takes <tt class="docutils literal">Stack a</tt> (a list of a's)
+and returns Bool (boolean).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">isEmpty</span> <span class="ow">=</span> <span class="n">null</span>
+</pre></div>
+
+</div>
+<p>After type annotation of a function, definition of the function must follow.
+So, isEmpty is same as null, which is a Haskell function that returns
+True if the list is empty, False otherwise:</p>
+<pre class="literal-block">
+ghci&gt; :t null
+null :: [a] -&gt; Bool
+ghci&gt; null &quot;&quot;
+True
+ghci&gt; null []
+True
+ghci&gt; null [1]
+False
+</pre>
+<p><tt class="docutils literal">:t expr</tt> is GHCi command that prints type of expr.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">pop</span> <span class="ow">::</span> <span class="kt">Stack</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="kt">Stack</span> <span class="n">a</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">pop</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">xs</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>defines function pop that takes a list of a's and returns
+a pair of a and a list of a's.</p>
+<p><tt class="docutils literal">(a, b)</tt> means a pair of a value of type a and a value of type b:</p>
+<pre class="literal-block">
+ghci&gt; (1, 1) :: (Int, Float)
+(1, 1.0)
+</pre>
+<p>You can also annotate type of an expression with <tt class="docutils literal">::</tt> .</p>
+<p>Definition of pop uses pattern.
+A pattern can be a literal or
+something that starts with (or includes) a function
+(normal function, type constructor, data constructor, operator).
+<tt class="docutils literal">:</tt> in <tt class="docutils literal">(x:xs)</tt> is a data constructor for list types:</p>
+<pre class="literal-block">
+ghci&gt; :t (:)
+(:) :: a -&gt; [a] -&gt; [a]
+</pre>
+<p>A data constructor is a function that starts with
+<tt class="docutils literal">:</tt> and continues with special characters, or a function
+that starts with an uppercase letter and continues with normal function name.
+For example, <tt class="docutils literal"><span class="pre">:-&gt;</span></tt>, <tt class="docutils literal"><span class="pre">:===-?</span></tt>, Hello, He''ll__o are data constructors.</p>
+<p><tt class="docutils literal">(x:xs)</tt> is same as <tt class="docutils literal"><span class="pre">((:)</span> x xs)</tt>.
+<tt class="docutils literal">pop (x:xs)</tt> matches function calls like:</p>
+<pre class="literal-block">
+pop [1,2,3]
+pop &quot;abc&quot;
+</pre>
+<p>because:</p>
+<pre class="literal-block">
+pop [1,2,3] ==&gt; 1 : [2,3]        ==&gt; (1, [2,3])
+                |     +----- xs ------|----+
+                +----------- x  ------+
+
+pop &quot;abc&quot; ==&gt; 'a' : &quot;bc&quot;         ==&gt; ('a', &quot;bc&quot;)
+               |     +------ xs -------|----+
+               +------------ x  -------+
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">push</span> <span class="ow">::</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">Stack</span> <span class="n">a</span> <span class="ow">-&gt;</span> <span class="kt">Stack</span> <span class="n">a</span>
+<span class="cs">&gt; </span><span class="nf">push</span> <span class="n">v</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">v</span> <span class="kt">:</span> <span class="n">s</span>
+</pre></div>
+
+</div>
+<p>push matches calls like:</p>
+<pre class="literal-block">
+push 1 [2,3]         ==&gt; [1,2,3]
+     |   +------- s ------|--+
+     +----------- v ------+
+
+push 'a' &quot;bc&quot;        ==&gt; &quot;abc&quot;
+      |   +------ s ------|+
+      +---------- v ------+
+</pre>
+<pre class="literal-block">
+ghci&gt; :l Stack
+ghci&gt; pop &quot;abc&quot;
+('a',&quot;bc&quot;)
+ghci&gt; push 'a' &quot;bc&quot;
+&quot;abc&quot;
+ghci&gt; pop []
+*** Exception: Stack.lhs:87:2-21: Non-exhaustive patterns in function pop
+</pre>
+<p><tt class="docutils literal">pop []</tt> throws an exception because pop is defined only on
+<tt class="docutils literal">(x:xs)</tt>, a list of at least one element.
+So, <tt class="docutils literal">[]</tt> won't match <tt class="docutils literal">x:xs</tt> and causes an exception.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

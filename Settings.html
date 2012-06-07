@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Settings.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="settings-lhs">
+<h1 class="title">Settings.lhs</h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#literate-haskell" id="id1">1&nbsp;&nbsp;&nbsp;Literate Haskell</a></li>
+<li><a class="reference internal" href="#comments" id="id2">2&nbsp;&nbsp;&nbsp;Comments</a></li>
+<li><a class="reference internal" href="#module" id="id3">3&nbsp;&nbsp;&nbsp;Module</a></li>
+<li><a class="reference internal" href="#function-definition" id="id4">4&nbsp;&nbsp;&nbsp;Function Definition</a></li>
+<li><a class="reference internal" href="#operators" id="id5">5&nbsp;&nbsp;&nbsp;Operators</a></li>
+<li><a class="reference internal" href="#convention" id="id6">6&nbsp;&nbsp;&nbsp;Convention</a></li>
+</ul>
+</div>
+<div class="section" id="literate-haskell">
+<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Literate Haskell</a></h1>
+<p>A Haskell program is made of multiple modules.
+A module can be defined in a file.
+Name of the file can end with <tt class="docutils literal">.hs</tt> or <tt class="docutils literal">.lhs</tt>.
+When it ends with <tt class="docutils literal">.lhs</tt>, the file is a literate Haskell file:
+lines that start with <tt class="docutils literal">&gt;</tt> are considered to be Haskell source code.
+Other lines are ignored.
+In literate Haskell, one can enclose Haskell source code
+in <tt class="docutils literal">\begin{code}</tt> and <tt class="docutils literal">\end{code}</tt>, instead of prefixing
+each line with <tt class="docutils literal">&gt;</tt>. But one must choose either of the two ways
+to flag source code portion of the file.</p>
+<p>This is a literate Haskell file that prefixes each source code line
+with <tt class="docutils literal">&gt;</tt>.</p>
+</div>
+<div class="section" id="comments">
+<h1><a class="toc-backref" href="#id2">2&nbsp;&nbsp;&nbsp;Comments</a></h1>
+<p>Anything after <tt class="docutils literal"><span class="pre">--</span></tt> until new line is comment.
+Anything inside <tt class="docutils literal">{- <span class="pre">-}</span></tt> is comment.
+For example:</p>
+<pre class="literal-block">
+-- this is a single line comment
+{- this is a multiple line comment
+    {- it can be nested -} -}
+</pre>
+</div>
+<div class="section" id="module">
+<h1><a class="toc-backref" href="#id3">3&nbsp;&nbsp;&nbsp;Module</a></h1>
+<p>To define a module, one can use:</p>
+<pre class="literal-block">
+module ModuleName where
+-- module body
+</pre>
+<p>that defines a module named ModuleName.
+<tt class="docutils literal">module</tt> and <tt class="docutils literal">where</tt> are keywords.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Settings</span> <span class="kr">where</span>
+</pre></div>
+
+</div>
+<p>A module called Settings is defined in this file.</p>
+</div>
+<div class="section" id="function-definition">
+<h1><a class="toc-backref" href="#id4">4&nbsp;&nbsp;&nbsp;Function Definition</a></h1>
+<p>A module has many top-level functions.
+One can define a top-level function with:</p>
+<pre class="literal-block">
+functionName = functionBody
+</pre>
+<p>that defines a function functionName.
+Anywhere where functionBody appears, one can replace it with functionName.
+For example:</p>
+<pre class="literal-block">
+f = 1000
+g = 1000
+</pre>
+<p>can be rewritten as:</p>
+<pre class="literal-block">
+f = g -- replacing 1000 with g
+g = 1000
+</pre>
+<p>Note that one would not need to define g before it can be used
+(g is used before it is defined).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">sBASEDIR</span> <span class="ow">=</span> <span class="s">&quot;.lipl&quot;</span>
+<span class="cs">&gt; </span><span class="nf">sPRELUDE</span> <span class="ow">=</span> <span class="s">&quot;core.lipl&quot;</span>
+<span class="cs">&gt; </span><span class="nf">sLANGNAME</span> <span class="ow">=</span> <span class="s">&quot;LIPL&quot;</span>
+<span class="cs">&gt; </span><span class="nf">sPATH</span> <span class="ow">=</span> <span class="n">sLANGNAME</span> <span class="o">++</span> <span class="s">&quot;PATH&quot;</span>
+</pre></div>
+
+</div>
+<p>So, these define 4 functions: sBASEDIR, sPRELUDE, ...
+A normal function name should start with a lowercase letter.
+Then, uppercase letters and <tt class="docutils literal">'</tt> or <tt class="docutils literal">_</tt> can follow:</p>
+<pre class="literal-block">
+aPple, aP_pLE, apple', a_ppL''_'_E
+</pre>
+<p>are all valid function names.</p>
+</div>
+<div class="section" id="operators">
+<h1><a class="toc-backref" href="#id5">5&nbsp;&nbsp;&nbsp;Operators</a></h1>
+<p>A function can start with one of these:</p>
+<pre class="literal-block">
+:!#$%&amp;*+./&lt;=&gt;?&#64;\\^|-~
+</pre>
+<p>and continue with one of those.</p>
+<p>Then, the function is an operator.
+Usually, a function application is written as <tt class="docutils literal">f a b</tt>.
+But for operators, it is written as <tt class="docutils literal">a + b</tt>, where <tt class="docutils literal">+</tt> is an operator.
+A function can be turned into an operator by enclosing it in <tt class="docutils literal">` `</tt>:</p>
+<pre class="literal-block">
+f a b
+==&gt; a `f` b
+</pre>
+<p>Similarly, an operator can be turned into a function by enclosing it in
+<tt class="docutils literal">( )</tt>:</p>
+<pre class="literal-block">
+a + b
+==&gt; (+) a b
+</pre>
+<p><tt class="docutils literal">++</tt> is concatenation operator that concatenates two lists:</p>
+<pre class="literal-block">
+sLANGNAME ++ &quot;PATH&quot;
+==&gt; &quot;LIPLPATH&quot; where sLANGNAME is &quot;LIPL&quot;
+</pre>
+<p>So, a string in Haskell is a list of characters.
+Strings can be written as:</p>
+<pre class="literal-block">
+['a', 'p', 'p', 'l', 'e']
+or
+&quot;apple&quot;
+</pre>
+<p>They represent the same string.
+A character is enclosed in <tt class="docutils literal">' '</tt>. A string is enclosed in <tt class="docutils literal">&quot; &quot;</tt>.</p>
+<p><tt class="docutils literal">a ==&gt; b</tt> means that a can be transformed to b. Or, b follows
+from a.
+It is not Haskell. Just a notation used in this document.</p>
+</div>
+<div class="section" id="convention">
+<h1><a class="toc-backref" href="#id6">6&nbsp;&nbsp;&nbsp;Convention</a></h1>
+<p><tt class="docutils literal">shell&gt;</tt> is a shell prompt (command line):</p>
+<pre class="literal-block">
+shell&gt; cd ..
+</pre>
+<p>means to type <tt class="docutils literal">cd ..</tt> at command line prompt.</p>
+<p><tt class="docutils literal">ghci&gt;</tt> is a GHCi prompt:</p>
+<pre class="literal-block">
+ghci&gt; 1 + 2
+3
+</pre>
+<p>means to type <tt class="docutils literal">1 + 2</tt> at GHCi prompt. And it also shows what GHCi
+prints when enter key is pressed.
+To start GHCi:</p>
+<pre class="literal-block">
+shell&gt; ghci
+ghci&gt;
+</pre>
+<p><tt class="docutils literal">LIPL&gt;</tt> is a LIPL prompt:</p>
+<pre class="literal-block">
+LIPL&gt; (+ 1 2)
+type: Int
+3
+</pre>
+<p>means to type <tt class="docutils literal">(+ 1 2)</tt> at LIPL propmpt. And it shows
+what LIPL interpreter prints.</p>
+<pre class="literal-block">
+shell&gt; cd path/to/Settings.lhs
+shell&gt; ghci
+ghci&gt; :l Settings
+</pre>
+<p>The last command will load Settings module (the module this file defines).
+After loading the module, the prompt will change to <tt class="docutils literal">*Settings&gt;</tt>.
+However, <tt class="docutils literal">ghci&gt;</tt> will still be used through out this document.</p>
+<pre class="literal-block">
+ghci&gt; sPATH -- Settings module is already loaded.
+&quot;LIPLPATH&quot;
+</pre>
+</div>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

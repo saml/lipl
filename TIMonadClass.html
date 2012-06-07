@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>TIMonadClass.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="timonadclass-lhs">
+<h1 class="title">TIMonadClass.lhs</h1>
+<p>TIMonadClass declares class MonadTI.</p>
+<p>During type inference of LIPL expressions, a Subst
+should be maintained that contains type information of
+various type variables.
+During evaluation of LIPL expressions, an EnvStack
+should be maintained that contains variables
+and values bound to them.
+While the interpreter is running, various errors should be reported.</p>
+<p>A monad can be used to manage a Subst for type inference,
+an EnvStack for evaluation, and also handle error reporting.
+For modularity, however, different monads are created each of which is
+responsible for the Subst, the EnvStack, and error reporting.
+Then, a huge monad is constructed by composing those modular monads.</p>
+<p>For composition of monads, monad transformers are defined and used,
+in a similar fashion that can be found in mtl (Monad Transformer Library.
+Comes with GHC): definition of a monad is done over 2 modules:
+class module and monad module.
+For example, Reader monad in mtl is defined in 2 modules:</p>
+<ul class="simple">
+<li>Control.Monad.Reader.Class: provides interface MonadReader</li>
+<li>Control.Monad.Reader: provides Reader monad and ReaderT
+monad transformer.</li>
+</ul>
+<p>Similarly, TIMonadClass module and TIMonad module
+are responsible for TI monad:</p>
+<ul class="simple">
+<li>TIMonadClass: provides interface MonadTI</li>
+<li>TIMonad: provides TI monad and TIT monad transformer.</li>
+</ul>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">TIMonadClass</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Type</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">class</span> <span class="p">(</span><span class="kt">Monad</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadTI</span> <span class="n">m</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getSubst</span> <span class="ow">::</span> <span class="n">m</span> <span class="kt">Subst</span>
+<span class="cs">&gt;     </span><span class="nf">putSubst</span> <span class="ow">::</span> <span class="kt">Subst</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt;     </span><span class="nf">extendSubst</span> <span class="ow">::</span> <span class="kt">Subst</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt;     </span><span class="nf">getN</span> <span class="ow">::</span> <span class="n">m</span> <span class="kt">Int</span>
+<span class="cs">&gt;     </span><span class="nf">putN</span> <span class="ow">::</span> <span class="kt">Int</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt;     </span><span class="nf">newId</span> <span class="ow">::</span> <span class="n">m</span> <span class="kt">Id</span>
+</pre></div>
+
+</div>
+<p>For a monad to be MonadTI, it has to implement those functions
+listed above: getSubst, putSubst, ...</p>
+<ul>
+<li><p class="first">getSubst should return a Subst in the monad.</p>
+</li>
+<li><p class="first">putSubst takes a Subst and puts it to the monad.</p>
+</li>
+<li><p class="first">extendSubst takes a Subst and merges it to the current Subst.
+The Subst being merged into shadows current Subst.
+For example, if <tt class="docutils literal"><span class="pre">[(&quot;a&quot;,</span> tNew)]</tt> is passed to extendSubst
+and current Subst has <tt class="docutils literal">(&quot;a&quot;, tOld)</tt>, then a is bound to
+tNew:</p>
+<pre class="literal-block">
+current Subst:     [(a, tOld), ...]
+extendSubst        [(a, tNew)]
+==&gt; current Subst: [(a, tNew), ...]
+</pre>
+</li>
+<li><p class="first">getN returns an Int in the monad.</p>
+</li>
+<li><p class="first">putN puts an Int to the monad.</p>
+</li>
+<li><p class="first">newId returns a new Id (String). It should be unique.</p>
+</li>
+</ul>
+<p>So, MonadTI stores a Subst and an Int.
+Users can access the Subst and the Int using getSubst, getN, ...etc.
+The Subst can be extended.
+And, MonadTI can generate brand new Id.</p>
+<p><tt class="docutils literal">class (Monad m) =&gt; MonadTI m ...</tt>
+means MonadTI class is being declared in the context that says
+m is a Monad: Monad is another typeclass just like MonadTI:</p>
+<pre class="literal-block">
+ghci&gt; :i Monad
+class Monad m where
+  (&gt;&gt;=) :: m a -&gt; (a -&gt; m b) -&gt; m b
+  (&gt;&gt;) :: m a -&gt; m b -&gt; m b
+  return :: a -&gt; m a
+  fail :: String -&gt; m a
+    -- Defined in GHC.Base
+</pre>
+<p><tt class="docutils literal">:i</tt> is GHCi command that prints information of given expression.
+So, for a value to be a Monad, it has to support <tt class="docutils literal">&gt;&gt;=</tt>, <tt class="docutils literal">&gt;&gt;</tt>,
+return, and fail.</p>
+<p>Since MonadTI is declared for all m such that m is a Monad,
+to instantiate MonadTI, one should implement <tt class="docutils literal">&gt;&gt;=</tt>, <tt class="docutils literal">&gt;&gt;</tt>, ... also
+(if the type trying to instantiate MonadTI isn't already a Monad).</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

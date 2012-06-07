@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Parser.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="parser-lhs">
+<h1 class="title">Parser.lhs</h1>
+<p>Parser module implements parser of LIPL.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Parser</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="p">((</span><span class="o">&lt;|&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">&lt;?&gt;</span><span class="p">))</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">CoreLib</span> <span class="p">(</span><span class="nf">builtinNames</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">ParseUtils</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Settings</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">at</span> <span class="n">val</span> <span class="ow">=</span> <span class="kt">At</span> <span class="n">initialPos</span> <span class="n">val</span>
+</pre></div>
+
+</div>
+<p>at function wraps given Val with initialPos, which is
+(line 1, column 1).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parse</span> <span class="n">input</span> <span class="ow">=</span> <span class="kr">case</span> <span class="n">parseSingle</span> <span class="n">input</span> <span class="kr">of</span>
+<span class="cs">&gt;     </span><span class="kt">Right</span> <span class="n">v</span> <span class="ow">-&gt;</span> <span class="n">v</span>
+<span class="cs">&gt;     </span><span class="kt">Left</span> <span class="n">err</span> <span class="ow">-&gt;</span> <span class="ne">error</span> <span class="p">(</span><span class="n">show</span> <span class="n">err</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">parseSingle</span> <span class="n">input</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">parse</span>
+<span class="cs">&gt;     </span><span class="nf">parseSingleExpr</span> <span class="p">(</span><span class="n">sLANGNAME</span> <span class="o">++</span> <span class="s">&quot; REPL&quot;</span><span class="p">)</span> <span class="n">input</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">parseMultiple</span> <span class="n">fileName</span> <span class="n">input</span> <span class="ow">=</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">parse</span> <span class="n">parseMultipleExpr</span> <span class="n">fileName</span> <span class="n">input</span>
+</pre></div>
+
+</div>
+<p>parse function parses String to Val. In case of error,
+exception is raised.
+parseSingle parses String
+that represents a single LIPL expression to Val.
+It returns ParseError in case of error.
+parseMultiple parses multiple LIPL expressions into Val.
+It also returns ParseError in case of error.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseBool</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">b</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;True&quot;</span> <span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;False&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Bool</span> <span class="o">$</span> <span class="kr">case</span> <span class="n">b</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="s">&quot;False&quot;</span> <span class="ow">-&gt;</span> <span class="kt">False</span>
+<span class="cs">&gt;         </span><span class="kr">_</span> <span class="ow">-&gt;</span>  <span class="kt">True</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Bool&quot;</span>
+</pre></div>
+
+</div>
+<p>parseBool parses True or False (LIPL booleans).
+It retrieves current SourcePos and returns
+parsed boolean along with the SourcePos.
+Most other parser actions in this module
+wraps parsed Val with current SourcePos.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseIdent</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">ident</span> <span class="ow">&lt;-</span> <span class="n">parseOp</span> <span class="o">&lt;|&gt;</span> <span class="n">parseName</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">ident</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Ident&quot;</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">parseOp</span> <span class="ow">=</span> <span class="n">parseHeadBody</span> <span class="n">opLetter</span> <span class="n">opLetter</span>
+<span class="cs">&gt;         </span><span class="nf">parseName</span> <span class="ow">=</span> <span class="n">parseHeadBody</span> <span class="n">identStart</span> <span class="n">identLetter</span>
+</pre></div>
+
+</div>
+<p>parseIdent parses LIPL identifiers:
+apple, app-le, apple' , app''''---__le, +, -,  ...</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parsePrimFun</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">ident</span><span class="p">))</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseIdent</span>
+<span class="cs">&gt;         </span><span class="o">&lt;|&gt;</span> <span class="n">return</span> <span class="p">(</span><span class="n">at</span> <span class="p">(</span><span class="kt">Ident</span> <span class="s">&quot;&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="kr">if</span> <span class="n">ident</span> <span class="p">`</span><span class="n">elem</span><span class="p">`</span> <span class="n">builtinNames</span>
+<span class="cs">&gt;         </span><span class="kr">then</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">PrimFun</span> <span class="n">ident</span><span class="p">)</span>
+<span class="cs">&gt;         </span><span class="kr">else</span>
+<span class="cs">&gt;             </span><span class="nf">fail</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;PrimFun&quot;</span>
+</pre></div>
+
+</div>
+<p>parsePrimFun parses one of identifiers defined in builtinNames:
++, -, div, toInt, ...</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseInt</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">sign</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="p">(</span><span class="kt">P</span><span class="o">.</span><span class="n">option</span> <span class="s">&quot;&quot;</span> <span class="p">(</span><span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;-&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="nf">val</span> <span class="ow">&lt;-</span> <span class="n">nat</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Int</span> <span class="p">(</span><span class="n">read</span> <span class="o">$</span> <span class="n">sign</span> <span class="o">++</span> <span class="n">val</span><span class="p">)))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Int&quot;</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">parseFloat</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">sign</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;-&quot;</span> <span class="o">&lt;|&gt;</span> <span class="n">return</span> <span class="s">&quot;&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">n</span> <span class="ow">&lt;-</span> <span class="n">nat</span>
+<span class="cs">&gt;     </span><span class="nf">dot</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;.&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">frac</span> <span class="ow">&lt;-</span> <span class="n">nat</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="o">$</span> <span class="kt">Float</span> <span class="p">(</span><span class="n">read</span> <span class="o">$</span> <span class="p">(</span><span class="n">sign</span> <span class="o">++</span> <span class="n">n</span> <span class="o">++</span> <span class="n">dot</span> <span class="o">++</span> <span class="n">frac</span><span class="p">)))</span>
+<span class="cs">&gt;     </span><span class="o">&lt;?&gt;</span> <span class="s">&quot;Float&quot;</span>
+</pre></div>
+
+</div>
+<p>parseInt parses LIPL integers: 000, -000024, 235, 00234, ...
+parseFloat parses LIPL floats: 00000.000, -0000.003, 00213.23, ...</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseChar</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;</span><span class="se">\&#39;</span><span class="sc">&#39;</span>
+<span class="cs">&gt;     </span><span class="nf">c</span> <span class="ow">&lt;-</span> <span class="n">escapedChar</span> <span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">anyChar</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;</span><span class="se">\&#39;</span><span class="sc">&#39;</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="o">$</span> <span class="kt">Char</span> <span class="n">c</span><span class="p">)</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Char&quot;</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">escapedChar</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">escapedChars</span>
+<span class="cs">&gt;             </span><span class="kr">let</span> <span class="n">char</span> <span class="ow">=</span> <span class="s">&quot;&#39;&quot;</span> <span class="o">++</span> <span class="n">s</span> <span class="o">++</span> <span class="s">&quot;&#39;&quot;</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="o">$</span> <span class="n">read</span> <span class="n">char</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="c1">-- TODO: support \32353 and unicode.</span>
+<span class="cs">&gt; </span><span class="nf">escapedChars</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;</span><span class="se">\\</span><span class="sc">&#39;</span> <span class="c1">-- get \</span>
+<span class="cs">&gt;     </span><span class="nf">c</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">anyChar</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kr">case</span> <span class="n">c</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="sc">&#39;n&#39;</span> <span class="ow">-&gt;</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+<span class="cs">&gt;         </span><span class="sc">&#39;t&#39;</span> <span class="ow">-&gt;</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span>
+<span class="cs">&gt;         </span><span class="sc">&#39;r&#39;</span> <span class="ow">-&gt;</span> <span class="s">&quot;</span><span class="se">\r</span><span class="s">&quot;</span>
+<span class="cs">&gt;         </span><span class="sc">&#39;v&#39;</span> <span class="ow">-&gt;</span> <span class="s">&quot;</span><span class="se">\v</span><span class="s">&quot;</span>
+<span class="cs">&gt;         </span><span class="sc">&#39;f&#39;</span> <span class="ow">-&gt;</span> <span class="s">&quot;</span><span class="se">\f</span><span class="s">&quot;</span>
+<span class="cs">&gt;         </span><span class="sc">&#39;a&#39;</span> <span class="ow">-&gt;</span> <span class="s">&quot;</span><span class="se">\a</span><span class="s">&quot;</span>
+<span class="cs">&gt;         </span><span class="sc">&#39;b&#39;</span> <span class="ow">-&gt;</span> <span class="s">&quot;</span><span class="se">\b</span><span class="s">&quot;</span>
+<span class="cs">&gt;         </span><span class="nf">otherwise</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="n">c</span><span class="p">]</span>
+</pre></div>
+
+</div>
+<p>parseChar parses any single character enclosed in <tt class="docutils literal">' '</tt>
+or escaped characters: <tt class="docutils literal">\n</tt>, <tt class="docutils literal">\t</tt>, ...etc.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseStr</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;&quot;&#39;</span>
+<span class="cs">&gt;     </span><span class="nf">str</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">many</span> <span class="o">$</span> <span class="kt">P</span><span class="o">.</span><span class="n">many1</span> <span class="p">(</span><span class="kt">P</span><span class="o">.</span><span class="n">noneOf</span> <span class="s">&quot;</span><span class="se">\&quot;\\</span><span class="s">&quot;</span><span class="p">)</span> <span class="o">&lt;|&gt;</span> <span class="n">escapedChars</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;&quot;&#39;</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="o">$</span> <span class="kt">Str</span> <span class="p">(</span><span class="n">concat</span> <span class="n">str</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Str&quot;</span>
+</pre></div>
+
+</div>
+<p>parseStr parses LIPL strings: multi line strings
+enclosed in <tt class="docutils literal">&quot; &quot;</tt> with escaped double quote (<tt class="docutils literal">\&quot;</tt>).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseList</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">lbracket</span>
+<span class="cs">&gt;     </span><span class="nf">l</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">sepBy</span> <span class="n">parseToken</span> <span class="p">(</span><span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">comma</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">rbracket</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="o">$</span> <span class="kt">List</span> <span class="n">l</span><span class="p">)</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;List&quot;</span>
+</pre></div>
+
+</div>
+<p>parseList parses LIPL lists:</p>
+<pre class="literal-block">
+[1], [1, &quot;hello&quot;], [  a, b, 35, &quot;asdf&quot;], ...
+</pre>
+<p>parseList does not detect heterogeneous lists although LIPL only
+allows homogeneous lists.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">getIdents</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="kt">[]</span>
+<span class="cs">&gt; </span><span class="nf">getIdents</span> <span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">a</span><span class="p">)</span> <span class="kt">:</span> <span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">a</span> <span class="kt">:</span> <span class="n">getIdents</span> <span class="n">xs</span>
+<span class="cs">&gt; </span><span class="nf">getIdents</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">a</span> <span class="kt">:</span> <span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">a</span> <span class="kt">:</span> <span class="n">getIdents</span> <span class="n">xs</span>
+<span class="cs">&gt; </span><span class="nf">getIdents</span> <span class="p">(</span><span class="kr">_</span> <span class="kt">:</span> <span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">getIdents</span> <span class="n">xs</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">parseParams</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">lparen</span>
+<span class="cs">&gt;     </span><span class="nf">params</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">sepEndBy</span> <span class="n">parseIdent</span> <span class="n">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">rparen</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="n">getIdents</span> <span class="n">params</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Params&quot;</span>
+</pre></div>
+
+</div>
+<p>getIdents returns identifiers from list of Vals:</p>
+<pre class="literal-block">
+getIdents [Int 1, Ident &quot;a&quot;, Ident &quot;b&quot;, ...]
+==&gt; [&quot;a&quot;, &quot;b&quot;, ...]
+</pre>
+<p>parseParams parses parameter list:</p>
+<pre class="literal-block">
+(ident1 ident2 ident3 ... identN)
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseLambda</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;lambda&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">args</span> <span class="ow">&lt;-</span> <span class="n">parseParams</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">body</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Lambda</span> <span class="n">args</span> <span class="n">body</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Lambda&quot;</span>
+</pre></div>
+
+</div>
+<p>parseLambda parses LIPL lambda expression:</p>
+<pre class="literal-block">
+lambda (ident1 ident2 ... identN) expr
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseDef</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;def&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">name</span><span class="p">))</span> <span class="ow">&lt;-</span> <span class="n">parseIdent</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">args</span> <span class="ow">&lt;-</span> <span class="n">parseParams</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">body</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">FunDef</span> <span class="n">name</span> <span class="n">args</span> <span class="n">body</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Def&quot;</span>
+</pre></div>
+
+</div>
+<p>parseDef parses LIPL function definition:</p>
+<pre class="literal-block">
+def fname (ident1 ident2 ... identN) expr
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseParenExpr</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">lparen</span>
+<span class="cs">&gt;     </span><span class="nf">val</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">sepEndBy</span> <span class="n">parseToken</span> <span class="n">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">rparen</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Expr</span> <span class="n">val</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Paren Expr&quot;</span>
+</pre></div>
+
+</div>
+<p>parseParenExpr parses a LIPL expression, which should be
+parenthesized:</p>
+<pre class="literal-block">
+(lambda (x) x), (def f (x) x), (1), (-3.324), ...
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseIf</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;if&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">pred</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">ifCase</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">elseCase</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">If</span> <span class="n">pred</span> <span class="n">ifCase</span> <span class="n">elseCase</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;If&quot;</span>
+</pre></div>
+
+</div>
+<p>parseIf parses LIPL if expression:</p>
+<pre class="literal-block">
+(if expr1 expr2 expr3)
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseLet</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">string</span> <span class="s">&quot;let&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="kt">At</span> <span class="kr">_</span> <span class="p">(</span><span class="kt">Dict</span> <span class="n">env</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">parseDict</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">body</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Let</span> <span class="n">env</span> <span class="n">body</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Let&quot;</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">parseDict</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">lbrace</span>
+<span class="cs">&gt;     </span><span class="nf">l</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">sepBy</span> <span class="n">parseKeyVal</span> <span class="p">(</span><span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">comma</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">rbrace</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Dict</span> <span class="n">l</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Dict&quot;</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">parseKeyVal</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="kt">At</span> <span class="kr">_</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">key</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">parseIdent</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">char</span> <span class="sc">&#39;=&#39;</span>
+<span class="cs">&gt;     </span><span class="nf">mustSpaces</span>
+<span class="cs">&gt;     </span><span class="nf">val</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;KeyVal&quot;</span>
+</pre></div>
+
+</div>
+<p>parseLet parses LIPL let expression:</p>
+<pre class="literal-block">
+(let { i1 = expr1, i2 = expr2, ... iN = exprN }
+     expr)
+</pre>
+<p>parseKeyVal parses:</p>
+<pre class="literal-block">
+identifier = expr
+</pre>
+<p>parseDict parses:</p>
+<pre class="literal-block">
+{ identifer1 = expr1 , identifier2 = expr2
+    , ..., identiferN = exprN}
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parsePair</span> <span class="ow">=</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">getPosition</span>
+<span class="cs">&gt;     </span><span class="nf">lparen</span>
+<span class="cs">&gt;     </span><span class="nf">a</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">comma</span>
+<span class="cs">&gt;     </span><span class="nf">b</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">rparen</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">At</span> <span class="n">pos</span> <span class="p">(</span><span class="kt">Pair</span> <span class="n">a</span> <span class="n">b</span><span class="p">))</span> <span class="o">&lt;?&gt;</span> <span class="s">&quot;Pair&quot;</span>
+</pre></div>
+
+</div>
+<p>parsePair parses:</p>
+<pre class="literal-block">
+(expr1, expr2)
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseToken</span> <span class="ow">=</span>
+<span class="cs">&gt;         </span><span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseIf</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseParenExpr</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseLet</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseDef</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseLambda</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseList</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseDict</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parsePair</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseBool</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseChar</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseStr</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseFloat</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseInt</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parsePrimFun</span>
+<span class="cs">&gt;     </span><span class="o">&lt;|&gt;</span> <span class="kt">P</span><span class="o">.</span><span class="n">try</span> <span class="n">parseIdent</span>
+</pre></div>
+
+</div>
+<p>parseToken parses a LIPL token, which can be a nested
+parenthesized expression.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">parseSingleExpr</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">ws</span>
+<span class="cs">&gt;     </span><span class="nf">e</span> <span class="ow">&lt;-</span> <span class="n">parseToken</span>
+<span class="cs">&gt;     </span><span class="nf">ws</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">eof</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">e</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">parseMultipleExpr</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">ws</span>
+<span class="cs">&gt;     </span><span class="nf">es</span> <span class="ow">&lt;-</span> <span class="kt">P</span><span class="o">.</span><span class="n">sepEndBy</span> <span class="n">parseParenExpr</span> <span class="n">ws</span>
+<span class="cs">&gt;     </span><span class="kt">P</span><span class="o">.</span><span class="n">eof</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">es</span>
+</pre></div>
+
+</div>
+<p>parseSingleExpr parses a LIPL token (includes parenthesised
+expression).
+parseMultipleExpr parses multiple parenthesized expressions.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

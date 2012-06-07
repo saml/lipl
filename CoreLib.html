@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>CoreLib.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="corelib-lhs">
+<h1 class="title">CoreLib.lhs</h1>
+<p>CoreLib defines built-in functions for LIPL.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="cm">{-# LANGUAGE Rank2Types, FlexibleContexts #-}</span>
+<span class="cs">&gt; </span><span class="c1">--{-# OPTIONS_GHC -fno-monomorphism-restriction #-}</span>
+</pre></div>
+
+</div>
+<p>Rank2Types extension is used to store
+various <tt class="docutils literal">[Val] <span class="pre">-&gt;</span> m [Val]</tt> (built-in) functions
+where m can be an instance of
+MonadEval and/or MonadError Err and/or
+MonadIO and/or MonadPos.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">CoreLib</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad</span> <span class="k">as</span> <span class="n">M</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Trans</span> <span class="k">as</span> <span class="n">T</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">Map</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">TParse</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Type</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">EvalMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Error</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">PosMonad</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">data</span> <span class="kt">Builtin</span> <span class="ow">=</span> <span class="kt">Builtin</span> <span class="p">{</span>
+<span class="cs">&gt;     </span><span class="nf">getBuiltinArity</span> <span class="ow">::</span> <span class="kt">Int</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="n">getBuiltinFun</span> <span class="ow">::</span>
+<span class="cs">&gt;         </span><span class="nf">forall</span> <span class="n">m</span><span class="o">.</span> <span class="p">(</span><span class="kt">MonadEval</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span>
+<span class="cs">&gt;             </span><span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="kt">MonadIO</span> <span class="n">m</span><span class="p">,</span> <span class="kt">MonadPos</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="n">getBuiltinType</span> <span class="ow">::</span> <span class="kt">Type</span>
+<span class="cs">&gt;     </span><span class="p">}</span>
+</pre></div>
+
+</div>
+<p>Builtin can store a built-in function.
+A built-in function should have:</p>
+<ul class="simple">
+<li>number of arguments it takes.</li>
+<li>actual function that takes <tt class="docutils literal">[Val]</tt> (arguments) and returns result.</li>
+<li>type of the function.</li>
+</ul>
+<p>There can be a better way to store
+built-in functions (getBuiltinFun) in Builtin than to use Rank2Type.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">funcall</span> <span class="n">fname</span> <span class="n">args</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kt">Map</span><span class="o">.</span><span class="n">lookup</span> <span class="n">fname</span> <span class="n">primitives</span> <span class="kr">of</span>
+<span class="cs">&gt;     </span><span class="kt">Nothing</span> <span class="ow">-&gt;</span>
+<span class="cs">&gt;         </span><span class="nf">throwErr</span> <span class="p">(</span><span class="s">&quot;Unrecognizable primitive function: &quot;</span> <span class="o">++</span> <span class="n">fname</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="kt">Just</span> <span class="n">f</span> <span class="ow">-&gt;</span> <span class="p">(</span><span class="n">getBuiltinFun</span> <span class="n">f</span><span class="p">)</span> <span class="n">args</span>
+</pre></div>
+
+</div>
+<p>Given a function name and list of Vals (arguments),
+funcall calls the built-in function of the same name with the arguments.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">arityOf</span> <span class="n">name</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kt">Map</span><span class="o">.</span><span class="n">lookup</span> <span class="n">name</span> <span class="n">primitives</span> <span class="kr">of</span>
+<span class="cs">&gt;     </span><span class="kt">Nothing</span> <span class="ow">-&gt;</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="kt">Just</span> <span class="n">f</span> <span class="ow">-&gt;</span> <span class="n">getBuiltinArity</span> <span class="n">f</span>
+</pre></div>
+
+</div>
+<p>Given name of a built-in function, arityOf returns
+arity of the function.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">primitives</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="s">&quot;+&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">opAdd</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Int -&gt; Int -&gt; Int&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;+.&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">opAdd</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Float -&gt; Float -&gt; Float&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;-&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">opSub</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Int -&gt; Int -&gt; Int&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;-.&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">opSub</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Float -&gt; Float -&gt; Float&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;*&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">opMult</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Int -&gt; Int -&gt; Int&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;*.&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">opMult</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Float -&gt; Float -&gt; Float&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;div&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">intOpDiv</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Int -&gt; Int -&gt; Int&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">floatOpDiv</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Float -&gt; Float -&gt; Float&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;toInt&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">toInt</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Float -&gt; Int&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;toFloat&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">toFloat</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Int -&gt; Float&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;&amp;&amp;&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="p">(</span><span class="n">boolBinOp</span> <span class="p">(</span><span class="o">&amp;&amp;</span><span class="p">))</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Bool -&gt; Bool -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;||&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="p">(</span><span class="n">boolBinOp</span> <span class="p">(</span><span class="o">||</span><span class="p">))</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Bool -&gt; Bool -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;not&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">boolNot</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Bool -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;==&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">compareEq</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; a -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;!=&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">compareNeq</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; a -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;&lt;&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">compareLt</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; a -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;&lt;=&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">compareLte</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; a -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;&gt;&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">compareGt</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; a -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;&gt;=&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">compareGte</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; a -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;fst&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">fst&#39;</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;(a, b) -&gt; a&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;snd&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">snd&#39;</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;(a, b) -&gt; b&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;length&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">listLength</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;[a] -&gt; Int&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;head&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">listHead</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;[a] -&gt; a&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;tail&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">listTail</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;[a] -&gt; [a]&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;cons&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">2</span> <span class="n">listCons</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; [a] -&gt; [a]&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;isEmpty&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">listIsEmpty</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;[a] -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;println&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="p">(</span><span class="n">printStr</span> <span class="n">putStrLn</span><span class="p">)</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Str -&gt; ()&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;print&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="p">(</span><span class="n">printStr</span> <span class="n">putStr</span><span class="p">)</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Str -&gt; ()&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;getLine&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">0</span> <span class="p">(</span><span class="n">readFrom</span> <span class="n">stdin</span><span class="p">)</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Str&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;show&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">showVar</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;a -&gt; Str&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;readInt&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">readInt</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Str -&gt; Int&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;readFloat&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">readFloat</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Str -&gt; Float&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;readBool&quot;</span><span class="p">,</span> <span class="kt">Builtin</span> <span class="mi">1</span> <span class="n">readBool</span> <span class="p">(</span><span class="n">tParse</span> <span class="s">&quot;Str -&gt; Bool&quot;</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="p">]</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">primitivesList</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">toList</span> <span class="n">primitives</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">builtinNames</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">fst</span> <span class="n">primitivesList</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">builtinSubst</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">mkSubst</span> <span class="n">primitivesList</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">mkSubst</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="ow">=</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">getBuiltinType</span> <span class="n">b</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<ul class="simple">
+<li>primitives is a Map of String and built-in functions.</li>
+<li>builtinNames is a list of names of built-in functions.</li>
+<li>builtinSubst stores types (actually TScheme) of built-in functions.</li>
+</ul>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">fst&#39;</span> <span class="p">[(</span><span class="kt">Pair</span> <span class="n">x</span> <span class="kr">_</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">x</span>
+<span class="cs">&gt; </span><span class="nf">snd&#39;</span> <span class="p">[(</span><span class="kt">Pair</span> <span class="kr">_</span> <span class="n">x</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">x</span>
+</pre></div>
+
+</div>
+<p>fst' and snd' returns fst or snd of given LIPL pair.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">readInt</span> <span class="p">[(</span><span class="kt">Str</span> <span class="n">s</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="p">(</span><span class="kt">Int</span> <span class="p">(</span><span class="n">read</span> <span class="n">s</span><span class="p">))</span>
+<span class="cs">&gt; </span><span class="nf">readInt</span> <span class="p">[(</span><span class="kt">List</span> <span class="n">l</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">readInt</span> <span class="p">[</span><span class="n">toStr</span> <span class="n">l</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">readFloat</span> <span class="p">[(</span><span class="kt">Str</span> <span class="n">s</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="p">(</span><span class="kt">Float</span> <span class="p">(</span><span class="n">read</span> <span class="n">s</span><span class="p">))</span>
+<span class="cs">&gt; </span><span class="nf">readFloat</span> <span class="p">[(</span><span class="kt">List</span> <span class="n">l</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">readFloat</span> <span class="p">[</span><span class="n">toStr</span> <span class="n">l</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">readBool</span> <span class="p">[(</span><span class="kt">Str</span> <span class="n">s</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="p">(</span><span class="kt">Bool</span> <span class="p">(</span><span class="n">read</span> <span class="n">s</span><span class="p">))</span>
+<span class="cs">&gt; </span><span class="nf">readBool</span> <span class="p">[(</span><span class="kt">List</span> <span class="n">l</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">readBool</span> <span class="p">[</span><span class="n">toStr</span> <span class="n">l</span><span class="p">]</span>
+</pre></div>
+
+</div>
+<p><tt class="docutils literal">read*</tt> converts LIPL string or list of chars to actual value
+they represent.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">toInt</span> <span class="p">[(</span><span class="kt">Float</span> <span class="n">f</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="p">(</span><span class="kt">Int</span> <span class="o">$</span> <span class="n">floor</span> <span class="n">f</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">toFloat</span> <span class="p">[(</span><span class="kt">Int</span> <span class="n">i</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="p">(</span><span class="kt">Float</span> <span class="o">$</span> <span class="n">fromIntegral</span> <span class="n">i</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>toInt and toFloat converts between Float and Int.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">isIn</span> <span class="ow">=</span> <span class="n">flip</span> <span class="n">elem</span>
+</pre></div>
+
+</div>
+<p>isIn takes a list and a value and tests if the value can be found
+in the list:</p>
+<pre class="literal-block">
+isIn [LT, EQ] EQ
+==&gt; True
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">,</span> <span class="kt">MonadPos</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="kt">Ordering</span> <span class="ow">-&gt;</span> <span class="kt">Bool</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">Int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Int</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="o">$</span> <span class="n">op</span> <span class="p">(</span><span class="n">compare</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">Float</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Float</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="o">$</span> <span class="n">op</span> <span class="p">(</span><span class="n">compare</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">Bool</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Bool</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="o">$</span> <span class="n">op</span> <span class="p">(</span><span class="n">compare</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">Str</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Str</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="o">$</span> <span class="n">op</span> <span class="p">(</span><span class="n">compare</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="n">a</span><span class="o">@</span><span class="p">(</span><span class="kt">Str</span> <span class="kr">_</span><span class="p">),</span> <span class="kt">List</span> <span class="n">l</span><span class="p">]</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="n">a</span><span class="p">,</span> <span class="n">toStr</span> <span class="n">l</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">List</span> <span class="n">l</span><span class="p">,</span> <span class="n">a</span><span class="o">@</span><span class="p">(</span><span class="kt">Str</span> <span class="kr">_</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="n">toStr</span> <span class="n">l</span><span class="p">,</span> <span class="n">a</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">Char</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Char</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="o">$</span> <span class="n">op</span> <span class="p">(</span><span class="n">compare</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">List</span> <span class="n">a</span><span class="p">,</span> <span class="kt">List</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="o">$</span> <span class="n">op</span> <span class="p">(</span><span class="n">compare</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">Pair</span> <span class="n">a1</span> <span class="n">a2</span><span class="p">,</span> <span class="kt">Pair</span> <span class="n">b1</span> <span class="n">b2</span><span class="p">]</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">ab1</span> <span class="ow">&lt;-</span> <span class="n">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="n">a1</span><span class="p">,</span> <span class="n">b1</span><span class="p">]</span>
+<span class="cs">&gt;     </span><span class="nf">ab2</span> <span class="ow">&lt;-</span> <span class="n">compareOp</span> <span class="n">op</span> <span class="p">[</span><span class="n">a2</span><span class="p">,</span> <span class="n">b2</span><span class="p">]</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="p">(</span><span class="n">unpackBool</span> <span class="n">ab1</span> <span class="o">&amp;&amp;</span> <span class="n">unpackBool</span> <span class="n">ab2</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">compareOp</span> <span class="kr">_</span> <span class="p">[</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;can&#39;t compare these two: &quot;</span>
+<span class="cs">&gt;         </span><span class="o">++</span> <span class="n">show</span> <span class="n">a</span> <span class="o">++</span> <span class="s">&quot;, &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">b</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>compareOp compares two LIPL values.
+To compare equality, for example,
+<tt class="docutils literal">compareOp (isIn [EQ]) (compare a b)</tt> can be used.
+compare a b will return EQ, LT, or GT.
+When it returns EQ, <tt class="docutils literal">isIn [EQ] EQ</tt> will return True.
+When it returns something other than EQ, <tt class="docutils literal">isIn [EQ] returnValue</tt>
+would be False.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">compareEq</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadPos</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="nf">compareEq</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="p">(</span><span class="n">isIn</span> <span class="p">[</span><span class="kt">EQ</span><span class="p">])</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">compareNeq</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadPos</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="nf">compareNeq</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="p">(</span><span class="n">isIn</span> <span class="p">[</span><span class="kt">LT</span><span class="p">,</span> <span class="kt">GT</span><span class="p">])</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">compareLt</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadPos</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="nf">compareLt</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="p">(</span><span class="n">isIn</span> <span class="p">[</span><span class="kt">LT</span><span class="p">])</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">compareLte</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadPos</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="nf">compareLte</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="p">(</span><span class="n">isIn</span> <span class="p">[</span><span class="kt">LT</span><span class="p">,</span> <span class="kt">EQ</span><span class="p">])</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">compareGt</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadPos</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="nf">compareGt</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="p">(</span><span class="n">isIn</span> <span class="p">[</span><span class="kt">GT</span><span class="p">])</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">compareGte</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadPos</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="nf">compareGte</span> <span class="ow">=</span> <span class="n">compareOp</span> <span class="p">(</span><span class="n">isIn</span> <span class="p">[</span><span class="kt">GT</span><span class="p">,</span> <span class="kt">EQ</span><span class="p">])</span>
+</pre></div>
+
+</div>
+<p><tt class="docutils literal">compare*</tt> functions above tests whether
+two LIPL values are equal, less than, less than or equal to,
+greater than, greater than or equal to.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">opAdd</span> <span class="p">[</span><span class="kt">Int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Int</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Int</span> <span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">opAdd</span> <span class="p">[</span><span class="kt">Float</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Float</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Float</span> <span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">opSub</span> <span class="p">[</span><span class="kt">Int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Int</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Int</span> <span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">opSub</span> <span class="p">[</span><span class="kt">Float</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Float</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Float</span> <span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">opMult</span> <span class="p">[</span><span class="kt">Int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Int</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Int</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">opMult</span> <span class="p">[</span><span class="kt">Float</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Float</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Float</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">floatOpDiv</span> <span class="p">[</span><span class="kt">Float</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Float</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Float</span> <span class="p">(</span><span class="n">a</span> <span class="o">/</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">intOpDiv</span> <span class="p">[</span><span class="kt">Int</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Int</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Int</span> <span class="p">(</span><span class="n">div</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Above functions performs arithmetic operations on LIPL values.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">boolBinOp</span> <span class="n">op</span> <span class="p">[</span><span class="kt">Bool</span> <span class="n">a</span><span class="p">,</span> <span class="kt">Bool</span> <span class="n">b</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="p">(</span><span class="n">a</span> <span class="p">`</span><span class="n">op</span><span class="p">`</span> <span class="n">b</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">boolNot</span> <span class="p">[</span><span class="kt">Bool</span> <span class="n">a</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="p">(</span><span class="n">not</span> <span class="n">a</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>boolBinOp performs boolean binary operation on LIPL values
+according to op (||, &amp;&amp;, ...).
+boolNot flips True to False and vice versa.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">listLength</span> <span class="p">[</span><span class="kt">List</span> <span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Int</span> <span class="p">(</span><span class="n">toInteger</span> <span class="o">$</span> <span class="n">length</span> <span class="n">x</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">listLength</span> <span class="p">[</span><span class="kt">Str</span> <span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Int</span> <span class="p">(</span><span class="n">toInteger</span> <span class="o">$</span> <span class="n">length</span> <span class="n">x</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">listHead</span> <span class="p">[</span><span class="kt">List</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">x</span>
+<span class="cs">&gt; </span><span class="nf">listHead</span> <span class="p">[</span><span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">List</span> <span class="kt">[]</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;need non empty list: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">listHead</span> <span class="p">[</span><span class="kt">Str</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Char</span> <span class="n">x</span>
+<span class="cs">&gt; </span><span class="nf">listHead</span> <span class="p">[</span><span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Str</span> <span class="s">&quot;&quot;</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;need non empty string: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">listHead</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;need non empty list: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">x</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">listTail</span> <span class="p">[</span><span class="kt">List</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">List</span> <span class="n">xs</span>
+<span class="cs">&gt; </span><span class="nf">listTail</span> <span class="p">[</span><span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">List</span> <span class="kt">[]</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;need non empty list: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">listTail</span> <span class="p">[</span><span class="kt">Str</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Str</span> <span class="n">xs</span>
+<span class="cs">&gt; </span><span class="nf">listTail</span> <span class="p">[</span><span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Str</span> <span class="kt">[]</span><span class="p">)]</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;need non empty string: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">listTail</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;need non empty list: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">x</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">listCons</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="kt">List</span> <span class="kt">[]</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">List</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">listCons</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="kt">List</span> <span class="n">xs</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">List</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">listCons</span> <span class="p">[</span><span class="kt">Char</span> <span class="n">x</span><span class="p">,</span> <span class="kt">Str</span> <span class="s">&quot;&quot;</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Str</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">listCons</span> <span class="p">[</span><span class="kt">Char</span> <span class="n">x</span><span class="p">,</span> <span class="kt">Str</span> <span class="n">xs</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Str</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">listIsEmpty</span> <span class="p">[</span><span class="kt">List</span> <span class="n">a</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="p">(</span><span class="n">null</span> <span class="n">a</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">listIsEmpty</span> <span class="p">[</span><span class="kt">Str</span> <span class="n">a</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Bool</span> <span class="p">(</span><span class="n">null</span> <span class="n">a</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Above are built-in list operations.
+LIPL Str values are considered to be list of Chars.
+So, Str cases are also implemented.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">showVar</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="kt">Str</span> <span class="p">(</span><span class="n">show</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>showVar is used to convert LIPL values to string representation.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">printStr</span> <span class="n">f</span> <span class="p">[</span><span class="kt">Str</span> <span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="kt">T</span><span class="o">.</span><span class="n">liftIO</span> <span class="o">$</span> <span class="n">f</span> <span class="n">x</span>
+<span class="cs">&gt;     </span><span class="kt">T</span><span class="o">.</span><span class="n">liftIO</span> <span class="o">$</span> <span class="n">hFlush</span> <span class="n">stdout</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="kt">Null</span>
+<span class="cs">&gt; </span><span class="nf">printStr</span> <span class="n">f</span> <span class="p">[</span><span class="kt">List</span> <span class="n">x</span><span class="p">]</span> <span class="ow">=</span> <span class="n">printStr</span> <span class="n">f</span> <span class="p">[</span><span class="n">toStr</span> <span class="n">x</span><span class="p">]</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">readFrom</span> <span class="n">handle</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="kt">T</span><span class="o">.</span><span class="n">liftIO</span> <span class="o">$</span> <span class="n">hGetLine</span> <span class="n">handle</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">Str</span> <span class="n">s</span>
+</pre></div>
+
+</div>
+<p>printStr prints Str. f is the IO action that prints.
+f can be putStrLn, putStr, ...etc.
+readFrom reads a line from handle (could be stdin).</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

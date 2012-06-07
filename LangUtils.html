@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>LangUtils.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="langutils-lhs">
+<h1 class="title">LangUtils.lhs</h1>
+<p>LangUtils module has useful functions
+related to LIPL Val.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">LangUtils</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Set</span> <span class="k">as</span> <span class="n">Set</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Data.Set</span> <span class="p">((</span><span class="o">\\</span><span class="p">),</span> <span class="nf">union</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>With <tt class="docutils literal">import ModuleName (func1, func2, func3)</tt>,
+only func1, func2, and func3 are accessible directly
+(<tt class="docutils literal">(func1, func2, <span class="pre">...)</span></tt> is called an import list).
+Other functions in MouduleName are not accessible from this module.
+So, one can call union and <tt class="docutils literal">\\</tt> on this module
+(note the parenthesis around <tt class="docutils literal">\\</tt> in the import list).
+But other functions defined in <tt class="docutils literal">Data.Set</tt> module
+should be called as <tt class="docutils literal">Set.functionName</tt> (because Data.Set
+module was qualified as Set).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Utils</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Parser</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">toSet</span> <span class="n">l</span> <span class="ow">=</span> <span class="kt">Set</span><span class="o">.</span><span class="n">fromList</span> <span class="n">l</span>
+</pre></div>
+
+</div>
+<p>toSet converts a list to Set.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">unboundVars</span> <span class="n">x</span> <span class="ow">=</span> <span class="kt">Set</span><span class="o">.</span><span class="n">toList</span> <span class="p">(</span><span class="n">freeVars</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>unboundVars returns a list of Keys that are not bound (free variables):</p>
+<pre class="literal-block">
+ghci&gt; :l LangUtils
+ghci&gt; unboundVars (Ident &quot;a&quot;)
+[&quot;a&quot;]
+ghci&gt; unboundVars (Lambda [&quot;a&quot;] (Expr [Ident &quot;a&quot;, Ident &quot;b&quot;]))
+[&quot;b&quot;]
+</pre>
+<p>&quot;a&quot; is free in the first expression.
+However, it is bound in the lambda expression. So, only &quot;b&quot; is returned.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">a</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">Set</span><span class="o">.</span><span class="n">singleton</span> <span class="n">a</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">Let</span> <span class="n">env</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="n">freeVarsKeyValList</span> <span class="n">env</span> <span class="p">`</span><span class="n">union</span><span class="p">`</span> <span class="n">freeVars</span> <span class="n">body</span><span class="p">)</span> <span class="o">\\</span> <span class="n">keys</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">keys</span> <span class="ow">=</span> <span class="n">toSet</span> <span class="o">$</span> <span class="n">getKeys</span> <span class="n">env</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">Lambda</span> <span class="n">params</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="n">freeVars</span> <span class="n">body</span> <span class="o">\\</span> <span class="n">toSet</span> <span class="n">params</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">FunDef</span> <span class="n">name</span> <span class="n">params</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="n">freeVars</span> <span class="n">body</span>
+<span class="cs">&gt;     </span><span class="o">\\</span> <span class="n">toSet</span> <span class="p">(</span><span class="n">name</span> <span class="kt">:</span> <span class="n">params</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">Expr</span> <span class="kt">[]</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">Set</span><span class="o">.</span><span class="n">empty</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">[</span><span class="n">x</span><span class="p">])</span> <span class="ow">=</span> <span class="n">freeVars</span> <span class="n">x</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">Expr</span> <span class="n">l</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">Set</span><span class="o">.</span><span class="n">unions</span> <span class="p">(</span><span class="n">map</span> <span class="n">freeVars</span> <span class="n">l</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="n">x</span><span class="p">)</span> <span class="ow">=</span> <span class="n">freeVars</span> <span class="n">x</span>
+<span class="cs">&gt; </span><span class="nf">freeVars</span> <span class="n">x</span> <span class="ow">=</span> <span class="kt">Set</span><span class="o">.</span><span class="n">empty</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">freeVarsKeyValList</span> <span class="ow">::</span> <span class="kt">KeyValList</span> <span class="ow">-&gt;</span> <span class="kt">Set</span><span class="o">.</span><span class="kt">Set</span> <span class="kt">Key</span>
+<span class="cs">&gt; </span><span class="nf">freeVarsKeyValList</span> <span class="n">env</span> <span class="ow">=</span> <span class="n">vals</span> <span class="o">\\</span> <span class="n">keys</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">vals</span> <span class="ow">=</span> <span class="kt">Set</span><span class="o">.</span><span class="n">unions</span> <span class="o">$</span> <span class="n">map</span> <span class="n">freeVars</span> <span class="p">(</span><span class="n">getVals</span> <span class="n">env</span><span class="p">)</span>
+<span class="cs">&gt;         </span><span class="nf">keys</span> <span class="ow">=</span> <span class="n">toSet</span> <span class="o">$</span> <span class="n">getKeys</span> <span class="n">env</span>
+</pre></div>
+
+</div>
+<p>freeVars returns a Set of Keys that are free in a given Val.
+It is defined case by case using pattern matching.
+For example, when the given Val is <tt class="docutils literal">Ident a</tt>, then a singleton Set of
+a is returned.
+For other cases, Set.union and Set difference operation (<tt class="docutils literal">\\</tt>) are used
+to get all free variables.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">simplifyLambda</span> <span class="n">lam</span><span class="o">@</span><span class="p">(</span><span class="kt">Lambda</span> <span class="kt">[]</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="n">lam</span>
+<span class="cs">&gt; </span><span class="nf">simplifyLambda</span> <span class="n">lam</span><span class="o">@</span><span class="p">(</span><span class="kt">Lambda</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="n">lam</span>
+<span class="cs">&gt; </span><span class="nf">simplifyLambda</span> <span class="n">lam</span><span class="o">@</span><span class="p">(</span><span class="kt">Lambda</span> <span class="p">(</span><span class="n">x</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span>
+<span class="cs">&gt;     </span><span class="kt">Lambda</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="p">(</span><span class="n">simplifyLambda</span> <span class="p">(</span><span class="kt">Lambda</span> <span class="n">xs</span> <span class="n">e</span><span class="p">))</span>
+<span class="cs">&gt; </span><span class="nf">simplifyLambda</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">[</span><span class="n">x</span><span class="p">])</span> <span class="ow">=</span> <span class="n">simplifyLambda</span> <span class="n">x</span>
+</pre></div>
+
+</div>
+<p>simplifyLambda converts a lambda with multiple parameters
+to a normal lambda that takes only 1 parameter:</p>
+<pre class="literal-block">
+(lambda (x1 x2 ... xN) e)
+==&gt; (lambda (x1) (lambda (x2) ... (lambda (xN) e)))
+</pre>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Main.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="main-lhs">
+<h1 class="title">Main.lhs</h1>
+<p>Main module is LIPL interpreter entry point.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Main</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">System.IO</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">System.Environment</span> <span class="p">(</span><span class="nf">getArgs</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">MainUtils</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">main</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">hSetBuffering</span> <span class="n">stdout</span> <span class="kt">NoBuffering</span>
+<span class="cs">&gt;     </span><span class="nf">createBaseDir</span>
+<span class="cs">&gt;     </span><span class="nf">fn</span> <span class="ow">&lt;-</span> <span class="n">getArgs</span>
+<span class="cs">&gt;     </span><span class="kr">if</span> <span class="n">length</span> <span class="n">fn</span> <span class="o">&gt;</span> <span class="mi">0</span>
+<span class="cs">&gt;         </span><span class="kr">then</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">run</span> <span class="p">((</span><span class="kr">do</span>
+<span class="cs">&gt;                 </span><span class="nf">loadPrelude</span>
+<span class="cs">&gt;                 </span><span class="nf">loadFile</span> <span class="p">(</span><span class="n">fn</span> <span class="o">!!</span> <span class="mi">0</span><span class="p">)</span>
+<span class="cs">&gt;                 </span><span class="nf">return</span> <span class="nb">()</span><span class="p">)</span> <span class="p">`</span><span class="kt">E</span><span class="o">.</span><span class="n">catchError</span><span class="p">`</span> <span class="p">(</span><span class="nf">\</span><span class="n">e</span> <span class="ow">-&gt;</span> <span class="n">println</span> <span class="p">(</span><span class="n">show</span> <span class="n">e</span><span class="p">)))</span>
+<span class="cs">&gt;         </span><span class="kr">else</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">hSetBuffering</span> <span class="n">stdout</span> <span class="kt">LineBuffering</span>
+<span class="cs">&gt;             </span><span class="nf">putStrLn</span> <span class="s">&quot;Starting REPL...&quot;</span>
+<span class="cs">&gt;             </span><span class="nf">run</span> <span class="p">(</span><span class="n">loadPrelude</span> <span class="o">&gt;&gt;</span> <span class="n">repl</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>main action is the entry point.
+It creates <tt class="docutils literal"><span class="pre">~/.lipl</span></tt> if it doesn't exist.
+When arguments is passed to the interpreter,
+the first argument is considered to be path to a LIPL file
+and the file is loaded (executed).
+Otherwise, repl is started.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

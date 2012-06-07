@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Type.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="type-lhs">
+<h1 class="title">Type.lhs</h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#monad" id="id1">1&nbsp;&nbsp;&nbsp;Monad</a></li>
+</ul>
+</div>
+<p>Type module defines useful functions (such as unification)
+for type inference and a way to represent types.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Type</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.List</span> <span class="k">as</span> <span class="n">List</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">Map</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="k">as</span> <span class="n">PP</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="p">(</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="o">&lt;&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">&lt;+&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">$$</span><span class="p">),</span> <span class="p">(</span><span class="o">$+$</span><span class="p">)</span> <span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Utils</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">Id</span> <span class="ow">=</span> <span class="kt">String</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">data</span> <span class="kt">Type</span> <span class="ow">=</span> <span class="kt">TVar</span> <span class="p">{</span> <span class="n">getId</span> <span class="ow">::</span> <span class="kt">Id</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">TConst</span> <span class="p">{</span> <span class="n">getId</span> <span class="ow">::</span> <span class="kt">Id</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">TApp</span> <span class="kt">Type</span> <span class="kt">Type</span>
+<span class="cs">&gt;     </span><span class="kr">deriving</span> <span class="p">(</span><span class="kt">Eq</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Type of a LIPL expression is represented by values of type Type.
+TVar constructs values that represent type variables.
+TConst represents type constants.
+TApp represents application of a type to another.
+For example, <tt class="docutils literal">Int <span class="pre">-&gt;</span> [Char]</tt> can be represented as:</p>
+<pre class="literal-block">
+TApp (TApp (TConst &quot;-&gt;&quot;) (TConst &quot;Int&quot;))
+     (TApp (TConst &quot;[]&quot;) (TConst &quot;Char&quot;))
+</pre>
+<p>Type derives Eq and Ord class so that values of type Type can
+be compared.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">Show</span> <span class="kt">Type</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">show</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">render</span> <span class="o">.</span> <span class="n">ppType</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">ppType</span> <span class="p">(</span><span class="kt">TVar</span> <span class="n">v</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">v</span>
+<span class="cs">&gt; </span><span class="nf">ppType</span> <span class="p">(</span><span class="kt">TConst</span> <span class="n">c</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">c</span>
+<span class="cs">&gt; </span><span class="nf">ppType</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TConst</span> <span class="s">&quot;(,)&quot;</span><span class="p">)</span> <span class="n">a</span><span class="p">)</span> <span class="n">b</span><span class="p">)</span> <span class="ow">=</span>
+<span class="cs">&gt;     </span><span class="kt">PP</span><span class="o">.</span><span class="n">parens</span> <span class="p">(</span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="n">ppType</span> <span class="n">a</span><span class="p">,</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;,&quot;</span><span class="p">,</span> <span class="n">ppType</span> <span class="n">b</span><span class="p">])</span>
+<span class="cs">&gt; </span><span class="nf">ppType</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TConst</span> <span class="s">&quot;[]&quot;</span><span class="p">)</span> <span class="n">a</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">brackets</span> <span class="p">(</span><span class="n">ppType</span> <span class="n">a</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">ppType</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TConst</span> <span class="s">&quot;{}&quot;</span><span class="p">)</span> <span class="n">a</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">braces</span> <span class="p">(</span><span class="n">ppType</span> <span class="n">a</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">ppType</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TConst</span> <span class="s">&quot;-&gt;&quot;</span><span class="p">)</span> <span class="n">a</span><span class="p">)</span> <span class="n">b</span><span class="p">)</span> <span class="ow">=</span>
+<span class="cs">&gt;     </span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kr">if</span> <span class="n">isFun</span> <span class="n">a</span> <span class="kr">then</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span> <span class="p">(</span><span class="n">ppType</span> <span class="n">a</span><span class="p">)</span> <span class="kr">else</span> <span class="n">ppType</span> <span class="n">a</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;-&gt;&quot;</span><span class="p">,</span> <span class="n">ppType</span> <span class="n">b</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppType</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span> <span class="ow">=</span> <span class="n">ppType</span> <span class="n">a</span> <span class="o">&lt;+&gt;</span> <span class="n">ppType</span> <span class="n">b</span>
+</pre></div>
+
+</div>
+<p>Type is an instance of Show class. And, ppType is defined so that
+a value of type Type can be shown in pretty way.
+For example, when a Type value has pattern:</p>
+<pre class="literal-block">
+TApp (TApp (TConst &quot;(,)&quot;) a) b
+</pre>
+<p>it is shown as <tt class="docutils literal">(a,b)</tt>.</p>
+<p>For function types:</p>
+<pre class="literal-block">
+TApp (TApp (TConst &quot;-&gt;&quot;) a) b
+</pre>
+<p>parenthesis used when a is a function type too.
+So, it can insert parenthesis like <tt class="docutils literal">(a) <span class="pre">-&gt;</span> b</tt> when a is a function.
+Of course, it would get expended to something like: <tt class="docutils literal">(x <span class="pre">-&gt;</span> y) <span class="pre">-&gt;</span> b</tt>
+when a were of type <tt class="docutils literal">x <span class="pre">-&gt;</span> y</tt>.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">isFun</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TApp</span> <span class="p">(</span><span class="kt">TConst</span> <span class="s">&quot;-&gt;&quot;</span><span class="p">)</span> <span class="kr">_</span><span class="p">)</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">True</span>
+<span class="cs">&gt; </span><span class="nf">isFun</span> <span class="kr">_</span> <span class="ow">=</span> <span class="kt">False</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">tSanitize</span> <span class="n">t</span> <span class="ow">=</span>
+<span class="cs">&gt;     </span><span class="nf">subst</span> <span class="p">[(</span><span class="n">v</span><span class="p">,</span> <span class="s">&quot;t&quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">i</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">&lt;-</span> <span class="n">zip</span> <span class="p">[</span><span class="mi">0</span><span class="o">..</span><span class="p">]</span> <span class="p">(</span><span class="n">tv</span> <span class="n">t</span><span class="p">)]</span> <span class="n">t</span>
+</pre></div>
+
+</div>
+<p>isFun returns True if a given Type is a function type.
+It returns False otherwise.</p>
+<p>tSanitize normalizes type variables by replacing them in a uniform way.
+All type variables in a type expression become t0, t1, ...etc.
+To do so, tt first creates <tt class="docutils literal">[(0, var0), (1, var1), <span class="pre">...,</span> (N, varN)]</tt>,
+where var0, var1, ..., varN are type variables in the type expression
+(they can be irregular like [a,x,t0]).
+Then it creates <tt class="docutils literal">[(var0, t0), (var1, t1), <span class="pre">...,</span> (varN, tN)]</tt>,
+where t0, t1, ..., tN are regular (they are always [t0, t1, ...]).
+And, it actually makes substitution for each varI with tI:</p>
+<pre class="literal-block">
+a -&gt; Int -&gt; b -&gt; Char
+==&gt; t0 -&gt; Int -&gt; t1 -&gt; Char
+</pre>
+<p><tt class="docutils literal">[e | x &lt;- l]</tt> is list comprehension syntax where <tt class="docutils literal">x &lt;- l</tt>
+is a generator generating values and e is an expression using
+those values. For example:</p>
+<pre class="literal-block">
+ghci&gt; [x + 1 | x &lt;- [1..10]]
+[2,3,4,5,6,7,8,9,10,11]
+</pre>
+<p>subst function defined in this module is used
+to substitute type variables.
+tv function (also defined in this module) is used to get
+all type variables in a type.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tEq</span> <span class="n">t1</span> <span class="n">t2</span> <span class="ow">=</span> <span class="n">tSanitize</span> <span class="n">t1</span> <span class="o">==</span> <span class="n">tSanitize</span> <span class="n">t2</span>
+</pre></div>
+
+</div>
+<p>Using tSanitize, it is possible to compare equality of 2 type expressions:</p>
+<pre class="literal-block">
+a -&gt; b == x -&gt; y
+==&gt; False
+
+a -&gt; b `tEq` x -&gt; y
+==&gt; tSanitize (a -&gt; b) == tSanitize (x -&gt; y)
+==&gt; t0 -&gt; t1 == t0 -&gt; t1
+==&gt; True
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">subst</span> <span class="n">dict</span> <span class="n">t</span><span class="o">@</span><span class="p">(</span><span class="kt">TVar</span> <span class="n">v</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">case</span> <span class="n">lookup</span> <span class="n">v</span> <span class="n">dict</span> <span class="kr">of</span>
+<span class="cs">&gt;     </span><span class="kt">Just</span> <span class="n">v&#39;</span> <span class="ow">-&gt;</span> <span class="kt">TVar</span> <span class="n">v&#39;</span>
+<span class="cs">&gt;     </span><span class="kt">Nothing</span> <span class="ow">-&gt;</span> <span class="n">t</span>
+<span class="cs">&gt; </span><span class="nf">subst</span> <span class="n">dict</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">t1</span> <span class="n">t2</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">TApp</span> <span class="p">(</span><span class="n">subst</span> <span class="n">dict</span> <span class="n">t1</span><span class="p">)</span> <span class="p">(</span><span class="n">subst</span> <span class="n">dict</span> <span class="n">t2</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">subst</span> <span class="n">dict</span> <span class="n">t</span> <span class="ow">=</span> <span class="n">t</span>
+</pre></div>
+
+</div>
+<p>subst actually replaces all type variables in the given type expression
+according to the association list.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tUnit</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;()&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tChar</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;Char&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tInt</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;Int&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tFloat</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;Float&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tBool</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;Bool&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tList</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;[]&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tArrow</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;-&gt;&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tDict</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;{}&quot;</span>
+<span class="cs">&gt; </span><span class="nf">tTuple2</span> <span class="ow">=</span> <span class="kt">TConst</span> <span class="s">&quot;(,)&quot;</span>
+</pre></div>
+
+</div>
+<p>Above are short hands for built-in type constants: Char, Int, ...</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">a</span> <span class="p">`</span><span class="n">fn</span><span class="p">`</span> <span class="n">b</span> <span class="ow">=</span> <span class="kt">TApp</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">tArrow</span> <span class="n">a</span><span class="p">)</span> <span class="n">b</span>
+</pre></div>
+
+</div>
+<p>fn function makes a function type, given 2 types:</p>
+<pre class="literal-block">
+tInt `fn` tChar
+==&gt; Int -&gt; Char
+</pre>
+<p>Backtics (<tt class="docutils literal">` `</tt>) can be used to turn a function to an operator, just like
+parenthesis can turn an operator to a function:</p>
+<pre class="literal-block">
+(+) 1 2
+==&gt; 1 + 2
+==&gt; 3
+
+add 1 2
+==&gt; 1 `add` 2
+==&gt; 3
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">list</span> <span class="ow">=</span> <span class="kt">TApp</span> <span class="n">tList</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">pair</span> <span class="n">a</span> <span class="n">b</span> <span class="ow">=</span> <span class="kt">TApp</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">tTuple2</span> <span class="n">a</span><span class="p">)</span> <span class="n">b</span>
+</pre></div>
+
+</div>
+<p>list and pair are helper functions (like fn function) to create
+list-of types and pair types.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="c1">-- type abstraction</span>
+<span class="cs">&gt; </span><span class="c1">-- ((TScheme [x,y] ([y] -&gt; x)) Int Char) ==&gt; [Char] -&gt; Int</span>
+<span class="cs">&gt; </span><span class="kr">data</span> <span class="kt">TScheme</span> <span class="ow">=</span> <span class="kt">TScheme</span> <span class="p">[</span><span class="kt">Id</span><span class="p">]</span> <span class="kt">Type</span>
+<span class="cs">&gt;     </span><span class="kr">deriving</span> <span class="p">(</span><span class="kt">Eq</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">Show</span> <span class="kt">TScheme</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">show</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">render</span> <span class="o">.</span> <span class="n">ppTScheme</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">ppTScheme</span> <span class="p">(</span><span class="kt">TScheme</span> <span class="n">l</span> <span class="n">t</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="n">ppQuantification</span> <span class="n">l</span><span class="p">,</span> <span class="n">ppType</span> <span class="n">t</span><span class="p">]</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">ppQuantification</span> <span class="n">l</span> <span class="ow">=</span>  <span class="kr">if</span> <span class="n">null</span> <span class="n">l</span>
+<span class="cs">&gt;     </span><span class="kr">then</span>
+<span class="cs">&gt;         </span><span class="kt">PP</span><span class="o">.</span><span class="n">empty</span>
+<span class="cs">&gt;     </span><span class="kr">else</span>
+<span class="cs">&gt;         </span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;forall&quot;</span><span class="p">,</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">(</span><span class="n">map</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">l</span><span class="p">),</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;.&quot;</span><span class="p">]</span>
+</pre></div>
+
+</div>
+<p>TScheme holds a list of free type variables (freely instantiated) and a type.
+Free type variables can be instantiated many times:</p>
+<pre class="literal-block">
+id :: a -&gt; a
+(id 1, id &quot;1&quot;)
+</pre>
+<p>The type variable a will be instantiated to Int for <tt class="docutils literal">id 1</tt>.
+Then, type id would be <tt class="docutils literal">Int <span class="pre">-&gt;</span> Int</tt>.
+So, <tt class="docutils literal">id &quot;1&quot;</tt> becomes illegal because id now expects an Int, not a String.
+So, the type variable a in the type of id should be instantiated multiple
+times (once for Int and then for String).</p>
+<p>Using TScheme, type of id can be represented as:</p>
+<pre class="literal-block">
+id :: TScheme [&quot;a&quot;] (TVar &quot;a&quot; `fn` TVar &quot;a&quot;)
+
+instead of
+
+id :: TVar &quot;a&quot; `fn` TVar &quot;a&quot;
+</pre>
+<p>During type instantiation, TScheme can tell that the type variable &quot;a&quot;,
+which is the only type variable in the free type variable list,
+can be instantiated again.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">Subst</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">Id</span> <span class="kt">TScheme</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">ppIdTScheme</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">ts</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">i</span><span class="p">,</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;::&quot;</span><span class="p">,</span> <span class="n">ppTScheme</span> <span class="n">ts</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppIdTSchemeList</span> <span class="ow">=</span> <span class="n">map</span> <span class="p">((</span><span class="kt">PP</span><span class="o">.</span><span class="n">empty</span> <span class="o">$$</span><span class="p">)</span> <span class="o">.</span> <span class="n">ppIdTScheme</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">ppSubst</span> <span class="n">l</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">braces</span> <span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span>
+<span class="cs">&gt;     </span><span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">punctuate</span> <span class="kt">PP</span><span class="o">.</span><span class="n">comma</span> <span class="p">(</span><span class="n">ppIdTSchemeList</span> <span class="o">$</span> <span class="kt">Map</span><span class="o">.</span><span class="n">toList</span> <span class="n">l</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">showSubst</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">render</span> <span class="o">.</span> <span class="n">ppSubst</span>
+</pre></div>
+
+</div>
+<p>Subst is a Map of Id and TScheme.
+It stores which type variable has which type.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">nullSubst</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">empty</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">mkMonoType</span> <span class="n">t</span> <span class="ow">=</span> <span class="kt">TScheme</span> <span class="kt">[]</span> <span class="n">t</span>
+<span class="cs">&gt; </span><span class="nf">mkPolyType</span> <span class="n">t</span> <span class="ow">=</span> <span class="kt">TScheme</span> <span class="p">(</span><span class="n">tv</span> <span class="n">t</span><span class="p">)</span> <span class="n">t</span>
+</pre></div>
+
+</div>
+<p>nullSubst is empty environment where it has no information about which
+type variable is bound to which type.</p>
+<p>mkMonoType creates a TScheme whose type variables can be instantiated
+only once.
+mkPolyType creates a TScheme whose type variables can be instantiated
+multiple times.
+tv function used in mkPolyType returns a list of type variables in a type.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="p">(</span><span class="o">+-&gt;</span><span class="p">)</span> <span class="ow">::</span> <span class="kt">Id</span> <span class="ow">-&gt;</span> <span class="kt">TScheme</span> <span class="ow">-&gt;</span> <span class="kt">Subst</span>
+<span class="cs">&gt; </span><span class="nf">v</span> <span class="o">+-&gt;</span> <span class="n">ts</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">fromList</span> <span class="p">[(</span><span class="n">v</span><span class="p">,</span> <span class="n">ts</span><span class="p">)]</span>
+</pre></div>
+
+</div>
+<p><tt class="docutils literal">a <span class="pre">+-&gt;</span> b</tt> builds a singleton Subst where type variable a is
+mapped into type (scheme) b.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">fromIdType</span> <span class="ow">=</span> <span class="n">map</span> <span class="p">(</span><span class="nf">\</span><span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">mkPolyType</span> <span class="n">v</span><span class="p">))</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">toSubst</span> <span class="ow">::</span> <span class="p">[(</span><span class="kt">Id</span><span class="p">,</span> <span class="kt">Type</span><span class="p">)]</span> <span class="ow">-&gt;</span> <span class="kt">Subst</span>
+<span class="cs">&gt; </span><span class="nf">toSubst</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">fromList</span> <span class="o">.</span> <span class="n">fromIdType</span>
+</pre></div>
+
+</div>
+<p>fromIdType converts <tt class="docutils literal">[(Id, Type)]</tt> to
+<tt class="docutils literal">[(Id, TScheme)]</tt> in a way that each Type bound to Id
+is a polytype (type variables can be instantiated more than once).
+And toSubst converts <tt class="docutils literal">[(Id, Type)]</tt> to Subst
+such that each Type becomes polytype.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">class</span> <span class="kt">Types</span> <span class="n">t</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">apply</span> <span class="ow">::</span> <span class="kt">Subst</span> <span class="ow">-&gt;</span> <span class="n">t</span> <span class="ow">-&gt;</span> <span class="n">t</span>
+<span class="cs">&gt;     </span><span class="nf">tv</span> <span class="ow">::</span> <span class="n">t</span> <span class="ow">-&gt;</span> <span class="p">[</span><span class="kt">Id</span><span class="p">]</span>
+</pre></div>
+
+</div>
+<p>Class Types provide 2 functions:</p>
+<dl class="docutils">
+<dt>apply</dt>
+<dd>takes a Subst and a type and applies the Subst to the type
+by replacing all type variables in the type with types bound
+according to the Subst.</dd>
+<dt>tv</dt>
+<dd>takes a type and returns all type variables in it.</dd>
+</dl>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">Types</span> <span class="kt">Type</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">apply</span> <span class="n">s</span> <span class="n">v</span><span class="o">@</span><span class="p">(</span><span class="kt">TVar</span> <span class="n">u</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">case</span> <span class="kt">Map</span><span class="o">.</span><span class="n">lookup</span> <span class="n">u</span> <span class="n">s</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="kt">Just</span> <span class="p">(</span><span class="kt">TScheme</span> <span class="kr">_</span> <span class="n">t</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="n">apply</span> <span class="n">s</span> <span class="n">t</span>
+<span class="cs">&gt;         </span><span class="kt">Nothing</span> <span class="ow">-&gt;</span> <span class="n">v</span>
+<span class="cs">&gt;     </span><span class="nf">apply</span> <span class="n">s</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">f</span> <span class="n">a</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">TApp</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">f</span><span class="p">)</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">a</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">apply</span> <span class="n">s</span> <span class="n">t</span> <span class="ow">=</span> <span class="n">t</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt;     </span><span class="nf">tv</span> <span class="p">(</span><span class="kt">TVar</span> <span class="n">u</span><span class="p">)</span> <span class="ow">=</span> <span class="p">[</span><span class="n">u</span><span class="p">]</span>
+<span class="cs">&gt;     </span><span class="nf">tv</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">f</span> <span class="n">a</span><span class="p">)</span> <span class="ow">=</span> <span class="n">tv</span> <span class="n">f</span> <span class="p">`</span><span class="kt">List</span><span class="o">.</span><span class="n">union</span><span class="p">`</span> <span class="n">tv</span> <span class="n">a</span>
+<span class="cs">&gt;     </span><span class="nf">tv</span> <span class="kr">_</span> <span class="ow">=</span> <span class="kt">[]</span>
+</pre></div>
+
+</div>
+<p>Type is an instance of Types.
+So, one can apply a Subst to a Type, and get all type variables
+from a Type.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="p">(</span><span class="kt">Types</span> <span class="n">a</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">Types</span> <span class="p">[</span><span class="n">a</span><span class="p">]</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">apply</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">map</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">tv</span> <span class="ow">=</span> <span class="kt">List</span><span class="o">.</span><span class="n">nub</span> <span class="o">.</span> <span class="n">concat</span> <span class="o">.</span> <span class="n">map</span> <span class="n">tv</span>
+</pre></div>
+
+</div>
+<p>A list of Types is also Types.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">Types</span> <span class="kt">TScheme</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">apply</span> <span class="n">s</span> <span class="p">(</span><span class="kt">TScheme</span> <span class="n">l</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">TScheme</span> <span class="n">l</span> <span class="o">$</span> <span class="n">apply</span> <span class="p">(</span><span class="n">s</span> <span class="p">`</span><span class="n">subtractMap</span><span class="p">`</span> <span class="n">l</span><span class="p">)</span> <span class="n">e</span>
+<span class="cs">&gt;     </span><span class="nf">tv</span> <span class="p">(</span><span class="kt">TScheme</span> <span class="n">l</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="n">tv</span> <span class="n">e</span>
+</pre></div>
+
+</div>
+<p>TScheme is also Types.
+When a Subst is applied to a TScheme, type variables
+that can be instantiated many times are not touched.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">s1</span> <span class="o">@@</span> <span class="n">s2</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">union</span> <span class="n">s2</span> <span class="n">s1</span>
+</pre></div>
+
+</div>
+<p><tt class="docutils literal">&#64;&#64;</tt> operator performs composition of 2 Subst's:</p>
+<pre class="literal-block">
+apply (s1 &#64;&#64; s2) t
+==&gt; apply s1 (apply s2 t)
+</pre>
+<p>Since Map.union prefers first argument in case of duplicate key,
+s2 has precedence:</p>
+<pre class="literal-block">
+ghci&gt; let s1 = Map.fromList [(&quot;a&quot;,1), (&quot;b&quot;,2)]
+ghci&gt; let s2 = Map.fromList [(&quot;a&quot;,2)]
+ghci&gt; s1 &#64;&#64; s2
+fromList [(&quot;a&quot;,2), (&quot;b&quot;,2)]
+</pre>
+<p>In case s2 maps type variable a to Int and s1 maps type variable a to Char,
+<tt class="docutils literal">s1 &#64;&#64; s2</tt> maps type variable a to Int.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">mgu</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">f1</span> <span class="n">a1</span><span class="p">)</span> <span class="p">(</span><span class="kt">TApp</span> <span class="n">f2</span> <span class="n">a2</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">s1</span> <span class="ow">&lt;-</span> <span class="n">mgu</span> <span class="n">f1</span> <span class="n">f2</span>
+<span class="cs">&gt;     </span><span class="nf">s2</span> <span class="ow">&lt;-</span> <span class="n">mgu</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s1</span> <span class="n">a1</span><span class="p">)</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s1</span> <span class="n">a2</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="n">s2</span> <span class="o">@@</span> <span class="n">s1</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">mgu</span> <span class="p">(</span><span class="kt">TVar</span> <span class="n">v</span><span class="p">)</span> <span class="n">t</span> <span class="ow">=</span> <span class="n">varBind</span> <span class="n">v</span> <span class="n">t</span>
+<span class="cs">&gt; </span><span class="nf">mgu</span> <span class="n">t</span> <span class="p">(</span><span class="kt">TVar</span> <span class="n">v</span><span class="p">)</span> <span class="ow">=</span> <span class="n">varBind</span> <span class="n">v</span> <span class="n">t</span>
+<span class="cs">&gt; </span><span class="nf">mgu</span> <span class="p">(</span><span class="kt">TConst</span> <span class="n">c1</span><span class="p">)</span> <span class="p">(</span><span class="kt">TConst</span> <span class="n">c2</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="n">c1</span> <span class="o">==</span> <span class="n">c2</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">nullSubst</span>
+<span class="cs">&gt; </span><span class="nf">mgu</span> <span class="kr">_</span> <span class="kr">_</span> <span class="ow">=</span> <span class="n">fail</span> <span class="s">&quot;types do not unify&quot;</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">varBind</span> <span class="n">u</span> <span class="n">t</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="n">t</span> <span class="o">==</span> <span class="kt">TVar</span> <span class="n">u</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">nullSubst</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="n">u</span> <span class="p">`</span><span class="n">elem</span><span class="p">`</span> <span class="n">tv</span> <span class="n">t</span> <span class="ow">=</span> <span class="n">fail</span> <span class="s">&quot;occurs check fails&quot;</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="n">otherwise</span> <span class="ow">=</span> <span class="n">return</span> <span class="p">(</span><span class="n">u</span> <span class="o">+-&gt;</span> <span class="kt">TScheme</span> <span class="kt">[]</span> <span class="n">t</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>mgu takes 2 types and finds the most general unifier:</p>
+<pre class="literal-block">
+mgu (a -&gt; b) (Int -&gt; b)
+==&gt; [(a, Int)]
+</pre>
+<p>The most general unifer of 2 types
+is a unifier:
+a Subst that can be applied to the 2 types to make them the same type.
+And any other unifiers can be constructed by composing the most general
+unifier with some other Subst:</p>
+<pre class="literal-block">
+ghci&gt; :l Type
+ghci&gt; let t1 = TVar &quot;a&quot; `fn` TVar &quot;b&quot;
+ghci&gt; t1
+a -&gt; b
+ghci&gt; let t2 = tInt `fn` TVar &quot;a&quot;
+ghci&gt; t2
+Int -&gt; a
+ghci&gt; mgu t1 t2
+fromList [(&quot;a&quot;, Int), (&quot;b&quot;, Int)]
+ghci&gt; it -- value of the last expression (GHCi variable)
+fromList [(&quot;a&quot;, Int), (&quot;b&quot;, Int)]
+ghci&gt; apply it t1 `tEq` apply it t2
+True
+</pre>
+<p>varBind function is helper of mgu.
+When mgu has to find unifier of a type variable and a type,
+it makes sure the type doesn't contain the type variable.
+Otherwise, the type can't be bound to the type variable:</p>
+<pre class="literal-block">
+ghci&gt; let t1 = TVar &quot;a&quot;
+ghci&gt; let t2 = TVar &quot;b&quot; `fn` TVar &quot;a&quot;
+ghci&gt; t1
+a
+ghci&gt; t2
+b -&gt; a
+ghci&gt; mgu t1 t2
+*** Exception: user error (occurs check fails)
+</pre>
+<p>For <tt class="docutils literal">a</tt> and <tt class="docutils literal">b <span class="pre">-&gt;</span> a</tt> to be unified, there must be a Subst
+that can be applied to both and make them the same type.
+Since the type variable a appears on both types, there can't be such Subst.
+So, mgu fails with an exception saying that occurs check fails.</p>
+<div class="section" id="monad">
+<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Monad</a></h1>
+<p>mgu is a monadic function.
+Unlike normal functions, a monadic function returns a value using
+<tt class="docutils literal">return</tt> function: <tt class="docutils literal">return 1</tt>, for example.
+The return function puts the value inside the monad.</p>
+<p>To retrieve the value inside a monad, one can use <tt class="docutils literal">&lt;-</tt>:</p>
+<pre class="literal-block">
+ghci&gt; s &lt;- mgu (TVar &quot;a&quot;) tInt
+fromList [(&quot;a&quot;, Int)]
+ghci&gt; s
+fromList [(&quot;a&quot;, Int)]
+</pre>
+<p>GHCi itself is running inside a monad called IO. That's why <tt class="docutils literal">&lt;-</tt>
+works (<tt class="docutils literal">&lt;-</tt> only works inside a monad. Actually, in a do block.
+But GHCi prompt is special):</p>
+<pre class="literal-block">
+ghci&gt; let f = s &lt;- mgu tInt (TVar &quot;a&quot;)
+&lt;interactive&gt;:1:10: parse error on input `&lt;-'
+</pre>
+<p>One can know a function is monadic when the function uses return function,
+<tt class="docutils literal">&lt;-</tt>, or do notation:</p>
+<pre class="literal-block">
+mgu (TApp f1 a1) (TApp f2 a2) = do
+    s1 &lt;- mgu f1 f2
+    s2 &lt;- mgu (apply s1 a1) (apply s1 a2)
+    return (s2 &#64;&#64; s1)
+</pre>
+<p>do notation looks like a sequence of expressions while a normal function body
+is just one expression:</p>
+<pre class="literal-block">
+f x = do
+    expr1
+    expr2
+    ...
+
+f x = expr
+</pre>
+<p>do notation converts those aligned expression into one expression:</p>
+<pre class="literal-block">
+do
+    expr1
+    expr2
+    ...
+    exprN
+
+==&gt; expr1 &gt;&gt; expr2 &gt;&gt; ... &gt;&gt; exprN
+</pre>
+<p>where <tt class="docutils literal">&gt;&gt;</tt> is a monadic bind operator.
+Bind operation is similar to function composition operation (<tt class="docutils literal">.</tt> is
+function composition operator in Haskell):</p>
+<pre class="literal-block">
+(f . g . h) x
+==&gt; f (g (h x))
+==&gt; calculate h, g, and f.
+
+h' &gt;&gt; g' &gt;&gt; f'
+==&gt; compute h', g', and f'.
+</pre>
+<p>Another monadic bind operator is <tt class="docutils literal">&gt;&gt;=</tt>:</p>
+<pre class="literal-block">
+f &gt;&gt;= (\ resultOfF -&gt; g) &gt;&gt;= (\ resultOfG -&gt; h)
+==&gt; compute f, pass its result (inside monad) to
+    (\ resultOfF -&gt; g), which is a lambda that takes the result
+    and computes g (that might use the result).
+    Pass the resultant value of the lambda (also inside monad)
+    to (\ resultOfG -&gt; h) that takes the result and computes
+    h (that might use the result).
+</pre>
+<p>A lambda expression (a nameless function) has syntax:</p>
+<pre class="literal-block">
+\ v1 v2 ... vN -&gt; e
+</pre>
+<p>where <tt class="docutils literal">\</tt> flags start of a lambda expression,
+v1, v2, ..., vN are parameters to the function, and e is function body.</p>
+<p>If one does not want to align expressions (layout) in do block, one can use
+explicit braces and semicolons:</p>
+<pre class="literal-block">
+do {
+    expr1; expr2
+  ;
+ expr3;
+    expr4;      expr5;
+    ...
+    exprN; }
+</pre>
+</div>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

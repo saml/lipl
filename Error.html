@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Error.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="error-lhs">
+<h1 class="title">Error.lhs</h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#typeclass" id="id1">1&nbsp;&nbsp;&nbsp;Typeclass</a></li>
+</ul>
+</div>
+<p>Module Error defines Err type that is used in the interpreter.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Error</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="k">as</span> <span class="n">PP</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="p">(</span> <span class="p">(</span><span class="o">&lt;&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">&lt;+&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">$$</span><span class="p">),</span> <span class="p">(</span><span class="o">$+$</span><span class="p">)</span> <span class="p">)</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">ErrMsg</span> <span class="ow">=</span> <span class="kt">String</span>
+<span class="cs">&gt; </span><span class="kr">data</span> <span class="kt">Err</span> <span class="ow">=</span> <span class="kt">Err</span> <span class="kt">P</span><span class="o">.</span><span class="kt">SourcePos</span> <span class="kt">ErrMsg</span> <span class="o">|</span> <span class="kt">Default</span> <span class="kt">ErrMsg</span>
+</pre></div>
+
+</div>
+<p>Err in <tt class="docutils literal">data Err</tt> is a type constructor. Err after <tt class="docutils literal">=</tt> is
+a data constructor.
+Type constructor is used to construct a type (in this case type Err).
+And, data constructor is used to construct a value or data of some type.
+So, a value of type Err can be constructed using Err data constructor.
+Default is another data constructor that can be used to create
+a value of type Err.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">ppErr</span> <span class="p">(</span><span class="kt">Err</span> <span class="n">pos</span> <span class="n">msg</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="p">(</span><span class="n">show</span> <span class="n">pos</span><span class="p">),</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">msg</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppErr</span> <span class="p">(</span><span class="kt">Default</span> <span class="n">msg</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">msg</span>
+</pre></div>
+
+</div>
+<p>ppErr turns a value of type Err into a value that can be pretty-printed
+(looks nice when printed).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">Show</span> <span class="kt">Err</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">show</span> <span class="n">e</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">render</span> <span class="o">$</span> <span class="n">ppErr</span> <span class="n">e</span>
+</pre></div>
+
+</div>
+<p>By making Err an instance of Show class, a value of type Err can be
+converted to String and printed.
+When a value of type Err is converted to String, ppErr is used
+to make the string representation look nice.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">E</span><span class="o">.</span><span class="kt">Error</span> <span class="kt">Err</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">noMsg</span> <span class="ow">=</span> <span class="kt">Default</span> <span class="s">&quot;Error&quot;</span>
+<span class="cs">&gt;     </span><span class="nf">strMsg</span> <span class="ow">=</span> <span class="kt">Default</span>
+</pre></div>
+
+</div>
+<p>By making Err an instance of Error class, Err can be used
+wherever an instance of Error class can be used.</p>
+<div class="section" id="typeclass">
+<h1><a class="toc-backref" href="#id1">1&nbsp;&nbsp;&nbsp;Typeclass</a></h1>
+<p>Haskell has notion of typeclasses.</p>
+<p>A typeclass can be declared using <tt class="docutils literal">class</tt> keyword:</p>
+<pre class="literal-block">
+class Foo a where
+    bar :: a -&gt; Int
+    foo :: a -&gt; String
+</pre>
+<p>The above declares a typeclass Foo that provides 2 functions: bar and foo.
+All instances of Foo should implement those 2 functions:</p>
+<pre class="literal-block">
+data Bar = Bar Int String
+
+instance Foo Bar where
+    bar (Bar i _) = i
+    foo (Bar _ s) = s
+</pre>
+<p>Bar is an instance of Foo and it implements bar and foo.
+A value of type Bar can be used anywhere where
+a value of an instance of class Foo is expected:</p>
+<pre class="literal-block">
+func :: (Foo a) =&gt; a -&gt; (String, Int)
+func a = (foo a, bar a)
+
+func (Bar 1 &quot;1&quot;)
+==&gt; (&quot;1&quot;, 1)
+</pre>
+<p><tt class="docutils literal">func :: (Foo a) =&gt; a <span class="pre">-&gt;</span> (String, Int)</tt>
+means that the function func has type <tt class="docutils literal">a <span class="pre">-&gt;</span> (String, Int)</tt>
+where a is an instance of Foo (an instance of a class is a type).</p>
+<p>If there were another instance of Foo, it could be passed to func:</p>
+<pre class="literal-block">
+data A = A
+instance Foo A where
+    bar _ = 1
+    foo _ = &quot;1&quot;
+
+func A
+==&gt; (&quot;1&quot;, 1)
+</pre>
+<p>So, with typeclass, one can overload a function.
+<tt class="docutils literal">func</tt> is overload to take a value of type A or Bar
+(both are instances of class Foo).</p>
+</div>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

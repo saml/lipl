@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>TCheck.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="tcheck-lhs">
+<h1 class="title">TCheck.lhs</h1>
+<p>TCheck module defines tInfer action that does type inference
+using unification.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="cm">{-# LANGUAGE FlexibleContexts #-}</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">TCheck</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">Map</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Data.List</span> <span class="p">((</span><span class="o">\\</span><span class="p">))</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad</span> <span class="k">as</span> <span class="n">M</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangUtils</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Type</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">CoreLib</span> <span class="p">(</span><span class="nf">builtinSubst</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Utils</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">TIMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">PosMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Error</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadTI</span> <span class="n">m</span><span class="p">,</span> <span class="kt">MonadPos</span> <span class="n">m</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="kt">Err</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">Val</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="kt">Type</span>
+<span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">At</span> <span class="n">pos</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">setSourcePos</span> <span class="n">pos</span>
+<span class="cs">&gt;     </span><span class="nf">tInfer</span> <span class="n">e</span>
+</pre></div>
+
+</div>
+<p>For Val value constructed with At data constructor,
+set current SourcePos to the given pos and type infer e.
+When something fails later on,
+the saved SourcePos can be retrieved and be reported.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Int</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">tInt</span>
+<span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Bool</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">tBool</span>
+<span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Float</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">tFloat</span>
+<span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Char</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">tChar</span>
+<span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Str</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="o">$</span> <span class="n">list</span> <span class="n">tChar</span>
+</pre></div>
+
+</div>
+<p>For above literals (Int, Bool, ...) just return
+corresponding built-in types (Int, Bool, ...).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">PrimFun</span> <span class="n">x</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="kr">case</span> <span class="kt">Map</span><span class="o">.</span><span class="n">lookup</span> <span class="n">x</span> <span class="n">s</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="kt">Just</span> <span class="n">ts</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">t</span> <span class="ow">&lt;-</span> <span class="n">toType</span> <span class="n">ts</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="n">t</span>
+<span class="cs">&gt;         </span><span class="nf">otherwise</span> <span class="ow">-&gt;</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;primitive function not found: &quot;</span> <span class="o">++</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>For built-in functions (PrimFun),
+find the type of it in the current substitution (type variable
+and type mapping).
+When it's not found, throwErr (it throws error with
+current SourcePos).
+When it's found, instantiate the bound type scheme using toType.
+For example, built-in function <tt class="docutils literal">fst</tt> has type <tt class="docutils literal">(a, b) <span class="pre">-&gt;</span> a</tt>
+where a and b are universally quantified (<tt class="docutils literal">forall a b. (a, b) <span class="pre">-&gt;</span> a</tt>).
+So, toType will update universally quantified type variables
+in the type of fst, a and b,
+with fresh variables.
+Otherwise, there can be errors when many functions use the same type
+variable a and b. For example, once a is bound to Int because of
+<tt class="docutils literal">fst <span class="pre">(1,&quot;hello&quot;)</span></tt>, inferring type of <tt class="docutils literal">head &quot;123&quot;</tt> can fail because
+type of head, <tt class="docutils literal">[a] <span class="pre">-&gt;</span> a</tt> uses the same type variable, a.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">List</span> <span class="kt">[]</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">v</span> <span class="ow">&lt;-</span> <span class="n">newTVar</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="n">list</span> <span class="n">v</span>
+</pre></div>
+
+</div>
+<p>Type of an empty list is <tt class="docutils literal">[a]</tt> where a is a fresh type variable.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">List</span> <span class="n">l</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">ts</span> <span class="ow">&lt;-</span> <span class="n">mapM</span> <span class="n">tInfer</span> <span class="n">l</span>
+<span class="cs">&gt;     </span><span class="kr">if</span> <span class="n">allEqWith</span> <span class="n">tEq</span> <span class="n">ts</span>
+<span class="cs">&gt;         </span><span class="kr">then</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="p">(</span><span class="n">list</span> <span class="p">(</span><span class="n">head</span> <span class="n">ts</span><span class="p">))</span>
+<span class="cs">&gt;         </span><span class="kr">else</span>
+<span class="cs">&gt;             </span><span class="nf">throwErr</span> <span class="p">(</span><span class="s">&quot;not homogeneous list: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="p">(</span><span class="kt">List</span> <span class="n">l</span><span class="p">))</span>
+</pre></div>
+
+</div>
+<p>To check homogeneousity of a list l,
+tInfer is called on every element in l. Then, allEqWith
+checks if all elements' types are the same.
+Since tEq normalizes type variables before checking equality,
+<tt class="docutils literal">[(lambda (x) x), (lambda (x) x)]</tt> can be type checked properly.
+Otherwise, above list would have types <tt class="docutils literal">[t0 <span class="pre">-&gt;</span> t0, t1 <span class="pre">-&gt;</span> t1]</tt>
+and not be considered homogeneous.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Pair</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">tA</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">a</span>
+<span class="cs">&gt;     </span><span class="nf">tB</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">b</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="n">pair</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">tA</span><span class="p">)</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">tB</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>To infer type of a pair, types of the 2 elements of the pair are
+inferred and returned.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">x</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="kr">case</span> <span class="kt">Map</span><span class="o">.</span><span class="n">lookup</span> <span class="n">x</span> <span class="n">s</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="kt">Just</span> <span class="n">ts</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">t</span> <span class="ow">&lt;-</span> <span class="n">toType</span> <span class="n">ts</span>
+<span class="cs">&gt;             </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">t</span><span class="p">)</span>
+<span class="cs">&gt;         </span><span class="nf">otherwise</span> <span class="ow">-&gt;</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;not found in assumptions: &quot;</span> <span class="o">++</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>To type check a variable, type of the variable is looked up in
+current Subst. If the variable has no bound type, error is thrown
+with current SourcePos.
+It is assumed that variables are only introduced from
+lambda abstraction, let expression, and function definition.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Expr</span> <span class="kt">[]</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">tUnit</span>
+<span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Expr</span> <span class="n">l</span><span class="p">)</span> <span class="ow">=</span> <span class="n">tInfer</span> <span class="p">(</span><span class="n">foldl1</span> <span class="kt">App</span> <span class="n">l</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Type of an empty expression is unit <tt class="docutils literal">()</tt>.
+The expression is converted to App version before it is type inferred:</p>
+<pre class="literal-block">
+(f a b c d e)
+==&gt; (App (App (App (App (App f a) b) c) d) e)
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">App</span> <span class="n">f</span> <span class="n">x</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">tF</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">f</span>
+<span class="cs">&gt;     </span><span class="nf">tX</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">x</span>
+<span class="cs">&gt;     </span><span class="nf">v</span> <span class="ow">&lt;-</span> <span class="n">newTVar</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">tF&#39;</span> <span class="ow">=</span> <span class="n">tX</span> <span class="p">`</span><span class="n">fn</span><span class="p">`</span> <span class="n">v</span>
+<span class="cs">&gt;     </span><span class="nf">unify</span> <span class="n">tF</span> <span class="n">tF&#39;</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">v</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>To infer type of App value, type of the function is inferred first (tF).
+Then, type of the argument is inferred (tX).
+Then type of the function is unified with <tt class="docutils literal">tX <span class="pre">-&gt;</span> a</tt>
+where a is a fresh type variable:</p>
+<pre class="literal-block">
+App (a -&gt; b -&gt; c) (d -&gt; e)
+==&gt; unify (a -&gt; b -&gt; c) ((d -&gt; e) -&gt; f) where f is fresh
+    ==&gt; [(&quot;a&quot;, d -&gt; e), (&quot;f&quot;, b -&gt; c)]
+==&gt; b -&gt; c
+</pre>
+<p>App value is never generated from the parser. Only Expr value
+is converted to App value during type inference.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">If</span> <span class="n">pred</span> <span class="n">true</span> <span class="n">false</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">tPred</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">pred</span>
+<span class="cs">&gt;     </span><span class="nf">unify</span> <span class="n">tPred</span> <span class="n">tBool</span>
+<span class="cs">&gt;     </span><span class="nf">tTrue</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">true</span>
+<span class="cs">&gt;     </span><span class="nf">tFalse</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">false</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">unify</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">tTrue</span><span class="p">)</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">tFalse</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">tFalse</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Type of if expression is inferred so that pred has type Bool
+and types of true case (tTrue) and false case (tFalse) are unified.
+The unified type of true case and false case is the type of the if
+expression.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Lambda</span> <span class="kt">[]</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="n">tInfer</span> <span class="n">e</span>
+</pre></div>
+
+</div>
+<p>Type of a lambda expression that doesn't abstract a variable
+is just type of body expression.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="n">lam</span><span class="o">@</span><span class="p">(</span><span class="kt">Lambda</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">v</span> <span class="ow">&lt;-</span> <span class="n">newTVar</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">sF</span> <span class="ow">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">+-&gt;</span> <span class="kt">TScheme</span> <span class="kt">[]</span> <span class="n">v</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">tE</span> <span class="ow">&lt;-</span> <span class="n">localSubst</span> <span class="n">sF</span> <span class="p">(</span><span class="n">tInfer</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">domain</span> <span class="ow">=</span> <span class="n">apply</span> <span class="n">s</span> <span class="n">v</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">result</span> <span class="ow">=</span> <span class="n">domain</span> <span class="p">`</span><span class="n">fn</span><span class="p">`</span> <span class="n">tE</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s</span> <span class="n">result</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Type of a lambda expression λx.e is inferred in an environment (Subst)
+where x is bound to a fresh type variable.
+After inferring type of e, the environment is updated to have
+proper type of x (since x can appear in e).
+Actual type of the lambda is <tt class="docutils literal">type of x <span class="pre">-&gt;</span> type of e</tt>.</p>
+<p>When inferring type of e, localSubst is used that runs type inference
+on the given Subst, sF, instead of current global Subst.
+localSubst stores types of variables that conflict with sF. Then it restores
+them upon exit:</p>
+<pre class="literal-block">
+localSubst [(&quot;x&quot;, Int)]
+==&gt; sF = [(&quot;x&quot;, Int)]
+==&gt; current subst  = [(&quot;x&quot;, Float), ...]
+==&gt; (&quot;x&quot;, Float) is cached.
+==&gt; type inference is performed in the environment where
+    x is mapped to Int
+==&gt; (&quot;x&quot;, Float) is restored to current subst.
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="n">lam</span><span class="o">@</span><span class="p">(</span><span class="kt">Lambda</span> <span class="n">params</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">noDup</span> <span class="n">params</span>
+<span class="cs">&gt;     </span><span class="kr">then</span>
+<span class="cs">&gt;         </span><span class="nf">tInfer</span> <span class="p">(</span><span class="n">simplifyLambda</span> <span class="n">lam</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="kr">else</span>
+<span class="cs">&gt;         </span><span class="nf">throwErr</span> <span class="p">(</span><span class="s">&quot;duplicate argument: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">lam</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>When lambda has more than 1 parameter, it is turned to
+a lambda with 1 parameter and type inferred:</p>
+<pre class="literal-block">
+(lambda (x y z) e)
+==&gt; (lambda (x) (lambda (y) (lambda (z) e)))
+</pre>
+<p>noDup makes sure there's no duplicate parameter (such as <tt class="docutils literal">(lambda (x x) e)</tt>).
+simplifyLambda turns multiple parameter lambda expression to
+normal 1 parameter lambda expression.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Let</span> <span class="p">[(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)]</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">tV</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">v</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">keys</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">keys</span> <span class="n">s</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">vals</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">elems</span> <span class="n">s</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">freeVs</span> <span class="ow">=</span> <span class="p">(</span><span class="n">tv</span> <span class="n">tV</span> <span class="o">\\</span> <span class="n">keys</span><span class="p">)</span> <span class="o">\\</span> <span class="n">tv</span> <span class="n">vals</span>
+<span class="cs">&gt;     </span><span class="nf">localSubst</span> <span class="n">s</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">extendSubst</span> <span class="p">(</span><span class="n">k</span> <span class="o">+-&gt;</span> <span class="kt">TScheme</span> <span class="n">freeVs</span> <span class="n">tV</span><span class="p">)</span>
+<span class="cs">&gt;         </span><span class="nf">tE</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="n">e</span>
+<span class="cs">&gt;         </span><span class="nf">tK</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">k</span><span class="p">)</span>
+<span class="cs">&gt;         </span><span class="nf">unify</span> <span class="n">tK</span> <span class="n">tV</span>
+<span class="cs">&gt;         </span><span class="nf">s&#39;</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;         </span><span class="nf">return</span> <span class="p">(</span><span class="n">apply</span> <span class="n">s&#39;</span> <span class="n">tE</span><span class="p">))</span>
+</pre></div>
+
+</div>
+<p>For a let expression of the form <tt class="docutils literal">let { k = v } e</tt>,
+type of v is inferred first (tV).
+Since tV might contain type variables that are already in current Subst,
+only those type variables that do not appear in the Subst are
+stored in freeVs.
+For example:</p>
+<pre class="literal-block">
+(lambda (x) (let { x = x } x))
+         |         |   |   +----- x of let      x4
+         |         |   +--------- x of lambda   x3
+         |         +------------- x of let      x2
+         +----------------------- x of lambda   x1
+</pre>
+<p>While inferring type of x3 (x of lambda), it can get type variable t0
+(during type inferencing the outer lambda,
+x gets type variable t0, for example).
+Then when extending Subst with <tt class="docutils literal">x2 <span class="pre">+-&gt;</span> t0</tt>
+(<tt class="docutils literal">k <span class="pre">+-&gt;</span> TScheme freeVs tV</tt> in source code), x2 is bound to t0.
+And, this will interfere type inference for x1.
+So, freeVs only stores type variables that are not already found in
+the current Subst.
+After getting freeVs, type of e is inferred in local environment,
+where k is bound to tV with freeVs universally quantified.
+During inference of e, which can contain k, Subst is modified
+to have enough information about k to infer type of k.
+Type of k is inferred (tK) and is unified with tV.
+During unification, Subst is modified to contain most general unifier
+of tK and tV. Using the modified Subst, type of e (tE) is
+finalized.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="p">(</span><span class="kt">Let</span> <span class="n">kvs</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="n">tInfer</span> <span class="o">$</span> <span class="n">foldr</span> <span class="p">(</span><span class="kt">Let</span> <span class="o">.</span> <span class="p">(</span><span class="kt">:[]</span><span class="p">))</span> <span class="n">e</span> <span class="n">kvs</span>
+</pre></div>
+
+</div>
+<p>When a let expression has more than 1 key value assignment
+(such as <tt class="docutils literal">let {x1 = v1, x2 = v2, ... } e</tt>),
+it is converted to a let expression with only 1 key value assignment.
+And, type of the converted let expression is inferred:</p>
+<pre class="literal-block">
+let {x1 = v1, x2 = v2, ..., xN = vN} e
+==&gt; let { x1 = v1 }
+        (let {x2 = v2}
+            ...
+            (let {xN = vN} e))
+</pre>
+<p>This is possible because LIPL does not allow mutually recursive
+let expressions, and key value assignments are evaluated in sequence.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">tInfer</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">FunDef</span> <span class="n">name</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">if</span> <span class="n">noDup</span> <span class="n">args</span>
+<span class="cs">&gt;     </span><span class="kr">then</span>
+<span class="cs">&gt;         </span><span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">v</span> <span class="ow">&lt;-</span> <span class="n">newTVar</span>
+<span class="cs">&gt;             </span><span class="nf">extendSubst</span> <span class="p">(</span><span class="n">name</span> <span class="o">+-&gt;</span> <span class="n">mkMonoType</span> <span class="n">v</span><span class="p">)</span>
+<span class="cs">&gt;             </span><span class="nf">tF</span> <span class="ow">&lt;-</span> <span class="n">tInfer</span> <span class="p">(</span><span class="kt">Lambda</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span>
+<span class="cs">&gt;             </span><span class="nf">unify</span> <span class="n">v</span> <span class="n">tF</span>
+<span class="cs">&gt;             </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;             </span><span class="kr">let</span> <span class="n">result</span> <span class="ow">=</span> <span class="n">apply</span> <span class="n">s</span> <span class="n">v</span>
+<span class="cs">&gt;             </span><span class="nf">extendSubst</span> <span class="p">(</span><span class="n">name</span> <span class="o">+-&gt;</span> <span class="n">mkPolyType</span> <span class="n">result</span><span class="p">)</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="n">result</span>
+<span class="cs">&gt;     </span><span class="kr">else</span>
+<span class="cs">&gt;         </span><span class="nf">throwErr</span> <span class="p">(</span><span class="s">&quot;duplicate argument: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>For a function definition, parameters are checked to make sure
+they don't contain duplicates.
+Then, Subst is extended with function name bound to a new type variable.
+mkMonoType is used because the function name should be instantiated
+with one type only in the function body (for recursive functions).
+Then, using parameters and function body, a lambda expression is formed
+and type of the lambda is inferred (tF).
+After unifying tF with the new type variable bound to function name (v),
+type of the function is computed by applying current Subst to
+the new type variable.
+The current Subst is extended with the function name bound to the function
+type.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">typeInfer</span> <span class="n">v</span> <span class="ow">=</span> <span class="n">typeInfer&#39;</span> <span class="n">v</span> <span class="p">`</span><span class="kt">E</span><span class="o">.</span><span class="n">catchError</span><span class="p">`</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="nf">\</span><span class="n">e</span> <span class="ow">-&gt;</span> <span class="kr">case</span> <span class="n">e</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="kt">Err</span> <span class="kr">_</span> <span class="kr">_</span> <span class="ow">-&gt;</span> <span class="kt">E</span><span class="o">.</span><span class="n">throwError</span> <span class="n">e</span>
+<span class="cs">&gt;         </span><span class="nf">otherwise</span> <span class="ow">-&gt;</span> <span class="n">throwErr</span> <span class="p">(</span><span class="n">show</span> <span class="n">e</span><span class="p">))</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">typeInfer&#39;</span> <span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">FunDef</span> <span class="kr">_</span> <span class="kr">_</span> <span class="kr">_</span><span class="p">))</span> <span class="ow">=</span> <span class="n">typeInfer&#39;</span> <span class="n">e</span>
+<span class="cs">&gt;         </span><span class="nf">typeInfer&#39;</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">FunDef</span> <span class="n">name</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">t</span> <span class="ow">&lt;-</span> <span class="kt">M</span><span class="o">.</span><span class="n">liftM</span> <span class="n">tSanitize</span> <span class="p">(</span><span class="n">locally</span> <span class="p">(</span><span class="n">tInfer</span> <span class="n">e</span><span class="p">))</span>
+<span class="cs">&gt;             </span><span class="nf">extendSubst</span> <span class="p">(</span><span class="n">name</span> <span class="o">+-&gt;</span> <span class="n">mkPolyType</span> <span class="n">t</span><span class="p">)</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="n">t</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt;         </span><span class="nf">typeInfer&#39;</span> <span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">[</span><span class="n">e</span><span class="p">]))</span> <span class="ow">=</span> <span class="n">typeInfer&#39;</span> <span class="n">e</span>
+<span class="cs">&gt;         </span><span class="nf">typeInfer&#39;</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">[</span><span class="n">e</span><span class="p">])</span> <span class="ow">=</span> <span class="n">typeInfer&#39;</span> <span class="n">e</span>
+<span class="cs">&gt;         </span><span class="nf">typeInfer&#39;</span> <span class="n">e</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">t</span> <span class="ow">&lt;-</span> <span class="n">locally</span> <span class="p">(</span><span class="n">tInfer</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="p">(</span><span class="n">tSanitize</span> <span class="n">t</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>typeInfer uses tInfer but after inferring type of given LIPL value,
+it brings Subst to previous state (using locally function).
+Only when the Val is function definition, Subst is extended
+to register type of the function.
+When an error is thrown during type inference, it is caught
+and re-thrown. When the error caught does not already have
+SourcePos, current SourcePos is retrieved and the error
+re-thrown (using throwErr).</p>
+<pre class="literal-block">
+ghci&gt; :m + Control.Monad
+ghci&gt; :t liftM
+liftM :: (Monad m) =&gt; (a1 -&gt; r) -&gt; m a1 -&gt; m r
+</pre>
+<p>liftM takes a transformation function (a function of type <tt class="docutils literal">a <span class="pre">-&gt;</span> b</tt>)
+and transforms the value inside a monad.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">toType</span> <span class="p">(</span><span class="kt">TScheme</span> <span class="n">l</span> <span class="n">t</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">l&#39;</span> <span class="ow">&lt;-</span> <span class="n">mapM</span> <span class="p">(</span><span class="n">const</span> <span class="n">newId</span><span class="p">)</span> <span class="n">l</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="n">subst</span> <span class="p">(</span><span class="n">zip</span> <span class="n">l</span> <span class="n">l&#39;</span><span class="p">)</span> <span class="n">t</span>
+</pre></div>
+
+</div>
+<p>toType instantiates a TScheme to a Type
+by replacing universally quantified type variables with
+new type variables.</p>
+<pre class="literal-block">
+ghci&gt; :t mapM
+mapM :: (Monad m) =&gt; (a -&gt; m b) -&gt; [a] -&gt; m [b]
+</pre>
+<p>mapM takes a function that returns a monad
+and applies it to each element in a list.
+The list now has monads.
+Then it executes each monad in the list collecting
+values of each monad in a list.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">locally</span> <span class="n">action</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">s</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">n</span> <span class="ow">&lt;-</span> <span class="n">getN</span>
+<span class="cs">&gt;     </span><span class="nf">result</span> <span class="ow">&lt;-</span> <span class="n">action</span>
+<span class="cs">&gt;     </span><span class="nf">putSubst</span> <span class="n">s</span>
+<span class="cs">&gt;     </span><span class="nf">putN</span> <span class="n">n</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">result</span>
+</pre></div>
+
+</div>
+<p>locally caches current state of TI monad.
+Then it executes the given action.
+And it restores the cached state before returning.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">localSubst</span> <span class="n">s</span> <span class="n">action</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">sOrig</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">cache</span> <span class="ow">=</span> <span class="n">sOrig</span> <span class="p">`</span><span class="kt">Map</span><span class="o">.</span><span class="n">intersection</span><span class="p">`</span> <span class="n">s</span> <span class="c1">-- store sOrig&#39;s types</span>
+<span class="cs">&gt;     </span><span class="nf">extendSubst</span> <span class="n">s</span>
+<span class="cs">&gt;     </span><span class="nf">result</span> <span class="ow">&lt;-</span> <span class="n">action</span>
+<span class="cs">&gt;     </span><span class="nf">s&#39;</span> <span class="ow">&lt;-</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">ks</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">keys</span> <span class="n">s</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">s&#39;&#39;</span> <span class="ow">=</span> <span class="n">subtractMap</span> <span class="n">s&#39;</span> <span class="n">ks</span> <span class="o">@@</span> <span class="n">cache</span> <span class="c1">-- restore sOrig&#39;s types</span>
+<span class="cs">&gt;     </span><span class="nf">putSubst</span> <span class="n">s&#39;&#39;</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">result</span>
+</pre></div>
+
+</div>
+<p>localSubst extends current Subst with the given Subst, s.
+When s contains conflicting entries, original types bound to
+the conflicting entries are cached.
+After running the given action, cached types are restored.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">defaultSubst</span> <span class="ow">::</span> <span class="kt">Subst</span>
+<span class="cs">&gt; </span><span class="nf">defaultSubst</span> <span class="ow">=</span> <span class="n">toSubst</span> <span class="p">[</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="s">&quot;Int&quot;</span><span class="p">,</span> <span class="n">tInt</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;Float&quot;</span><span class="p">,</span> <span class="n">tFloat</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;Bool&quot;</span><span class="p">,</span> <span class="n">tBool</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;Char&quot;</span><span class="p">,</span> <span class="n">tChar</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;Str&quot;</span><span class="p">,</span> <span class="n">list</span> <span class="n">tChar</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">initialSubst</span> <span class="ow">=</span> <span class="n">defaultSubst</span> <span class="p">`</span><span class="kt">Map</span><span class="o">.</span><span class="n">union</span><span class="p">`</span> <span class="n">toSubst</span> <span class="n">builtinSubst</span>
+</pre></div>
+
+</div>
+<p>initialSubst has types of built-in functions (<tt class="docutils literal">+</tt>, <tt class="docutils literal">-</tt>, head, ...)
+and base type constants (Int, Float, ...).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">clearSubst</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">MonadTI</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt; </span><span class="nf">clearSubst</span> <span class="ow">=</span> <span class="n">putSubst</span> <span class="n">initialSubst</span>
+</pre></div>
+
+</div>
+<p>clearSubst clears current type environment by replacing it with
+initialSubst.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">showS</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">showSubst</span> <span class="o">$</span> <span class="n">onlyNew</span> <span class="n">s</span>
+<span class="cs">&gt; </span><span class="nf">onlyNew</span> <span class="n">s</span> <span class="ow">=</span> <span class="n">s</span> <span class="p">`</span><span class="kt">Map</span><span class="o">.</span><span class="n">difference</span><span class="p">`</span> <span class="n">initialSubst</span>
+</pre></div>
+
+</div>
+<p>showS is a convenience action that converts key-type mappings
+that are not part of initialSubst to String.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

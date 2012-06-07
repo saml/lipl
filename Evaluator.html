@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Evaluator.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="evaluator-lhs">
+<h1 class="title">Evaluator.lhs</h1>
+<p>Evaluator module defines eval function that evaluates LIPL values.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">Evaluator</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">Map</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangData</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">CoreLib</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">LangUtils</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Utils</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">EvalMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">PosMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Error</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Int</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Float</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Bool</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Char</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Str</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">e</span>
+</pre></div>
+
+</div>
+<p>For literals above, just return itself.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">At</span> <span class="n">pos</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">setSourcePos</span> <span class="n">pos</span>
+<span class="cs">&gt;     </span><span class="nf">eval</span> <span class="n">e</span>
+</pre></div>
+
+</div>
+<p>For At value that comes with SourcePos
+and Val, store current SourcePos and evaluate the Val.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Ident</span> <span class="n">var</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">val</span> <span class="ow">&lt;-</span> <span class="n">getVal</span> <span class="n">var</span>
+<span class="cs">&gt;     </span><span class="nf">eval</span> <span class="n">val</span>
+</pre></div>
+
+</div>
+<p>For an identifier, find its value from the EnvStack (using getVal).
+When bound value is found, evaluate it.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">List</span> <span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">elems</span> <span class="ow">&lt;-</span> <span class="n">mapM</span> <span class="n">eval</span> <span class="n">xs</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">List</span> <span class="n">elems</span>
+</pre></div>
+
+</div>
+<p>For a list, evaluate each element in the list and return.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">PrimFun</span> <span class="n">name</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">arity</span> <span class="ow">=</span> <span class="n">arityOf</span> <span class="n">name</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">fun</span> <span class="ow">=</span> <span class="kt">Prim</span> <span class="n">name</span> <span class="n">arity</span> <span class="kt">[]</span>
+<span class="cs">&gt;     </span><span class="kr">if</span> <span class="n">arity</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="cs">&gt;         </span><span class="kr">then</span>
+<span class="cs">&gt;             </span><span class="nf">eval</span> <span class="n">fun</span>
+<span class="cs">&gt;         </span><span class="kr">else</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="n">fun</span>
+</pre></div>
+
+</div>
+<p>For built-in functions, return Prim function object
+that stores remaining number of parameters to take and already taken
+parameters.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">Prim</span> <span class="n">name</span> <span class="mi">0</span> <span class="n">args</span><span class="p">)</span> <span class="ow">=</span> <span class="n">funcall</span> <span class="n">name</span> <span class="n">args</span>
+</pre></div>
+
+</div>
+<p>For Prim function object that has no more parameters to take,
+call the built-in function using funcall.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">Lambda</span> <span class="kt">[]</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="n">eval</span> <span class="n">body</span>
+</pre></div>
+
+</div>
+<p>For a lambda without parameter, just evaluate body.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Lambda</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">env</span> <span class="ow">&lt;-</span> <span class="n">getEnvFor</span> <span class="p">(</span><span class="n">unboundVars</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">fun</span> <span class="ow">=</span> <span class="kt">Fun</span> <span class="n">env</span> <span class="n">args</span> <span class="n">body</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">fun</span>
+</pre></div>
+
+</div>
+<p>For a lambda expression, get free variables in e.
+And get environment for the free variables.
+For example, <tt class="docutils literal">(lambda (x) (+ x y))</tt> has 1 free variable, y.
+So, get environment for y (bound value for y).
+Then, return a function object (closure) wrapped with the environment.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">FunDef</span> <span class="n">name</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">env</span> <span class="ow">&lt;-</span> <span class="n">getEnvFor</span> <span class="p">(</span><span class="n">unboundVars</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">putVal</span> <span class="n">name</span> <span class="p">(</span><span class="kt">Fun</span> <span class="n">env</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">env&#39;</span> <span class="ow">&lt;-</span> <span class="n">getEnv</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">fun</span> <span class="ow">=</span> <span class="kt">Fun</span> <span class="n">env&#39;</span> <span class="n">args</span> <span class="n">body</span>
+<span class="cs">&gt;     </span><span class="nf">updateVal</span> <span class="n">name</span> <span class="n">fun</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">fun</span>
+</pre></div>
+
+</div>
+<p>For function definitions, make a function closure
+that has environment for free variables in the function definition.
+Then, update the environment with the closure
+bound to the function name.
+Then create another closure that has the environment
+where the function name is bound to the previous closure.
+Reset function name to the closure just created.
+All this is to evaluate recursive functions.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">If</span> <span class="n">pred</span> <span class="n">ifCase</span> <span class="n">elseCase</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">ifOrElse</span> <span class="ow">&lt;-</span> <span class="n">eval</span> <span class="n">pred</span>
+<span class="cs">&gt;     </span><span class="kr">case</span> <span class="n">ifOrElse</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="kt">Bool</span> <span class="kt">False</span> <span class="ow">-&gt;</span> <span class="n">eval</span> <span class="n">elseCase</span>
+<span class="cs">&gt;         </span><span class="nf">otherwise</span> <span class="ow">-&gt;</span> <span class="n">eval</span> <span class="n">ifCase</span>
+</pre></div>
+
+</div>
+<p>For if expression, evaluate the predicate.
+If the predicate is True, evalute ifCase. Otherwise, evaluate elseCase.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">Let</span> <span class="n">env</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">env&#39;</span> <span class="ow">&lt;-</span> <span class="n">keyValToEnv</span> <span class="n">env</span>
+<span class="cs">&gt;     </span><span class="nf">withEnv</span> <span class="n">env&#39;</span> <span class="p">(</span><span class="n">eval</span> <span class="n">body</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>For let expression, evaluate key-val pairs and get
+an environment where values are bound to the keys.
+Then in that environment, evaluate body of let.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">Fun</span> <span class="n">env</span> <span class="kt">[]</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">withEnv</span> <span class="n">env</span> <span class="p">(</span><span class="n">eval</span> <span class="n">body</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>For function objects (closures) without parameters,
+evaluate the body with environment the closure provides.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">Expr</span> <span class="kt">[]</span><span class="p">)</span> <span class="ow">=</span> <span class="n">return</span> <span class="kt">Null</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">[</span><span class="n">e</span><span class="p">])</span> <span class="ow">=</span> <span class="n">eval</span> <span class="n">e</span> <span class="c1">-- unwrap outer parens</span>
+</pre></div>
+
+</div>
+<p>For empty expression, return Null.
+For an expression with single value, evaluate the value.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">(</span><span class="n">f</span><span class="kt">:</span><span class="n">e</span><span class="p">))</span> <span class="ow">=</span> <span class="kr">do</span> <span class="c1">-- both f and e are Val because Expr [e] case</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">firstArg</span> <span class="ow">=</span> <span class="n">head</span> <span class="n">e</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">restArgs</span> <span class="ow">=</span> <span class="n">tail</span> <span class="n">e</span>
+<span class="cs">&gt;     </span><span class="nf">function</span> <span class="ow">&lt;-</span> <span class="n">eval</span> <span class="o">$</span> <span class="n">f</span>
+<span class="cs">&gt;     </span><span class="kr">case</span> <span class="n">function</span> <span class="kr">of</span>
+<span class="cs">&gt;         </span><span class="nf">fun</span><span class="o">@</span><span class="p">(</span><span class="kt">Fun</span> <span class="n">env</span> <span class="kr">_</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">arg1</span> <span class="ow">&lt;-</span> <span class="n">eval</span> <span class="o">$</span> <span class="n">firstArg</span>
+<span class="cs">&gt;             </span><span class="nf">evalFun</span> <span class="n">env</span> <span class="n">fun</span> <span class="n">arg1</span> <span class="n">restArgs</span>
+<span class="cs">&gt;         </span><span class="nf">fun</span><span class="o">@</span><span class="p">(</span><span class="kt">Prim</span> <span class="n">name</span> <span class="n">remaining</span> <span class="n">args</span><span class="p">)</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">arg1</span> <span class="ow">&lt;-</span> <span class="n">eval</span> <span class="o">$</span> <span class="n">firstArg</span>
+<span class="cs">&gt;             </span><span class="nf">evalPrim</span> <span class="n">name</span> <span class="n">arg1</span> <span class="n">restArgs</span> <span class="n">args</span> <span class="n">remaining</span>
+<span class="cs">&gt;         </span><span class="nf">otherwise</span> <span class="ow">-&gt;</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;not function: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">f</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>For expressions that has at least two values,
+evaluate the first value.
+When it is a function (built-in or not), evaluate the second value
+(1st argument to the function).
+And curry (return a function object that has the argument
+applied).
+If the first value is not a function, throw error.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="p">(</span><span class="kt">Pair</span> <span class="n">e1</span> <span class="n">e2</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">v1</span> <span class="ow">&lt;-</span> <span class="n">eval</span> <span class="n">e1</span>
+<span class="cs">&gt;     </span><span class="nf">v2</span> <span class="ow">&lt;-</span> <span class="n">eval</span> <span class="n">e2</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">Pair</span> <span class="n">v1</span> <span class="n">v2</span>
+</pre></div>
+
+</div>
+<p>For a pair, evaluate each element of the pair and return the evaluated pair.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">eval</span> <span class="n">x</span> <span class="ow">=</span> <span class="n">return</span> <span class="n">x</span>
+</pre></div>
+
+</div>
+<p>For all other cases, just return itself.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">evaluate</span> <span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">FunDef</span> <span class="kr">_</span> <span class="kr">_</span> <span class="kr">_</span><span class="p">))</span> <span class="ow">=</span> <span class="n">evaluate</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">evaluate</span> <span class="n">e</span><span class="o">@</span><span class="p">(</span><span class="kt">FunDef</span> <span class="n">name</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">result</span> <span class="ow">&lt;-</span> <span class="n">runLocally</span> <span class="p">(</span><span class="n">eval</span> <span class="n">e</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="nf">updateVal</span> <span class="n">name</span> <span class="n">result</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">result</span>
+<span class="cs">&gt; </span><span class="nf">evaluate</span> <span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">[</span><span class="n">e</span><span class="p">]))</span> <span class="ow">=</span> <span class="n">evaluate</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">evaluate</span> <span class="p">(</span><span class="kt">Expr</span> <span class="p">[</span><span class="n">e</span><span class="p">])</span> <span class="ow">=</span> <span class="n">evaluate</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">evaluate</span> <span class="n">e</span> <span class="ow">=</span> <span class="n">runLocally</span> <span class="p">(</span><span class="n">eval</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>evaluate runs eval in local environment so that the environment
+is not cluttered with unnecessary key-val bindings.
+Only function definitions modify the environment.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">runLocally</span> <span class="n">action</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">prev</span> <span class="ow">&lt;-</span> <span class="n">getEnvs</span>
+<span class="cs">&gt;     </span><span class="nf">pushEnv</span> <span class="n">emptyEnv</span>
+<span class="cs">&gt;     </span><span class="nf">result</span> <span class="ow">&lt;-</span> <span class="n">action</span>
+<span class="cs">&gt;     </span><span class="nf">putEnvs</span> <span class="n">prev</span>
+<span class="cs">&gt;     </span><span class="nf">return</span> <span class="n">result</span>
+</pre></div>
+
+</div>
+<p>runLocally saves current environment, runs the action, and restores
+the environment.
+emptyEnv is pushed to EnvStack so that the action can run on the new Env.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">keyValToEnv</span> <span class="n">kv</span> <span class="ow">=</span> <span class="n">runLocally</span> <span class="p">(</span><span class="n">keyValToEnv&#39;</span> <span class="n">kv</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="kr">where</span>
+<span class="cs">&gt;         </span><span class="nf">keyValToEnv&#39;</span> <span class="p">((</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">v&#39;</span> <span class="ow">&lt;-</span> <span class="n">eval</span> <span class="n">v</span>
+<span class="cs">&gt;             </span><span class="nf">putVal</span> <span class="n">k</span> <span class="n">v&#39;</span>
+<span class="cs">&gt;             </span><span class="nf">keyValToEnv&#39;</span> <span class="n">xs</span>
+<span class="cs">&gt;         </span><span class="nf">keyValToEnv&#39;</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;             </span><span class="nf">env</span> <span class="ow">&lt;-</span> <span class="n">getEnv</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="n">env</span>
+</pre></div>
+
+</div>
+<p>keyValToEnv takes key-value pair and evaluates
+values one by one while updating environment with the evaluated value
+bound to the key.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">apply</span> <span class="p">(</span><span class="kt">Fun</span> <span class="n">env</span> <span class="p">(</span><span class="n">arg</span><span class="kt">:</span><span class="n">rst</span><span class="p">)</span> <span class="n">body</span><span class="p">)</span> <span class="n">e</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">env&#39;</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">insert</span> <span class="n">arg</span> <span class="n">e</span> <span class="n">env</span>
+<span class="cs">&gt;     </span><span class="kr">if</span> <span class="n">null</span> <span class="n">rst</span>
+<span class="cs">&gt;         </span><span class="kr">then</span>
+<span class="cs">&gt;             </span><span class="nf">withEnv</span> <span class="n">env&#39;</span><span class="p">(</span><span class="n">eval</span> <span class="n">body</span><span class="p">)</span>
+<span class="cs">&gt;         </span><span class="kr">else</span>
+<span class="cs">&gt;             </span><span class="nf">return</span> <span class="o">$</span> <span class="kt">Fun</span> <span class="n">env&#39;</span> <span class="n">rst</span> <span class="n">body</span>
+<span class="cs">&gt; </span><span class="nf">apply</span> <span class="n">e</span> <span class="kr">_</span> <span class="ow">=</span> <span class="n">throwErr</span> <span class="p">(</span><span class="s">&quot;not function: &quot;</span> <span class="o">++</span> <span class="n">show</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>apply applies 1 argument to the given function object.
+When no more argument is left to apply, body of the function object is called.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">evalFun</span> <span class="n">env</span> <span class="n">fun</span> <span class="n">arg1</span> <span class="n">restArgs</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">withEnv</span> <span class="n">env</span> <span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">partial</span> <span class="ow">&lt;-</span> <span class="n">apply</span> <span class="n">fun</span> <span class="n">arg1</span>
+<span class="cs">&gt;         </span><span class="nf">eval</span> <span class="o">$</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">partial</span> <span class="kt">:</span> <span class="n">restArgs</span><span class="p">))</span>
+</pre></div>
+
+</div>
+<p>evalFun creates a partially applied function object by applying
+arg1 to fun,
+and evaluates the partially applied function object with the rest
+of arguments.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">evalPrim</span> <span class="n">fname</span> <span class="n">arg1</span> <span class="n">restArgs</span> <span class="n">argsHave</span> <span class="n">remaining</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="kr">let</span> <span class="n">args</span> <span class="ow">=</span> <span class="n">argsHave</span> <span class="o">++</span> <span class="p">[</span><span class="n">arg1</span><span class="p">]</span>
+<span class="cs">&gt;     </span><span class="kr">if</span> <span class="n">remaining</span> <span class="o">==</span> <span class="mi">1</span>
+<span class="cs">&gt;         </span><span class="kr">then</span>
+<span class="cs">&gt;             </span><span class="nf">funcall</span> <span class="n">fname</span> <span class="n">args</span>
+<span class="cs">&gt;         </span><span class="kr">else</span>
+<span class="cs">&gt;             </span><span class="nf">eval</span> <span class="o">$</span> <span class="kt">Expr</span> <span class="p">(</span>
+<span class="cs">&gt;                 </span><span class="p">(</span><span class="kt">Prim</span> <span class="n">fname</span> <span class="p">(</span><span class="n">remaining</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="n">args</span><span class="p">)</span> <span class="kt">:</span> <span class="n">restArgs</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>evalPrim calls built-in function when all of the arguments
+are already available.
+Otherwise, Prim function object (with 1 argument added to it)
+is evaluated with the rest of arguments.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">withEnv</span> <span class="n">env</span> <span class="n">action</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">pushEnv</span> <span class="n">env</span>
+<span class="cs">&gt;         </span><span class="nf">val</span> <span class="ow">&lt;-</span> <span class="n">action</span>
+<span class="cs">&gt;         </span><span class="nf">popEnv</span>
+<span class="cs">&gt;         </span><span class="nf">return</span> <span class="n">val</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="p">`</span><span class="kt">E</span><span class="o">.</span><span class="n">catchError</span><span class="p">`</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="nf">\</span><span class="n">e</span> <span class="ow">-&gt;</span> <span class="kr">do</span>
+<span class="cs">&gt;         </span><span class="nf">popEnv</span>
+<span class="cs">&gt;         </span><span class="kt">E</span><span class="o">.</span><span class="n">throwError</span> <span class="n">e</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>withEnv evaluates the given action in the environment provided.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

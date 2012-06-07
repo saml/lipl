@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>LangData.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="langdata-lhs">
+<h1 class="title">LangData.lhs</h1>
+<p>LangData module defines Val type, which represent
+values used inside LIPL interpreter.</p>
+<p><tt class="docutils literal">module ModuleName (func1, func2) where</tt>
+creates a module ModuleName where func1, func2 are exported
+(<tt class="docutils literal">(fun1, func2)</tt> is called an export list).
+So, in another module:</p>
+<pre class="literal-block">
+import ModuleName
+
+f = func1 -- this is fine
+g = func2 -- also fine because ModuleName exports these.
+h = func3 -- is not fine because func3 is not exported by
+             the module, ModuleName.
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">LangData</span> <span class="p">(</span> <span class="kt">Val</span> <span class="p">(</span><span class="o">..</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="kt">Env</span><span class="p">,</span> <span class="nf">emptyEnvStack</span><span class="p">,</span> <span class="nf">emptyEnv</span><span class="p">,</span> <span class="kt">EnvStack</span><span class="p">,</span> <span class="nf">showEnv</span><span class="p">,</span> <span class="nf">showEnvs</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="kt">KeyValList</span><span class="p">,</span> <span class="kt">Key</span><span class="p">,</span> <span class="nf">initialPos</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="nf">ppValList</span><span class="p">,</span> <span class="nf">ppVal</span><span class="p">,</span> <span class="nf">toStr</span>
+<span class="cs">&gt;     </span><span class="p">)</span> <span class="kr">where</span>
+</pre></div>
+
+</div>
+<p>So, LangData module exports <tt class="docutils literal">Val <span class="pre">(..)</span></tt>, Env, emptyEnvStack, ...etc.
+<tt class="docutils literal">Val <span class="pre">(..)</span></tt> means all data constructors of type Val are exported too.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="k">as</span> <span class="n">PP</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Text.PrettyPrint.HughesPJ</span> <span class="p">(</span> <span class="p">(</span><span class="o">&lt;&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">&lt;+&gt;</span><span class="p">),</span> <span class="p">(</span><span class="o">$$</span><span class="p">),</span> <span class="p">(</span><span class="o">$+$</span><span class="p">)</span> <span class="p">)</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec.Pos</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.Map</span> <span class="k">as</span> <span class="n">Map</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Data.List</span> <span class="k">as</span> <span class="n">List</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Stack</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">Key</span> <span class="ow">=</span> <span class="kt">String</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">KeyVal</span> <span class="ow">=</span> <span class="p">(</span><span class="kt">Key</span><span class="p">,</span> <span class="kt">Val</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">KeyValList</span> <span class="ow">=</span> <span class="p">[</span><span class="kt">KeyVal</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">initialPos</span> <span class="ow">=</span> <span class="kt">P</span><span class="o">.</span><span class="n">initialPos</span> <span class="s">&quot;&quot;</span>
+</pre></div>
+
+</div>
+<p>Key, KeyVal, KeyValList are type synonyms for convenience.
+initialPos is default source position used in the interpreter
+<tt class="docutils literal">(line 1, column 1)</tt>.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">ppKeyVal</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">=</span> <span class="n">ppVal</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">k</span><span class="p">)</span>
+<span class="cs">&gt;     </span><span class="o">&lt;+&gt;</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;=&quot;</span>
+<span class="cs">&gt;     </span><span class="o">&lt;+&gt;</span> <span class="n">ppVal</span> <span class="n">v</span>
+</pre></div>
+
+</div>
+<p>ppKeyVal takes a pair (Key, Val) and converts them to Doc
+(PrettyPrint data type that is used to pretty print values):</p>
+<pre class="literal-block">
+ppKeyVal (&quot;a&quot;, Int 1)
+==&gt; a = 1
+</pre>
+<p><tt class="docutils literal">ppKeyVal (&quot;a&quot;, Int1)</tt> will eventually be printed as: <tt class="docutils literal">a = 1</tt>.</p>
+<!-- sc::haskell
+
+> ppKeyValList :: KeyValList -> PP.Doc
+> ppKeyValList l = ppDict $ map ((PP.empty $$) . ppKeyVal) l
+> ppDict l = PP.braces $ PP.fsep $ PP.punctuate PP.comma l -->
+<p>ppKeyValList prints:</p>
+<pre class="literal-block">
+[(&quot;a&quot;, Int 1), (&quot;b&quot;, Int 2), (&quot;c&quot;, Str &quot;hello&quot;)]
+as
+{a = 1, b = 2, c = &quot;hello&quot;}
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">Env</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="kt">Map</span> <span class="kt">Key</span> <span class="kt">Val</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">EnvStack</span> <span class="ow">=</span> <span class="kt">Stack</span> <span class="kt">Env</span>
+<span class="cs">&gt; </span><span class="nf">emptyEnv</span> <span class="ow">=</span> <span class="kt">Map</span><span class="o">.</span><span class="n">empty</span>
+<span class="cs">&gt; </span><span class="nf">emptyEnvStack</span> <span class="ow">=</span> <span class="p">[</span><span class="n">emptyEnv</span><span class="p">]</span>
+</pre></div>
+
+</div>
+<p>EnvStack is a Stack of (hence a list of) Env (or Map.Map Key Val).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">showEnv</span> <span class="n">env</span> <span class="ow">=</span> <span class="n">show</span> <span class="o">$</span> <span class="n">ppEnv</span> <span class="n">env</span>
+<span class="cs">&gt; </span><span class="nf">showEnvs</span> <span class="n">envs</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">render</span>
+<span class="cs">&gt;     </span><span class="p">((</span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="o">$</span> <span class="n">map</span> <span class="n">ppEnv</span> <span class="n">envs</span><span class="p">)</span> <span class="o">$+$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">int</span> <span class="p">(</span><span class="n">length</span> <span class="n">envs</span><span class="p">))</span>
+<span class="cs">&gt; </span><span class="nf">ppEnv</span> <span class="n">env</span> <span class="ow">=</span> <span class="n">ppKeyValList</span>  <span class="o">$</span> <span class="kt">Map</span><span class="o">.</span><span class="n">toList</span> <span class="n">env</span>
+<span class="cs">&gt; </span><span class="nf">ppValList</span> <span class="ow">=</span> <span class="n">map</span> <span class="n">ppVal</span>
+<span class="cs">&gt; </span><span class="nf">ppStrList</span> <span class="ow">=</span> <span class="n">map</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span>
+<span class="cs">&gt; </span><span class="nf">ppArgs</span> <span class="n">args</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span> <span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="o">$</span> <span class="n">ppStrList</span> <span class="n">args</span>
+</pre></div>
+
+</div>
+<p>Above funcitons all facilitate pretty printing of Env, EnvStack, and Val.</p>
+<p>Many functions from PrettyPrint library (PP.render, PP.text, ...etc)
+are documented at:
+<a class="reference external" href="http://haskell.org/ghc/docs/latest/html/libraries/pretty/Text-PrettyPrint.html">http://haskell.org/ghc/docs/latest/html/libraries/pretty/Text-PrettyPrint.html</a></p>
+<p><a class="reference external" href="http://www.haskell.org/hoogle/">Hoogle</a> is a great resource to look up a function and find
+documentation about it.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">Name</span> <span class="ow">=</span> <span class="kt">String</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">Params</span> <span class="ow">=</span> <span class="p">[</span><span class="kt">Name</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="kr">type</span> <span class="kt">RemainingArgs</span> <span class="ow">=</span> <span class="kt">Int</span>
+</pre></div>
+
+</div>
+<p>One can create ADT (abstract data type) with:</p>
+<pre class="literal-block">
+data TypeCon = DataCon1 Int
+    | DataCon2 String Int
+    | ...
+</pre>
+<p>Above creates an ADT of type TypeCon that can be
+constructed using DataCon1, DataCon2, ...etc.
+Haskell ADT's are sum of product types.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">data</span> <span class="kt">Val</span> <span class="ow">=</span>
+<span class="cs">&gt;     </span><span class="kt">Null</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">At</span> <span class="kt">P</span><span class="o">.</span><span class="kt">SourcePos</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Ident</span> <span class="p">{</span> <span class="n">unpackIdent</span> <span class="ow">::</span> <span class="kt">Name</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Int</span> <span class="p">{</span> <span class="n">unpackInt</span> <span class="ow">::</span> <span class="kt">Integer</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Float</span> <span class="p">{</span> <span class="n">unpackFloat</span> <span class="ow">::</span> <span class="kt">Double</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Bool</span> <span class="p">{</span> <span class="n">unpackBool</span> <span class="ow">::</span> <span class="kt">Bool</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Char</span> <span class="p">{</span> <span class="n">unpackChar</span> <span class="ow">::</span> <span class="kt">Char</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Str</span> <span class="p">{</span> <span class="n">unpackStr</span> <span class="ow">::</span> <span class="kt">String</span> <span class="p">}</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">FunDef</span> <span class="kt">Name</span> <span class="kt">Params</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">PrimFun</span> <span class="kt">Name</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Lambda</span> <span class="kt">Params</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Fun</span> <span class="kt">Env</span> <span class="kt">Params</span> <span class="kt">Val</span> <span class="c1">-- parser don&#39;t generate this</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Prim</span> <span class="kt">Name</span> <span class="kt">RemainingArgs</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span> <span class="c1">-- parser don&#39;t generate this</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">List</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Dict</span> <span class="kt">KeyValList</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Pair</span> <span class="kt">Val</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Expr</span> <span class="p">[</span><span class="kt">Val</span><span class="p">]</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">App</span> <span class="kt">Val</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">Let</span> <span class="kt">KeyValList</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="o">|</span> <span class="kt">If</span> <span class="kt">Val</span> <span class="kt">Val</span> <span class="kt">Val</span>
+<span class="cs">&gt;     </span><span class="kr">deriving</span> <span class="p">(</span><span class="kt">Ord</span><span class="p">,</span> <span class="kt">Eq</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Type Val is defined above. Val represents values used inside the interpreter.
+Parser will create values of type Val from String using
+At data constructor, which stores source code position along with Val.
+So, upon error, the interpreter can print position of error.</p>
+<p>To construct a value of type Val, one can use
+any of the given data constructors above:</p>
+<pre class="literal-block">
+Null
+Ident &quot;foo&quot;
+List [Null, Int 1, Float 2.35, Ident { unpackIdent = &quot;bar&quot;}]
+...
+</pre>
+<p>These all construct a value of type Val.
+Note that Val is a type constructor and can't be used to construct
+a value (data) of type Val:</p>
+<pre class="literal-block">
+ghci&gt; :l LangData
+ghci&gt; Val
+&lt;interactive&gt;:1:0: Not in scope: data constructor `Val'
+</pre>
+<p>A data constructor <tt class="docutils literal">Bool Bool</tt> is same as <tt class="docutils literal">Bool { unpackBool :: Bool }</tt>.
+The latter is using record syntax.
+If a data constructor is defined using record syntax,
+each record accessor becomes a top level function:</p>
+<pre class="literal-block">
+data Foo = Foo { a :: Int, b :: String }
+
+a (Foo 1 &quot;hello&quot;)
+==&gt; 1
+
+b (Foo { a = 2, b = &quot;bye&quot; })
+==&gt; &quot;bye&quot;
+</pre>
+<p>One benefit of using record syntax is that modification
+of one field is easy:</p>
+<pre class="literal-block">
+(Foo 1 &quot;hello&quot;) { b = &quot;bye&quot; }
+==&gt; Foo 1 &quot;bye&quot;
+
+instead of
+
+case (Foo 1 &quot;hello&quot;) of
+    Foo a' _ -&gt; Foo a' &quot;bye&quot;
+==&gt; Foo 1 &quot;bye&quot;
+</pre>
+<p>Deriving clause (<tt class="docutils literal">deriving (Ord, Eq)</tt>) makes values of type Val
+to be comparable (can use <tt class="docutils literal">==</tt>, <tt class="docutils literal">&gt;</tt>, ... operators on Val).</p>
+<p>Ord and Eq are typeclasses in Haskell.
+A typeclass declares functions.
+One can make a type (such as Val) an instance of a typeclass
+by implementing those declared functions (or derive it using
+<tt class="docutils literal">derive</tt> kewword).
+To instantiate a typeclass, one can use <tt class="docutils literal">instance</tt> keyword:</p>
+<pre class="literal-block">
+instance Class1 Type1 where
+    funcClass1DeclaresA = ...
+    funcClass1DeclaresB = ...
+</pre>
+<p>Type1 is now an instance of Class1.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">Show</span> <span class="kt">Val</span> <span class="kr">where</span> <span class="n">show</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">render</span> <span class="o">.</span> <span class="n">ppVal</span>
+</pre></div>
+
+</div>
+<p>By making Val an instance of Show class, values of type Val
+can be converted to String and printed.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="kt">Null</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;Null&quot;</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">At</span> <span class="kr">_</span> <span class="n">e</span><span class="p">)</span> <span class="ow">=</span> <span class="n">ppVal</span> <span class="n">e</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Ident</span> <span class="n">s</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">s</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Int</span> <span class="n">i</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">integer</span> <span class="n">i</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Float</span> <span class="n">f</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">double</span> <span class="n">f</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Bool</span> <span class="n">b</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="o">$</span> <span class="n">show</span> <span class="n">b</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Char</span> <span class="n">c</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="o">$</span> <span class="n">show</span> <span class="n">c</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Str</span> <span class="n">s</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="o">$</span> <span class="n">show</span> <span class="n">s</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Fun</span> <span class="n">env</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span>
+<span class="cs">&gt;     </span><span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;function&quot;</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="n">ppArgs</span> <span class="n">args</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">body</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Lambda</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span>
+<span class="cs">&gt;     </span><span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;lambda&quot;</span><span class="p">,</span> <span class="n">ppArgs</span> <span class="n">args</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">body</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">FunDef</span> <span class="n">name</span> <span class="n">args</span> <span class="n">body</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span>
+<span class="cs">&gt;     </span><span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;def&quot;</span><span class="p">,</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">name</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="n">ppArgs</span> <span class="n">args</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">body</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">PrimFun</span> <span class="n">name</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">name</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Prim</span> <span class="n">name</span> <span class="kr">_</span> <span class="kr">_</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;&lt;builtin:&quot;</span>
+<span class="cs">&gt;     </span><span class="o">&lt;+&gt;</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="n">name</span> <span class="o">&lt;&gt;</span> <span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;&gt;&quot;</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">List</span> <span class="n">l</span><span class="o">@</span><span class="p">(</span><span class="kt">Char</span> <span class="n">c</span><span class="kt">:</span><span class="n">xs</span><span class="p">))</span> <span class="ow">=</span> <span class="n">ppVal</span> <span class="p">(</span><span class="n">toStr</span> <span class="n">l</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">List</span> <span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">brackets</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">punctuate</span> <span class="kt">PP</span><span class="o">.</span><span class="n">comma</span> <span class="p">(</span><span class="n">ppValList</span> <span class="n">xs</span><span class="p">))</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Dict</span> <span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="n">ppKeyValList</span> <span class="n">xs</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Pair</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span>
+<span class="cs">&gt;     </span><span class="p">(</span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">punctuate</span> <span class="kt">PP</span><span class="o">.</span><span class="n">comma</span> <span class="p">[</span><span class="n">ppVal</span> <span class="n">a</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">b</span><span class="p">])</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Expr</span> <span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span> <span class="p">(</span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="o">$</span> <span class="n">ppValList</span> <span class="n">xs</span><span class="p">)</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">If</span> <span class="n">pred</span> <span class="n">ifCase</span> <span class="n">elseCase</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span>
+<span class="cs">&gt;     </span><span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;if&quot;</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">pred</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">ifCase</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">elseCase</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">Let</span> <span class="n">env</span> <span class="n">val</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span>
+<span class="cs">&gt;     </span><span class="o">$</span> <span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="kt">PP</span><span class="o">.</span><span class="n">text</span> <span class="s">&quot;let&quot;</span><span class="p">,</span> <span class="n">ppKeyValList</span> <span class="n">env</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">val</span><span class="p">]</span>
+<span class="cs">&gt; </span><span class="nf">ppVal</span> <span class="p">(</span><span class="kt">App</span> <span class="n">f</span> <span class="n">x</span><span class="p">)</span> <span class="ow">=</span> <span class="kt">PP</span><span class="o">.</span><span class="n">parens</span> <span class="p">(</span><span class="kt">PP</span><span class="o">.</span><span class="n">fsep</span> <span class="p">[</span><span class="n">ppVal</span> <span class="n">f</span><span class="p">,</span> <span class="n">ppVal</span> <span class="n">x</span><span class="p">])</span>
+</pre></div>
+
+</div>
+<p>ppVal is used to pretty print values of type Val.
+It is defined case by case for different patterns.
+From the top to bottom, given a Val, the Val is matched
+against Null, <tt class="docutils literal">At _ e</tt>,  <tt class="docutils literal">Ident s</tt>, ..., <tt class="docutils literal">App f x</tt>.
+When a match is found, the body (the expression after <tt class="docutils literal">=</tt>) is evaluated
+in an environment where variables in the pattern are bound to actual values
+matched.
+For example:</p>
+<pre class="literal-block">
+ppVal (Prim &quot;+&quot; 3 [Int 1, Str &quot;hello&quot;])
+</pre>
+<p>will fail to match all patterns until it matches the pattern
+<tt class="docutils literal">ppVal (Prim name _ _)</tt>  (<tt class="docutils literal">_</tt> matches anything).
+So, the body expression of the pattern will be evaluated with &quot;+&quot;
+bound to the variable, name:</p>
+<pre class="literal-block">
+function call: ppVal (Prim &quot;+&quot; 3 [Int 1, Str &quot;hello&quot;])
+                 ^     ^    ^  ^   ^
+                 |     |    |   \ /
+                 |     |    |   | |
+pattern:       ppVal (Prim name _ _)
+                            |   | +--&gt; _ is not a variable
+                            |   +----&gt; _ is not a variable
+                            +--------&gt; name gets &quot;+&quot;
+</pre>
+<p>ppVal could have written using <tt class="docutils literal">case</tt> expression:</p>
+<pre class="literal-block">
+ppVal v = case v of
+    Null    -&gt; ...
+    At _ e  -&gt; ...
+    Ident s -&gt; ...
+    ...
+    App f x -&gt; ...
+</pre>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">toStr</span> <span class="kt">[]</span> <span class="ow">=</span> <span class="kt">Str</span> <span class="s">&quot;&quot;</span>
+<span class="cs">&gt; </span><span class="nf">toStr</span> <span class="p">(</span><span class="kt">Char</span> <span class="n">c</span><span class="kt">:</span><span class="n">xs</span><span class="p">)</span> <span class="ow">=</span> <span class="kr">let</span> <span class="kt">Str</span> <span class="n">xs&#39;</span> <span class="ow">=</span> <span class="n">toStr</span> <span class="n">xs</span>
+<span class="cs">&gt;     </span><span class="kr">in</span>
+<span class="cs">&gt;         </span><span class="kt">Str</span> <span class="p">(</span><span class="n">c</span><span class="kt">:</span><span class="n">xs&#39;</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>toStr converts a list of Char's to Str:</p>
+<pre class="literal-block">
+toStr [Char 'a', Char 'b', Char 'c']
+==&gt; Str &quot;abc&quot;
+</pre>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

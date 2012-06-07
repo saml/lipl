@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>core.lipl -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="core-lipl">
+<h1 class="title">core.lipl</h1>
+<div class="syntax scheme">
+<div class="highlight"><pre><span class="o">#</span> <span class="nv">Prelude</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">seq</span> <span class="p">(</span><span class="nf">a</span> <span class="nv">b</span><span class="p">)</span> <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="nv">a</span> <span class="err">}</span> <span class="nv">b</span><span class="p">))</span> <span class="o">#</span> <span class="nv">execute</span> <span class="nv">a</span> <span class="nv">then</span> <span class="nv">b</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">compose</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">g</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="nf">f</span> <span class="p">(</span><span class="nf">g</span> <span class="nv">x</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">apply</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">id</span> <span class="p">(</span><span class="nf">a</span><span class="p">)</span> <span class="nv">a</span><span class="p">)</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">flip</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">a</span> <span class="nv">b</span><span class="p">)</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">b</span> <span class="nv">a</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">const</span> <span class="p">(</span><span class="nf">a</span> <span class="nv">b</span><span class="p">)</span> <span class="nv">a</span><span class="p">)</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">foldl</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">z</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="nv">z</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span> <span class="err">}</span>
+            <span class="p">(</span><span class="nf">foldl</span> <span class="nv">f</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">z</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">xs</span><span class="p">))))</span>
+
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">scanl</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">q</span> <span class="nv">ls</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">ls</span><span class="o">&#39;</span> <span class="nv">=</span> <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">ls</span><span class="p">)</span>
+                    <span class="err">[]</span>
+                    <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">ls</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">ls</span><span class="p">)</span><span class="err">}</span>
+                        <span class="p">(</span><span class="nf">scanl</span> <span class="nv">f</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">q</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">xs</span><span class="p">)))</span> <span class="err">}</span>
+        <span class="p">(</span><span class="nb">cons </span><span class="nv">q</span> <span class="nv">ls</span><span class="o">&#39;</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">foldr</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">z</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="nv">z</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">foldr</span> <span class="nv">f</span> <span class="nv">z</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">))</span><span class="err">}</span>
+            <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span> <span class="nv">xs</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">foldr1</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">l</span><span class="p">)</span> <span class="o">#</span> <span class="nv">l</span> <span class="nv">can</span><span class="ss">&#39;t</span> <span class="nv">be</span> <span class="nv">empty</span>
+    <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span><span class="err">}</span>
+        <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">xs</span><span class="p">)</span>
+            <span class="nv">x</span>
+            <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span> <span class="p">(</span><span class="nf">foldr1</span> <span class="nv">f</span> <span class="nv">xs</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">scanr</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">q0</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="err">[</span><span class="nv">q0</span><span class="err">]</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span>
+            <span class="o">,</span> <span class="nv">qs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">scanr</span> <span class="nv">f</span> <span class="nv">q0</span> <span class="nv">xs</span><span class="p">)</span>
+            <span class="o">,</span> <span class="nv">q</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">qs</span><span class="p">)</span> <span class="err">}</span>
+            <span class="p">(</span><span class="nb">cons </span><span class="p">(</span><span class="nf">f</span> <span class="nv">x</span> <span class="nv">q</span><span class="p">)</span> <span class="nv">qs</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">take</span> <span class="p">(</span><span class="nf">n</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nb">&lt;= </span><span class="nv">n</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="err">[]</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span> <span class="err">}</span>
+            <span class="p">(</span><span class="nb">cons </span><span class="nv">x</span> <span class="p">(</span><span class="nf">take</span> <span class="p">(</span><span class="nb">- </span><span class="nv">n</span> <span class="mi">1</span><span class="p">)</span> <span class="nv">xs</span><span class="p">))))))</span>
+
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">drop</span> <span class="p">(</span><span class="nf">n</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nb">&lt;= </span><span class="nv">n</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="nv">l</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="nf">drop</span> <span class="p">(</span><span class="nb">- </span><span class="nv">n</span> <span class="mi">1</span><span class="p">)</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)))))</span>
+
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">splitAt</span> <span class="p">(</span><span class="nf">n</span> <span class="nv">l</span><span class="p">)</span> <span class="p">((</span><span class="nf">take</span> <span class="nv">n</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="p">(</span><span class="nf">drop</span> <span class="nv">n</span> <span class="nv">l</span><span class="p">)))</span>
+
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">map</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">l</span><span class="p">)</span> <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+                   <span class="err">[]</span>
+                   <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span><span class="err">}</span>
+                        <span class="p">(</span><span class="nb">cons </span><span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="nb">map </span><span class="nv">f</span> <span class="nv">xs</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">concat</span> <span class="p">(</span><span class="nf">l1</span> <span class="nv">l2</span><span class="p">)</span> <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l1</span><span class="p">)</span>
+                        <span class="nv">l2</span>
+                        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l1</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l1</span><span class="p">)</span><span class="err">}</span>
+                             <span class="p">(</span><span class="nb">cons </span><span class="nv">x</span> <span class="p">(</span><span class="nf">concat</span> <span class="nv">xs</span> <span class="nv">l2</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">concatMap</span> <span class="p">(</span><span class="nf">f</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">foldr</span> <span class="p">(</span><span class="nf">compose</span> <span class="nv">concat</span> <span class="nv">f</span><span class="p">)</span> <span class="err">[]</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">insertAt</span> <span class="p">(</span><span class="nf">n</span> <span class="nv">x</span> <span class="nv">xs</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">sp</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">splitAt</span> <span class="nv">n</span> <span class="nv">xs</span><span class="p">)</span><span class="o">,</span> <span class="nv">before</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">sp</span><span class="p">)</span><span class="o">,</span> <span class="nv">after</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">snd</span> <span class="nv">sp</span><span class="p">)</span> <span class="err">}</span>
+        <span class="p">(</span><span class="nf">concat</span> <span class="nv">before</span> <span class="p">(</span><span class="nb">cons </span><span class="nv">x</span> <span class="nv">after</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">range</span> <span class="p">(</span><span class="nf">n</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nb">&lt; </span><span class="nv">n</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="nf">concat</span> <span class="p">(</span><span class="nf">range</span> <span class="p">(</span><span class="nb">- </span><span class="nv">n</span> <span class="mi">1</span><span class="p">))</span> <span class="err">[</span><span class="nv">n</span><span class="err">]</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">iterateN</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span> <span class="nv">n</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nb">&lt;= </span><span class="nv">n</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="nb">cons </span><span class="nv">x</span> <span class="p">(</span><span class="nf">iterateN</span> <span class="nv">f</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="nb">- </span><span class="nv">n</span> <span class="mi">1</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">filter</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">l</span><span class="p">)</span>
+     <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+         <span class="err">[]</span>
+         <span class="p">(</span><span class="k">let </span><span class="err">{</span>
+                <span class="nv">x</span>  <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span>
+              <span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">filter</span> <span class="nv">f</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">))</span>
+              <span class="err">}</span>
+              <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">)</span>
+                  <span class="p">(</span><span class="nb">cons </span><span class="nv">x</span> <span class="nv">xs</span><span class="p">)</span>
+                  <span class="nv">xs</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">dropWhile</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span><span class="err">}</span>
+            <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">)</span>
+                <span class="p">(</span><span class="nf">dropWhile</span> <span class="nv">f</span> <span class="nv">xs</span><span class="p">)</span>
+                <span class="nv">l</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">isSpace</span> <span class="p">(</span><span class="nf">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="o">&#39;</span> <span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="o">&#39;</span><span class="err">\</span><span class="nv">t</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="o">&#39;</span><span class="err">\</span><span class="nv">n</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="o">&#39;</span><span class="err">\</span><span class="nv">r</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="o">&#39;</span><span class="err">\</span><span class="nv">f</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">==</span> <span class="o">&#39;</span><span class="err">\</span><span class="nv">v</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)))))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">isNum</span> <span class="p">(</span><span class="nf">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;0</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;1</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;2</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;3</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;4</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;5</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;6</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;7</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+    <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;7</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)</span>
+        <span class="p">(</span><span class="nf">==</span> <span class="ss">&#39;9</span><span class="o">&#39;</span> <span class="nv">c</span><span class="p">)))))))))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">zip</span> <span class="p">(</span><span class="nf">ks</span> <span class="nv">vs</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">ks</span><span class="p">)</span>
+        <span class="err">[]</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">vs</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">k</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">ks</span><span class="p">)</span><span class="o">,</span> <span class="nv">v</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">vs</span><span class="p">)</span>
+            <span class="o">,</span> <span class="nv">kss</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">ks</span><span class="p">)</span><span class="o">,</span> <span class="nv">vss</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">vs</span><span class="p">)</span><span class="err">}</span>
+            <span class="p">(</span><span class="nb">cons </span><span class="p">(</span><span class="nf">k,</span> <span class="nv">v</span><span class="p">)</span> <span class="p">(</span><span class="nf">zip</span> <span class="nv">kss</span> <span class="nv">vss</span><span class="p">))))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">zipWith</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">ks</span> <span class="nv">vs</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">ks</span><span class="p">)</span>
+        <span class="err">[]</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">vs</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">k</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">ks</span><span class="p">)</span><span class="o">,</span> <span class="nv">v</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">vs</span><span class="p">)</span>
+            <span class="o">,</span> <span class="nv">kss</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">ks</span><span class="p">)</span><span class="o">,</span> <span class="nv">vss</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">vs</span><span class="p">)</span><span class="err">}</span>
+            <span class="p">(</span><span class="nb">cons </span><span class="p">(</span><span class="nf">f</span> <span class="nv">k</span> <span class="nv">v</span><span class="p">)</span> <span class="p">(</span><span class="nf">zipWith</span> <span class="nv">f</span> <span class="nv">kss</span> <span class="nv">vss</span><span class="p">))))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">unzip</span> <span class="p">()</span>
+    <span class="p">(</span><span class="nf">foldr</span>
+        <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">kv</span> <span class="nv">ksvs</span><span class="p">)</span>
+            <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">k</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">kv</span><span class="p">)</span><span class="o">,</span> <span class="nv">v</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">snd</span> <span class="nv">kv</span><span class="p">)</span>
+                <span class="o">,</span> <span class="nv">ks</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">ksvs</span><span class="p">)</span><span class="o">,</span> <span class="nv">vs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">snd</span> <span class="nv">ksvs</span><span class="p">)</span><span class="err">}</span>
+                <span class="p">((</span><span class="nb">cons </span><span class="nv">k</span> <span class="nv">ks</span><span class="p">)</span><span class="o">,</span> <span class="p">(</span><span class="nb">cons </span><span class="nv">v</span> <span class="nv">vs</span><span class="p">))))</span>
+        <span class="p">(</span><span class="err">[]</span><span class="o">,</span><span class="err">[]</span><span class="p">)))</span>
+
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">reverse</span> <span class="p">()</span>
+    <span class="p">(</span><span class="nf">foldl</span> <span class="p">(</span><span class="nf">flip</span> <span class="nv">cons</span><span class="p">)</span> <span class="err">[]</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">last</span> <span class="p">(</span><span class="nf">l</span><span class="p">)</span> <span class="o">#</span> <span class="nv">l</span> <span class="nv">should</span> <span class="nv">not</span> <span class="nv">be</span> <span class="nv">empty</span>
+    <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span> <span class="err">}</span>
+        <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">xs</span><span class="p">)</span>
+            <span class="nv">x</span>
+            <span class="p">(</span><span class="nf">last</span> <span class="nv">xs</span><span class="p">))))</span>
+
+
+<span class="p">(</span><span class="nf">def</span> <span class="k">and </span><span class="p">()</span> <span class="p">(</span><span class="nf">foldr</span> <span class="nv">&amp;&amp;</span> <span class="nv">True</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="k">or </span><span class="p">()</span> <span class="p">(</span><span class="nf">foldr</span> <span class="nv">||</span> <span class="nv">False</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">all</span> <span class="p">(</span><span class="nf">p</span><span class="p">)</span> <span class="p">(</span><span class="nf">compose</span> <span class="k">and </span><span class="p">(</span><span class="nb">map </span><span class="nv">p</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">any</span> <span class="p">(</span><span class="nf">p</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="nv">False</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span><span class="err">}</span>
+            <span class="p">(</span><span class="nf">||</span> <span class="p">(</span><span class="nf">p</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="nf">any</span> <span class="nv">p</span> <span class="nv">xs</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">elem</span> <span class="p">(</span><span class="nf">v</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="nv">False</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span> <span class="err">}</span>
+            <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">==</span> <span class="nv">v</span> <span class="nv">x</span><span class="p">)</span>
+                <span class="nv">True</span>
+                <span class="p">(</span><span class="nf">elem</span> <span class="nv">v</span> <span class="nv">xs</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">member</span> <span class="p">(</span><span class="nf">k</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="nv">False</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span>
+            <span class="o">,</span> <span class="nv">key</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">x</span><span class="p">)</span><span class="err">}</span>
+            <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">==</span> <span class="nv">k</span> <span class="nv">key</span><span class="p">)</span>
+                <span class="nv">True</span>
+                <span class="p">(</span><span class="nb">member </span><span class="nv">k</span> <span class="nv">xs</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">lookup</span> <span class="p">(</span><span class="nf">k</span> <span class="nv">l</span><span class="p">)</span> <span class="o">#</span> <span class="nv">when</span> <span class="nv">k</span> <span class="nv">is</span> <span class="nv">not</span> <span class="nv">found</span> <span class="nv">in</span> <span class="nv">l,</span> <span class="nv">_|_</span>
+    <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="o">,</span> <span class="nv">key</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">x</span><span class="p">)</span>
+        <span class="o">,</span> <span class="nv">val</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">snd</span> <span class="nv">x</span><span class="p">)</span>
+        <span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span><span class="err">}</span>
+        <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">==</span> <span class="nv">key</span> <span class="nv">k</span><span class="p">)</span>
+            <span class="nv">val</span>
+            <span class="p">(</span><span class="nf">lookup</span> <span class="nv">k</span> <span class="nv">xs</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">break</span> <span class="p">(</span><span class="nf">p</span> <span class="nv">l</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+        <span class="p">(</span><span class="err">[]</span><span class="o">,</span> <span class="err">[]</span><span class="p">)</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span><span class="err">}</span>
+            <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">p</span> <span class="nv">x</span><span class="p">)</span>
+                <span class="p">(</span><span class="err">[]</span><span class="o">,</span> <span class="nv">l</span><span class="p">)</span>
+                <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">broken</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">break</span> <span class="nv">p</span> <span class="nv">xs</span><span class="p">)</span>
+                        <span class="o">,</span> <span class="nv">ys</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">broken</span><span class="p">)</span>
+                        <span class="o">,</span> <span class="nv">zs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">snd</span> <span class="nv">broken</span><span class="p">)</span> <span class="err">}</span>
+                    <span class="p">((</span><span class="nb">cons </span><span class="nv">x</span> <span class="nv">ys</span><span class="p">)</span><span class="o">,</span> <span class="nv">zs</span><span class="p">))))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">words</span> <span class="p">(</span><span class="nf">s</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">s</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">s</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">s</span><span class="p">)</span> <span class="err">}</span>
+            <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">s</span><span class="o">&#39;</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">dropWhile</span> <span class="nv">isSpace</span> <span class="nv">s</span><span class="p">)</span> <span class="err">}</span>
+                <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">s</span><span class="o">&#39;</span><span class="p">)</span>
+                    <span class="err">[]</span>
+                    <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">broken</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">break</span> <span class="nv">isSpace</span> <span class="nv">s</span><span class="o">&#39;</span><span class="p">)</span>
+                            <span class="o">,</span> <span class="nv">w</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">broken</span><span class="p">)</span>
+                            <span class="o">,</span> <span class="nv">ss</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">snd</span> <span class="nv">broken</span><span class="p">)</span> <span class="err">}</span>
+                        <span class="p">(</span><span class="nb">cons </span><span class="nv">w</span> <span class="p">(</span><span class="nf">words</span> <span class="nv">ss</span><span class="p">))))))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">unwords</span> <span class="p">(</span><span class="nf">s</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">s</span><span class="p">)</span>
+        <span class="s">&quot;&quot;</span>
+        <span class="p">(</span><span class="nf">foldr1</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">w</span> <span class="nv">s</span><span class="p">)</span> <span class="p">(</span><span class="nf">concat</span> <span class="nv">w</span> <span class="p">(</span><span class="nb">cons </span><span class="o">&#39;</span> <span class="o">&#39;</span> <span class="nv">s</span><span class="p">)))</span> <span class="nv">s</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">lines</span> <span class="p">(</span><span class="nf">s</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">s</span><span class="p">)</span>
+        <span class="err">[]</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">break</span> <span class="p">(</span><span class="nf">==</span> <span class="o">&#39;</span><span class="err">\</span><span class="nv">n</span><span class="o">&#39;</span><span class="p">)</span> <span class="nv">s</span><span class="p">)</span>
+            <span class="o">,</span> <span class="nv">l</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fst</span> <span class="nv">x</span><span class="p">)</span><span class="o">,</span> <span class="nv">s1</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">snd</span> <span class="nv">x</span><span class="p">)</span>
+            <span class="o">,</span> <span class="nv">s2</span> <span class="nv">=</span> <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">s1</span><span class="p">)</span> <span class="err">[]</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">s1</span><span class="p">))</span> <span class="err">}</span>
+            <span class="p">(</span><span class="nb">cons </span><span class="nv">l</span> <span class="p">(</span><span class="nf">lines</span> <span class="nv">s2</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">unlines</span> <span class="p">()</span>
+    <span class="p">(</span><span class="nf">concatMap</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(</span><span class="nf">concat</span> <span class="nv">x</span> <span class="s">&quot;\n&quot;</span><span class="p">))))</span>
+
+<span class="o">#</span> <span class="nv">simple</span> <span class="nv">quick</span> <span class="nv">sort</span>
+<span class="p">(</span><span class="nf">def</span> <span class="nv">quick-sort</span> <span class="p">(</span><span class="nf">l</span><span class="p">)</span> <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span> <span class="o">#</span> <span class="nv">is</span> <span class="nv">the</span> <span class="nv">list</span> <span class="nv">empty?</span>
+    <span class="err">[]</span>
+    <span class="p">(</span><span class="k">let </span><span class="err">{</span>     <span class="nv">x</span>       <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span>
+             <span class="o">,</span> <span class="nv">xs</span>      <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span>
+             <span class="o">,</span> <span class="nv">lesser</span>  <span class="nv">=</span> <span class="p">(</span><span class="nf">filter</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">a</span><span class="p">)</span> <span class="p">(</span><span class="nb">&lt; </span><span class="nv">a</span> <span class="nv">x</span><span class="p">))</span>  <span class="nv">xs</span><span class="p">)</span>
+             <span class="o">,</span> <span class="nv">greater</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">filter</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">a</span><span class="p">)</span> <span class="p">(</span><span class="nb">&gt;= </span><span class="nv">a</span> <span class="nv">x</span><span class="p">))</span> <span class="nv">xs</span><span class="p">)</span>
+         <span class="err">}</span>
+         <span class="p">(</span><span class="nf">concat</span> <span class="p">(</span><span class="nf">concat</span> <span class="p">(</span><span class="nf">quick-sort</span> <span class="nv">lesser</span><span class="p">)</span>
+                         <span class="p">(</span><span class="nb">cons </span><span class="nv">x</span> <span class="err">[]</span><span class="p">))</span>
+                 <span class="p">(</span><span class="nf">quick-sort</span> <span class="nv">greater</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">trace</span> <span class="p">(</span><span class="nf">msg</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="nf">seq</span> <span class="p">(</span><span class="nf">println</span> <span class="nv">msg</span><span class="p">)</span> <span class="nv">x</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">fac</span> <span class="p">(</span><span class="nf">n</span><span class="p">)</span> <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nb">&lt;= </span><span class="nv">n</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">1</span> <span class="p">(</span><span class="nb">* </span><span class="nv">n</span> <span class="p">(</span><span class="nf">fac</span> <span class="p">(</span><span class="nb">- </span><span class="nv">n</span> <span class="mi">1</span><span class="p">)))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">fib</span> <span class="p">(</span><span class="nf">n</span><span class="p">)</span>
+    <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nb">&lt; </span><span class="nv">n</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="nv">n</span>
+        <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">i</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fib</span> <span class="p">(</span><span class="nb">- </span><span class="nv">n</span> <span class="mi">1</span><span class="p">))</span><span class="o">,</span> <span class="nv">i-1</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">fib</span> <span class="p">(</span><span class="nb">- </span><span class="nv">n</span> <span class="mi">2</span><span class="p">))</span> <span class="err">}</span>
+             <span class="p">(</span><span class="nb">+ </span><span class="nv">i</span> <span class="nv">i-1</span><span class="p">))))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">twice</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="nf">f</span> <span class="p">(</span><span class="nf">f</span> <span class="nv">x</span><span class="p">)))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">succ</span> <span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(</span><span class="nb">+ </span><span class="nv">x</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">pred</span> <span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(</span><span class="nb">- </span><span class="nv">x</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">sum</span> <span class="p">(</span><span class="nf">l</span><span class="p">)</span>
+     <span class="p">(</span><span class="nf">foldl</span> <span class="nv">+</span> <span class="mi">0</span> <span class="nv">l</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">product</span> <span class="p">()</span>
+    <span class="p">(</span><span class="nf">foldl</span> <span class="nv">*</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="p">(</span><span class="nf">def</span> <span class="nv">subs</span> <span class="p">(</span><span class="nf">l</span><span class="p">)</span>
+     <span class="p">(</span><span class="k">if </span><span class="p">(</span><span class="nf">isEmpty</span> <span class="nv">l</span><span class="p">)</span>
+         <span class="err">[[]]</span>
+         <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">head</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">xs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">tail</span> <span class="nv">l</span><span class="p">)</span><span class="o">,</span> <span class="nv">subsXs</span> <span class="nv">=</span> <span class="p">(</span><span class="nf">subs</span> <span class="nv">xs</span><span class="p">)</span> <span class="err">}</span>
+              <span class="p">(</span><span class="nf">concat</span> <span class="nv">subsXs</span> <span class="p">(</span><span class="nb">map </span><span class="p">(</span><span class="nb">cons </span><span class="nv">x</span><span class="p">)</span> <span class="nv">subsXs</span><span class="p">)))))</span>
+
+<span class="err">{</span><span class="nv">-</span>
+<span class="p">((</span><span class="nf">twice</span> <span class="nv">twice</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nf">twice</span> <span class="p">(</span><span class="nf">twice</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">((</span><span class="nf">twice</span> <span class="nv">succ</span><span class="p">)</span> <span class="p">((</span><span class="nf">twice</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">0</span><span class="p">))</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nf">succ</span> <span class="p">(</span><span class="nf">succ</span> <span class="p">((</span><span class="nf">twice</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">0</span><span class="p">)))</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nb">+ </span><span class="p">(</span><span class="nf">succ</span> <span class="p">((</span><span class="nf">twice</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">0</span><span class="p">))</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nb">+ </span><span class="p">(</span><span class="nb">+ </span><span class="p">((</span><span class="nf">twice</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">0</span><span class="p">)</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nb">+ </span><span class="p">(</span><span class="nb">+ </span><span class="p">(</span><span class="nf">succ</span> <span class="p">(</span><span class="nf">succ</span> <span class="mi">0</span><span class="p">))</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nb">+ </span><span class="p">(</span><span class="nb">+ </span><span class="p">(</span><span class="nf">succ</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nb">+ </span><span class="p">(</span><span class="nb">+ </span><span class="mi">2</span> <span class="mi">1</span><span class="p">)</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nb">+ </span><span class="mi">3</span> <span class="mi">1</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="mi">4</span>
+<span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">fac</span> <span class="nv">=</span> <span class="p">(</span><span class="nb">+ </span><span class="nv">fac</span> <span class="mi">1</span><span class="p">)</span>
+<span class="p">((</span><span class="nf">twice</span> <span class="p">(</span><span class="nf">twice</span> <span class="p">(</span><span class="nf">twice</span> <span class="nv">succ</span><span class="p">)))</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">((</span><span class="nf">twice</span> <span class="p">(</span><span class="nf">twice</span> <span class="p">(</span><span class="nf">succ</span> <span class="p">(</span><span class="nf">succ</span><span class="p">))))</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nf">twice</span> <span class="p">((</span><span class="nf">succ</span> <span class="p">(</span><span class="nf">succ</span><span class="p">))</span> <span class="p">((</span><span class="nf">succ</span> <span class="p">(</span><span class="nf">succ</span><span class="p">))))</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">((</span><span class="nf">succ</span> <span class="nv">succ</span><span class="p">)</span> <span class="p">((</span><span class="nf">succ</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">0</span><span class="p">))</span>
+<span class="nv">==&gt;</span> <span class="p">((</span><span class="nf">succ</span> <span class="nv">succ</span><span class="p">)</span> <span class="p">(</span><span class="nf">succ</span> <span class="p">(</span><span class="nf">succ</span> <span class="mi">0</span><span class="p">)))</span>
+<span class="nv">==&gt;</span> <span class="p">((</span><span class="nf">succ</span> <span class="nv">succ</span><span class="p">)</span> <span class="mi">2</span><span class="p">)</span>
+<span class="nv">==&gt;</span> <span class="p">(</span><span class="nf">succ</span> <span class="p">(</span><span class="nf">succ</span> <span class="mi">2</span><span class="p">))</span>
+<span class="nv">==&gt;</span> <span class="mi">4</span>
+<span class="nv">-</span><span class="err">}</span>
+
+<span class="err">{</span><span class="nv">-</span>
+<span class="nv">ev</span> <span class="s">&quot;((lambda (x) ((let { x = (lambda (x) (+ x 1)) } x) x)) 3)&quot;</span>
+<span class="p">(</span><span class="nf">def</span> <span class="nv">f</span> <span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(((</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(</span><span class="nb">+ </span><span class="nv">x</span> <span class="mi">1</span><span class="p">))</span> <span class="err">}</span> <span class="nv">x</span><span class="p">))</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">x</span><span class="p">))</span>
+<span class="p">(</span><span class="nf">def</span> <span class="nv">f</span> <span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(((</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">((</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="nv">x</span><span class="p">)</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">(</span><span class="nb">+ </span><span class="nv">x</span> <span class="mi">1</span><span class="p">))))</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">x</span><span class="p">))</span>
+<span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">((</span><span class="k">let </span><span class="err">{</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span><span class="p">)</span> <span class="p">((</span><span class="k">let </span><span class="err">{</span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="k">lambda </span><span class="p">(</span><span class="nf">x</span> <span class="nv">y</span><span class="p">)</span> <span class="p">(</span><span class="nb">+ </span><span class="nv">x</span> <span class="nv">y</span><span class="p">))</span> <span class="err">}</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">x</span> <span class="mi">1</span><span class="p">))</span> <span class="err">}</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">x</span><span class="p">))</span>
+<span class="o">#</span> <span class="nv">f</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">((</span><span class="err">\</span><span class="nv">x</span> <span class="nv">-&gt;</span> <span class="k">let </span><span class="nv">x</span> <span class="nv">=</span> <span class="p">(</span><span class="err">\</span><span class="nv">x</span> <span class="nv">-&gt;</span> <span class="nv">x</span> <span class="nv">+</span> <span class="mi">1</span><span class="p">)</span> <span class="nv">in</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">x</span>
+<span class="o">#</span> <span class="k">let </span><span class="nv">f</span> <span class="nv">x</span> <span class="nv">=</span> <span class="p">((</span><span class="err">\</span><span class="nv">x</span> <span class="nv">-&gt;</span> <span class="p">(</span><span class="k">let </span><span class="nv">x</span> <span class="nv">=</span> <span class="err">\</span><span class="nv">x</span> <span class="nv">-&gt;</span> <span class="nv">x</span> <span class="nv">+</span> <span class="mi">1</span> <span class="nv">in</span> <span class="nv">x</span><span class="p">))</span> <span class="nv">x</span><span class="p">)</span> <span class="nv">x</span> <span class="nv">in</span> <span class="nv">f</span>
+<span class="nv">-</span><span class="err">}</span>
+</pre></div>
+
+</div>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

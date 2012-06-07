@@ -1,1 +1,619 @@
-bleh
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>LIPL: a Little Idiotic Programming Language -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="lipl-a-little-idiotic-programming-language">
+<h1 class="title">LIPL: a Little Idiotic Programming Language</h1>
+<h2 class="subtitle" id="cs731-software-development-practicum">CS731 Software Development Practicum</h2>
+<table class="docinfo" frame="void" rules="none">
+<col class="docinfo-name" />
+<col class="docinfo-content" />
+<tbody valign="top">
+<tr><th class="docinfo-name">Author:</th>
+<td>Sam Lee</td></tr>
+<tr><th class="docinfo-name">Organization:</th>
+<td><a class="first last reference external" href="http://www.cs.qc.edu/">Queens College - CUNY</a></td></tr>
+</tbody>
+</table>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#about" id="id3">1&nbsp;&nbsp;&nbsp;About</a></li>
+<li><a class="reference internal" href="#obtaining-the-project" id="id4">2&nbsp;&nbsp;&nbsp;Obtaining the Project</a></li>
+<li><a class="reference internal" href="#project-structure" id="id5">3&nbsp;&nbsp;&nbsp;Project Structure</a></li>
+<li><a class="reference internal" href="#installation-and-running" id="id6">4&nbsp;&nbsp;&nbsp;Installation and Running</a><ul class="auto-toc">
+<li><a class="reference internal" href="#steps" id="id7">4.1&nbsp;&nbsp;&nbsp;Steps</a></li>
+<li><a class="reference internal" href="#quick-start" id="id8">4.2&nbsp;&nbsp;&nbsp;Quick Start</a></li>
+<li><a class="reference internal" href="#requirements" id="id9">4.3&nbsp;&nbsp;&nbsp;Requirements</a></li>
+<li><a class="reference internal" href="#haskell-compiler" id="id10">4.4&nbsp;&nbsp;&nbsp;Haskell Compiler</a></li>
+<li><a class="reference internal" href="#build" id="id11">4.5&nbsp;&nbsp;&nbsp;Build</a><ul class="auto-toc">
+<li><a class="reference internal" href="#using-cabal" id="id12">4.5.1&nbsp;&nbsp;&nbsp;Using Cabal</a></li>
+<li><a class="reference internal" href="#manual-build" id="id13">4.5.2&nbsp;&nbsp;&nbsp;Manual Build</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#installation" id="id14">4.6&nbsp;&nbsp;&nbsp;Installation</a></li>
+<li><a class="reference internal" href="#running-the-interpreter" id="id15">4.7&nbsp;&nbsp;&nbsp;Running the Interpreter</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#lipl-tutorial" id="id16">5&nbsp;&nbsp;&nbsp;LIPL Tutorial</a></li>
+<li><a class="reference internal" href="#lipl-reference" id="id17">6&nbsp;&nbsp;&nbsp;LIPL Reference</a></li>
+<li><a class="reference internal" href="#project-timeline" id="id18">7&nbsp;&nbsp;&nbsp;Project Timeline</a></li>
+<li><a class="reference internal" href="#implementation-summary" id="id19">8&nbsp;&nbsp;&nbsp;Implementation Summary</a><ul class="auto-toc">
+<li><a class="reference internal" href="#parse" id="id20">8.1&nbsp;&nbsp;&nbsp;Parse</a></li>
+<li><a class="reference internal" href="#type-inference" id="id21">8.2&nbsp;&nbsp;&nbsp;Type Inference</a></li>
+<li><a class="reference internal" href="#evaluation" id="id22">8.3&nbsp;&nbsp;&nbsp;Evaluation</a></li>
+<li><a class="reference internal" href="#monad-transformer-library" id="id23">8.4&nbsp;&nbsp;&nbsp;Monad Transformer Library</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#source" id="id24">9&nbsp;&nbsp;&nbsp;Source</a></li>
+<li><a class="reference internal" href="#epilogue" id="id25">10&nbsp;&nbsp;&nbsp;Epilogue</a></li>
+<li><a class="reference internal" href="#document-generation" id="id26">11&nbsp;&nbsp;&nbsp;Document Generation</a></li>
+<li><a class="reference internal" href="#references" id="id27">12&nbsp;&nbsp;&nbsp;References</a></li>
+</ul>
+</div>
+<div class="section" id="about">
+<h1><a class="toc-backref" href="#id3">1&nbsp;&nbsp;&nbsp;About</a></h1>
+<p>This is a term project for cs731, offered in Spring 2008 semester.
+An interpreter of LIPL, a tiny functional programming language,
+is designed and its interpreter is implemented
+in Haskell programming language.
+The LIPL interpreter has following features:</p>
+<ul class="simple">
+<li>Eager evaluation</li>
+<li>Hindley-Milner style type inference</li>
+</ul>
+<p>Objective of the project is to learn about
+software development using functional programming style
+and Haskell programming language.</p>
+</div>
+<div class="section" id="obtaining-the-project">
+<h1><a class="toc-backref" href="#id4">2&nbsp;&nbsp;&nbsp;Obtaining the Project</a></h1>
+<p>The project can be obtained from: <a class="reference external" href="http://www.lipl.googlepages.com/lipl.zip">http://www.lipl.googlepages.com/lipl.zip</a></p>
+<p>Otherwise, you can check out the project
+from svn repository using an svn client.
+If you don't have an svn client,
+<a class="reference external" href="http://tortoisesvn.tigris.org/">TortoiseSVN</a> is recommended for
+Windows.</p>
+<pre class="literal-block">
+svn co http://svn2.assembla.com/svn/cs731/lipl/trunk lipl
+</pre>
+<p>will check out latest version of LIPL interpreter to the directory
+called``lipl``.</p>
+</div>
+<div class="section" id="project-structure">
+<h1><a class="toc-backref" href="#id5">3&nbsp;&nbsp;&nbsp;Project Structure</a></h1>
+<p>When you unzip the release or check out from the svn repository,
+you should have the following directory structure:</p>
+<pre class="literal-block">
+lipl/
+    doc/
+    src/
+    lib/
+</pre>
+<ul class="simple">
+<li><tt class="docutils literal">lipl</tt> is project root.</li>
+<li><tt class="docutils literal">doc</tt> contains documentations.</li>
+<li><tt class="docutils literal">src</tt> contains Haskell source code for the interpreter.</li>
+<li><tt class="docutils literal">lib</tt> contains libraries written in LIPL.</li>
+</ul>
+</div>
+<div class="section" id="installation-and-running">
+<h1><a class="toc-backref" href="#id6">4&nbsp;&nbsp;&nbsp;Installation and Running</a></h1>
+<div class="section" id="steps">
+<h2><a class="toc-backref" href="#id7">4.1&nbsp;&nbsp;&nbsp;Steps</a></h2>
+<p>To install LIPL interpreter, you need to follow the following steps:</p>
+<ol class="arabic">
+<li><p class="first">Compile the project (using <a class="reference internal" href="#using-cabal">Cabal</a> or <a class="reference internal" href="#manual-build">GHC</a>).</p>
+</li>
+<li><p class="first">Add the directory containing the compiled binary
+to PATH environment variable (or, move the binary to
+a directory included in PATH environment variable).</p>
+</li>
+<li><p class="first">Copy <tt class="docutils literal">lib/core.lipl</tt> to a directory where the interpreter
+can find:</p>
+<blockquote>
+<ul class="simple">
+<li>any directory listed in LIPLPATH environment variable</li>
+<li><tt class="docutils literal"><span class="pre">~/.lipl</span></tt> directory</li>
+</ul>
+</blockquote>
+</li>
+</ol>
+</div>
+<div class="section" id="quick-start">
+<h2><a class="toc-backref" href="#id8">4.2&nbsp;&nbsp;&nbsp;Quick Start</a></h2>
+<p>If you already have <a class="reference external" href="http://haskell.org/ghc">GHC</a> and <a class="reference external" href="http://www.haskell.org/cabal">Cabal</a> on your computer, you can quickly build
+and run the LIPL interpreter with following steps
+(<tt class="docutils literal">*nix</tt> environment assumed):</p>
+<pre class="literal-block">
+shell&gt; cd lipl #go to project root
+shell&gt; runhaskell Setup.lhs configure --prefix=/usr/local
+shell&gt; runhaskell Setup.lhs build
+shell&gt; runhaskell Setup.lhs install
+shell&gt; mkdir ~/.lipl
+shell&gt; cp /usr/local/share/Lipl-0.1/lib/core.lipl ~/.lipl
+shell&gt; lipl #assuming /usr/local/bin is in PATH
+LIPL&gt; (+ 1 2)
+type: Int
+3
+LIPL&gt; :q
+bye
+shell&gt;
+</pre>
+</div>
+<div class="section" id="requirements">
+<h2><a class="toc-backref" href="#id9">4.3&nbsp;&nbsp;&nbsp;Requirements</a></h2>
+<p>To build and install the interpreter, a Haskell compiler is required.
+Since the project is a Cabal package,
+Cabal can be used to build and install the interpreter.
+Cabal is included in GHC version 6.8.* , so no separate installation
+for Cabal is needed.</p>
+</div>
+<div class="section" id="haskell-compiler">
+<h2><a class="toc-backref" href="#id10">4.4&nbsp;&nbsp;&nbsp;Haskell Compiler</a></h2>
+<p>The interpreter can be compiled with <a class="reference external" href="http://haskell.org/ghc">GHC</a> (the Glasgow Haskell Compiler)
+version <tt class="docutils literal">6.8.*</tt>.
+Other Haskell compilers or different GHC version might be able to
+compile the interpreter. But, only the specified GHC version is used
+to test the project.</p>
+<p>Windows installer can be downloaded from
+<a class="reference external" href="http://haskell.org/ghc/download_ghc_682.html#windows">http://haskell.org/ghc/download_ghc_682.html#windows</a> .</p>
+<p>After installing GHC, make sure the bin directory
+(probably <tt class="docutils literal"><span class="pre">C:\ghc\ghc-6.8.2\bin</span></tt> for Windows) is included
+in PATH environment variable so that ghc executable can be
+invoked from anywhere.</p>
+<p>GHC comes with several executables:</p>
+<dl class="docutils">
+<dt>ghc</dt>
+<dd>compiles Haskell code to native binary.
+Example usage: <tt class="docutils literal">ghc <span class="pre">--make</span> Main.hs</tt></dd>
+<dt>ghci</dt>
+<dd>is an interactive Haskell interpreter.</dd>
+<dt>runghc</dt>
+<dd>interprets Haskell source code.
+Example usage: <tt class="docutils literal">runghc Main.hs</tt></dd>
+<dt>runhaskell</dt>
+<dd>same as runghc</dd>
+</dl>
+</div>
+<div class="section" id="build">
+<h2><a class="toc-backref" href="#id11">4.5&nbsp;&nbsp;&nbsp;Build</a></h2>
+<p>Building the project can be done in many ways.</p>
+<div class="section" id="using-cabal">
+<h3><a class="toc-backref" href="#id12">4.5.1&nbsp;&nbsp;&nbsp;Using Cabal</a></h3>
+<p>At the project root, type the following:</p>
+<pre class="literal-block">
+shell&gt; runhaskell Setup.lhs configure
+shell&gt; runhaskell Setup.lhs build
+shell&gt; runhaskell Setup.lhs install
+</pre>
+<p>First command configures the project.
+Optionally, you can set installation path by passing
+<tt class="docutils literal"><span class="pre">--prefix</span></tt> option. For example, if you want to install the LIPL
+interpreter to <tt class="docutils literal"><span class="pre">C:\lipl</span></tt>:</p>
+<pre class="literal-block">
+shell&gt; runhaskell Setup.lhs configure --prefix=&quot;C:\lipl&quot;
+</pre>
+<p>Then, execute build and install commands:</p>
+<pre class="literal-block">
+shell&gt; runhaskell Setup.lhs build
+shell&gt; runhaskell Setup.lhs install
+</pre>
+<p>If the project has been configured with <tt class="docutils literal"><span class="pre">--prefix=&quot;C:\lipl&quot;</span></tt>,
+the interpreter, lipl.exe, can be found in <tt class="docutils literal"><span class="pre">C:\lipl\bin\lipl.exe</span></tt>.</p>
+<p>Follow instructions in <a class="reference internal" href="#installation">Installation</a> section to finish installation
+process.</p>
+</div>
+<div class="section" id="manual-build">
+<h3><a class="toc-backref" href="#id13">4.5.2&nbsp;&nbsp;&nbsp;Manual Build</a></h3>
+<p>To manually build the interpreter without using Cabal:</p>
+<ul class="simple">
+<li>go to src directory under project root.</li>
+<li>type <tt class="docutils literal">ghc <span class="pre">--make</span> <span class="pre">-o</span> lipl Main.hs</tt></li>
+</ul>
+<p>This will create lipl.exe under src directory.
+You can move lipl.exe to <tt class="docutils literal"><span class="pre">C:\lipl\bin\lipl.exe</span></tt> if you want.</p>
+</div>
+</div>
+<div class="section" id="installation">
+<h2><a class="toc-backref" href="#id14">4.6&nbsp;&nbsp;&nbsp;Installation</a></h2>
+<p>Assuming lipl.exe is under <tt class="docutils literal"><span class="pre">C:\lipl\bin</span></tt>, add
+<tt class="docutils literal"><span class="pre">C:\lipl\bin</span></tt> to PATH environment variable so that you can start
+the interpreter from any directory.</p>
+<p>The interpreter tries to find and load <a class="reference external" href="core.html">core.lipl</a> (prelude library)
+that implements various useful functions.
+It searches <tt class="docutils literal">core.lipl</tt> in following order:</p>
+<ol class="arabic simple">
+<li>current working directory</li>
+<li>directories listed in LIPLPATH environment variable</li>
+<li>in <tt class="docutils literal">.lipl</tt> directory under HOME directory (<tt class="docutils literal"><span class="pre">C:\Users\yourid</span></tt>
+or <tt class="docutils literal"><span class="pre">C:\Documents</span> and Settings\yourid</tt>)</li>
+</ol>
+<p>core.lipl is can be found under lib directory, which is under
+project root (<tt class="docutils literal">lipl/lib/core.lipl</tt>).
+So, copy it to a directory of your choice.
+Then set LIPLPATH environment variable to the directory where you
+copied core.lipl to.
+Or, copy core.lipl to <tt class="docutils literal"><span class="pre">C:\Users\yourid\.lipl\core.lipl</span></tt>
+(the directory <tt class="docutils literal"><span class="pre">C:\Users\yourid\.lipl</span></tt> is created when the interpreter
+is run for the first time).</p>
+</div>
+<div class="section" id="running-the-interpreter">
+<h2><a class="toc-backref" href="#id15">4.7&nbsp;&nbsp;&nbsp;Running the Interpreter</a></h2>
+<p>After finishing installation, you can type the following to start
+LIPL REPL (read eval print loop):</p>
+<pre class="literal-block">
+shell&gt; lipl
+LIPL&gt;
+</pre>
+<p>At the <tt class="docutils literal">LIPL&gt;</tt> prompt, you can type LIPL expressions to evaluate them.
+Or, you can type <tt class="docutils literal">:?</tt> to print help menu:</p>
+<pre class="literal-block">
+LIPL&gt; :?
+:? help
+:s current type environment
+:q quit
+:e current environment
+:c clear environment
+:l &lt;file&gt; load &lt;file&gt;
+:r &lt;file&gt; load &lt;file&gt; on clean environment
+</pre>
+<dl class="docutils">
+<dt><tt class="docutils literal">:s</tt></dt>
+<dd>prints types of currently available functions
+(type substitution environment)</dd>
+<dt><tt class="docutils literal">:q</tt></dt>
+<dd>quits the repl</dd>
+<dt><tt class="docutils literal">:e</tt></dt>
+<dd>prints identifiers and their values in the current environment.
+Built-in functions are not shown.</dd>
+<dt><tt class="docutils literal">:c</tt></dt>
+<dd>cleans all bound identifiers.
+You are left with built-in functions only.</dd>
+<dt><tt class="docutils literal">:l file.lipl</tt></dt>
+<dd>loads file.lipl . file.lipl should not define a function
+that is already in the environment.</dd>
+<dt><tt class="docutils literal">:r file.lipl</tt></dt>
+<dd>cleans the environment first then loads file.lipl .</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="lipl-tutorial">
+<h1><a class="toc-backref" href="#id16">5&nbsp;&nbsp;&nbsp;LIPL Tutorial</a></h1>
+<p>LIPL tutorial is a separate document.
+It can be reached at: <a class="reference external" href="tutorial.html">this link</a>.
+It explains how a stack based postfix calculator can be implemented
+in LIPL.
+Source code of the calculator, <a class="reference external" href="calc.html">calc.lipl</a>, can be found in <tt class="docutils literal">lib/calc.lipl</tt>.</p>
+</div>
+<div class="section" id="lipl-reference">
+<h1><a class="toc-backref" href="#id17">6&nbsp;&nbsp;&nbsp;LIPL Reference</a></h1>
+<p>LIPL language reference is a separate document,
+located <a class="reference external" href="langref.html">here</a>.</p>
+</div>
+<div class="section" id="project-timeline">
+<h1><a class="toc-backref" href="#id18">7&nbsp;&nbsp;&nbsp;Project Timeline</a></h1>
+<p>The project was proposed in the beginning of Spring 2008 semester,
+during the week of January 27th, 2008.
+And it was submitted on May 28th, 2008 (total 18 weeks).
+Below is weekly summary of the project progress.</p>
+<ul>
+<li><dl class="first docutils">
+<dt>Project proposal and language specification.</dt>
+<dd><ul class="first last simple">
+<li>1st week (Jan 27): Project proposal. Brainstorm about the language.</li>
+<li>2nd week (Feb 3): Specify syntax of the language.</li>
+<li>3rd week (Feb 10): Write specification of syntax and semantics.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Parser and evaluator.</dt>
+<dd><ul class="first last simple">
+<li>4th week (Feb 17): Start writing parser.</li>
+<li>5th week (Feb 24): Start writing evaluator.</li>
+<li>6th week (Mar 2): Adding basic arithmetics functions.</li>
+<li>7th week (Mar 9): Deviation from the specification (allowing
+prefix, postfix, infix).</li>
+<li>8th week (Mar 16): Revert back to the specification (stick to prefix only).
+Adding boolean operations, comparison functions, and conditional
+expression.</li>
+<li>9th week (Mar 23): Adding buggy environment (function definition
+and let expression).</li>
+<li>10th week (Mar 30): Disallowing recursive let expression
+(recursive definitions only works for function definition).</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Type inference.</dt>
+<dd><ul class="first last simple">
+<li>11th week (Apr 6): Start type inference.</li>
+<li>12th week (Apr 13): Try to fix buggy type inference for let expressions and
+lambda expressions (improper variable capture).</li>
+<li>13th week (Apr 20): Fix more bugs involving let expressions
+and lambda expressions.</li>
+<li>14th week (Apr 27): Fix bugs for recursive function
+definitions.</li>
+<li>15th week (May 4): Refactoring monad stack.</li>
+<li>16th week (May 11): Fix bugs for variable capture.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Documentation.</dt>
+<dd><ul class="first last simple">
+<li>17th week (May 18): Start documentation.</li>
+<li>18th week (May 25): Add example programs.</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="implementation-summary">
+<h1><a class="toc-backref" href="#id19">8&nbsp;&nbsp;&nbsp;Implementation Summary</a></h1>
+<p>Each LIPL expression goes through 3 phases:</p>
+<ol class="arabic simple">
+<li>parse</li>
+<li>type inference</li>
+<li>evaluation</li>
+</ol>
+<div class="section" id="parse">
+<h2><a class="toc-backref" href="#id20">8.1&nbsp;&nbsp;&nbsp;Parse</a></h2>
+<p>During parse phase, abstract syntax tree is built from
+string representation of a LIPL expression.
+The abstract syntax tree is represented with Haskell data structures.
+For example, <tt class="docutils literal">(+ 1 2)</tt> is parsed into
+<tt class="docutils literal">At pos (Expr [PrimFun <span class="pre">&quot;+&quot;,</span> Int 1, Int 2])</tt>
+where pos is source position (file name, line number, and column number)
+where the expression <tt class="docutils literal">(+ 1 2)</tt> is located, and At, Expr, PrimFun, and Int
+are Haskell data constructors.</p>
+<p>By recording source position with actual abstract syntax tree,
+better error message can be printed.</p>
+<p>Actual implementation uses <a class="reference external" href="http://research.microsoft.com/users/daan/parsec.html">Parsec</a> library that
+comes with GHC.</p>
+</div>
+<div class="section" id="type-inference">
+<h2><a class="toc-backref" href="#id21">8.2&nbsp;&nbsp;&nbsp;Type Inference</a></h2>
+<p>After successfully building abstract syntax tree from an expression,
+the tree is traversed and its type is inferred.
+Type inference makes sure ill-formed expressions are rejected
+before evaluation.
+For example, type inference phase fails to infer the type of
+<tt class="docutils literal">(+ 1 'a')</tt> because the function + expects two Ints but a Char
+is passed to it.</p>
+<p>Unification algorithm is used to infer type of each expression.
+Maintaining substitution (table of type variables and type expressions)
+and generation of new type variables are implemented in a custom monad.</p>
+</div>
+<div class="section" id="evaluation">
+<h2><a class="toc-backref" href="#id22">8.3&nbsp;&nbsp;&nbsp;Evaluation</a></h2>
+<p>Well-typed expressions are evaluated (normalized) in applicative order
+(eager evaluation).
+For example, both <tt class="docutils literal">(g a)</tt> are evaluated then passed to
+function f, in <tt class="docutils literal">(f (g a) (g a))</tt>.</p>
+<p>Currying is implemented with closures.
+For example, <tt class="docutils literal">(f a b)</tt> will be evaluated so that
+a closure is formed where the 1st formal parameter of f is bound to
+the actual parameter, a. Then, the closure is applied to the next
+actual parameter, b.</p>
+<p>Evaluation is done inside a monad simulating a stack of
+environments: key value pairs where key is identifiers appearing
+in expressions and value is value bound to them.</p>
+</div>
+<div class="section" id="monad-transformer-library">
+<h2><a class="toc-backref" href="#id23">8.4&nbsp;&nbsp;&nbsp;Monad Transformer Library</a></h2>
+<p>Custom monads and monad transformers are written along with
+typeclasses to construct a monad (REPL monad)
+that can perform IO actions, type inference, evaulation, and error reporting.
+Type inference monad and evaluation monad (custom monads) are written
+in similar fashion as mtl monads are written, so that
+those monads can be combined with
+IO monad and error reporting monad (from base and mtl libraries that come with
+GHC) to construct the REPL monad used in the interpreter.</p>
+</div>
+</div>
+<div class="section" id="source">
+<h1><a class="toc-backref" href="#id24">9&nbsp;&nbsp;&nbsp;Source</a></h1>
+<p>Source code of the interpreter is written in literate Haskell
+style.
+Algorithms in the source code can be buggy and comments faulty.</p>
+<ol class="arabic simple">
+<li><a class="reference external" href="Settings.html">Settings.lhs</a></li>
+<li><a class="reference external" href="Stack.html">Stack.lhs</a></li>
+<li><a class="reference external" href="Utils.html">Utils.lhs</a></li>
+<li><a class="reference external" href="LangData.html">LangData.lhs</a></li>
+<li><a class="reference external" href="LangUtils.html">LangUtils.lhs</a></li>
+<li><a class="reference external" href="Error.html">Error.lhs</a></li>
+<li><a class="reference external" href="Type.html">Type.lhs</a></li>
+<li><a class="reference external" href="TIMonadClass.html">TIMonadClass.lhs</a></li>
+<li><a class="reference external" href="TIMonad.html">TIMonad.lhs</a></li>
+<li><a class="reference external" href="EvalMonadClass.html">EvalMonadClass.lhs</a></li>
+<li><a class="reference external" href="EvalMonad.html">EvalMonad.lhs</a></li>
+<li><a class="reference external" href="PosMonadClass.html">PosMonadClass.lhs</a></li>
+<li><a class="reference external" href="PosMonad.html">PosMonad.lhs</a></li>
+<li><a class="reference external" href="REPLMonad.html">REPLMonad.lhs</a></li>
+<li><a class="reference external" href="ParseUtils.html">ParseUtils.lhs</a></li>
+<li><a class="reference external" href="Parser.html">Parser.lhs</a></li>
+<li><a class="reference external" href="TParse.html">TParse.lhs</a></li>
+<li><a class="reference external" href="TCheck.html">TCheck.lhs</a></li>
+<li><a class="reference external" href="Evaluator.html">Evaluator.lhs</a></li>
+<li><a class="reference external" href="CoreLib.html">CoreLib.lhs</a></li>
+<li><a class="reference external" href="MainUtils.html">MainUtils.lhs</a></li>
+<li><a class="reference external" href="Main.html">Main.lhs</a></li>
+</ol>
+<p>Below are example programs written in LIPL:</p>
+<ol class="arabic simple">
+<li><a class="reference external" href="core.html">core.lipl</a> is a prelude library written in LIPL that is loaded
+when the interpreter starts.</li>
+<li><a class="reference external" href="calc.html">calc.lipl</a> is a postfix calculator written in LIPL.
+<a class="reference internal" href="#lipl-tutorial">LIPL Tutorial</a> is based on this.</li>
+</ol>
+</div>
+<div class="section" id="epilogue">
+<h1><a class="toc-backref" href="#id25">10&nbsp;&nbsp;&nbsp;Epilogue</a></h1>
+<p>Learning Haskell and functional programming was enjoyable experience.
+Some of the impressions I had as a new comer to Haskell include:</p>
+<ul class="simple">
+<li>Debugging a Haskell program can be difficult</li>
+<li>Modularity improves debug-ability</li>
+<li>Monad transformers improve modularity</li>
+<li>Unwrapping monad transformers and making magic lift work
+can be tedious (an IDE might help)</li>
+</ul>
+<p>Things that I should have done but did not include:</p>
+<ul class="simple">
+<li>Writing unit tests</li>
+<li>Allowing recursive let expressions in LIPL</li>
+<li>Adding ADT and pattern matching to LIPL</li>
+</ul>
+</div>
+<div class="section" id="document-generation">
+<h1><a class="toc-backref" href="#id26">11&nbsp;&nbsp;&nbsp;Document Generation</a></h1>
+<p>To generate HTML documents (including this),
+go to <tt class="docutils literal">lipl/doc/tools</tt> directory
+and run gen.py:</p>
+<pre class="literal-block">
+shell&gt; cd lipl # to project root
+shell&gt; python doc/tools/gen.py
+</pre>
+<p><a class="reference external" href="http://www.python.org/">Python</a>, <a class="reference external" href="http://docutils.sourceforge.net/">Docutils</a>, and <a class="reference external" href="http://pygments.org/">Pygments</a> are needed to run gen.py.</p>
+</div>
+<div class="section" id="references">
+<h1><a class="toc-backref" href="#id27">12&nbsp;&nbsp;&nbsp;References</a></h1>
+<p>To learn about Haskell programming and functional programming in
+general, these resources were used:</p>
+<table class="docutils citation" frame="void" id="daume" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[DAUME]</td><td>Daumé III, Hal (2002) Yet Another Haskell Tutorial.
+Retrieved January 1, 2008, from
+<a class="reference external" href="http://darcs.haskell.org/yaht/yaht.pdf">http://darcs.haskell.org/yaht/yaht.pdf</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="grabmuller" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[GRABMULLER]</td><td>Grabmüller, Martin (2006) Monad Transformers Step by Step.
+Retrieved March 1, 2008 from
+<a class="reference external" href="http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html">http://uebb.cs.tu-berlin.de/~magr/pub/Transformers.en.html</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="hudak89" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[HUDAK89]</td><td>Hudak, Paul (1989) Conception, Evolution, and Application
+of Functional Programming Languages. ACM Computing Surveys 21 (3):
+359-411</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="hudak" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[HUDAK]</td><td>Hudak, Paul et al. (2000) A Gentle Introduction to Haskell,
+Version 98. Retrieved January 1, 2008 from
+<a class="reference external" href="http://www.haskell.org/tutorial/">http://www.haskell.org/tutorial/</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="newbern" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[NEWBERN]</td><td>Newbern, Jeff. All About Monads.
+Retrieved April 1, 2008 from
+<a class="reference external" href="http://www.haskell.org/all_about_monads/html/index.html">http://www.haskell.org/all_about_monads/html/index.html</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="osullivan" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[OSULLIVAN]</td><td>O'Sullivan, Bryan et al. (2007) Real World Haskell (beta).
+Retrieved May 1, 2008 from
+<a class="reference external" href="http://book.realworldhaskell.org/beta/">http://book.realworldhaskell.org/beta/</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="wadler" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[WADLER]</td><td>Wadler, Philip (1992) The Essence of Functional Programming.
+Invited Talk, 19th Symposium on Principles of Programming Languages,
+ACM Press, Albuquerque.
+Retrieved March 1, 2008 from
+<a class="reference external" href="http://homepages.inf.ed.ac.uk/wadler/papers/essence/essence.ps">http://homepages.inf.ed.ac.uk/wadler/papers/essence/essence.ps</a></td></tr>
+</tbody>
+</table>
+<p>For implementation of LIPL evaluator and type inference,
+these resources were used:</p>
+<table class="docutils citation" frame="void" id="cardelli85" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[CARDELLI85]</td><td>Cardelli, Luca and Wegner, Peter (1985)
+On Understanding Types, Data Abstraction, and
+Polymorphism. ACM Computing Surveys 17 (4): 471-522</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="cardelli" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[CARDELLI]</td><td>Cardelli, Luca (1987) Basic Polymorphic Typechecking.
+Retrieved April 1, 2008 from
+<a class="reference external" href="http://lucacardelli.name/Papers/BasicTypechecking.pdf">http://lucacardelli.name/Papers/BasicTypechecking.pdf</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="henderson" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[HENDERSON]</td><td>Henderson, Peter (1980) Functional Programming: Application and
+Implementation. Prentice Hall.</td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="peytonjones" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[PEYTONJONES]</td><td>Peyton Jones, Simon (1987) The Implementation of Functional
+Programming Languages. Prentice Hall.
+Retrieved May 1, 2008 from
+<a class="reference external" href="http://research.microsoft.com/~simonpj/papers/slpj-book-1987/index.htm">http://research.microsoft.com/~simonpj/papers/slpj-book-1987/index.htm</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="pjones" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[PJONES]</td><td>P. Jones, Mark (2000) Typing Haskell in Haskell.
+Retrieved April 1, 2008 from
+<a class="reference external" href="http://web.cecs.pdx.edu/~mpj/thih/">http://web.cecs.pdx.edu/~mpj/thih/</a></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="tang" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[TANG]</td><td>Tang, Jonathan. Write Yourself a Scheme in 48 Hours: A Haskell Tutorial.
+Retrieved January 1, 2008 from
+<a class="reference external" href="http://halogen.note.amherst.edu/~jdtang/scheme_in_48/tutorial/overview.html">http://halogen.note.amherst.edu/~jdtang/scheme_in_48/tutorial/overview.html</a></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

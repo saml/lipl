@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>PosMonad.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="posmonad-lhs">
+<h1 class="title">PosMonad.lhs</h1>
+<p>PosMonad implements Pos monad and PosT monad transformer
+that provides actions declared in MonadPos interface.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="cm">{-# LANGUAGE GeneralizedNewtypeDeriving</span>
+<span class="cs">&gt;     </span><span class="cm">, FlexibleInstances, MultiParamTypeClasses #-}</span>
+<span class="cs">&gt; </span><span class="cm">{-# OPTIONS_GHC -fallow-undecidable-instances #-}</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">PosMonad</span> <span class="p">(</span>
+<span class="cs">&gt;     </span><span class="nf">module</span> <span class="kt">PosMonadClass</span>
+<span class="cs">&gt;     </span><span class="p">,</span> <span class="nf">module</span> <span class="kt">PosMonad</span>
+<span class="cs">&gt; </span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Identity</span> <span class="k">as</span> <span class="n">I</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Trans</span> <span class="k">as</span> <span class="n">T</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.State</span> <span class="k">as</span> <span class="n">S</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Reader</span> <span class="k">as</span> <span class="n">R</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Writer</span> <span class="k">as</span> <span class="n">W</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad</span> <span class="k">as</span> <span class="n">M</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">PosMonadClass</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">TIMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">EvalMonad</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Error</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">newtype</span> <span class="kt">Pos</span> <span class="n">a</span> <span class="ow">=</span> <span class="kt">Pos</span> <span class="p">{</span>
+<span class="cs">&gt;     </span><span class="nf">runPos</span> <span class="ow">::</span> <span class="kt">PosT</span> <span class="kt">I</span><span class="o">.</span><span class="kt">Identity</span> <span class="n">a</span>
+<span class="cs">&gt;     </span><span class="p">}</span> <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Monad</span><span class="p">,</span> <span class="kt">Functor</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">S</span><span class="o">.</span><span class="kt">MonadState</span> <span class="kt">P</span><span class="o">.</span><span class="kt">SourcePos</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">MonadPos</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>Pos is built using PosT.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">newtype</span> <span class="kt">PosT</span> <span class="n">m</span> <span class="n">a</span> <span class="ow">=</span> <span class="kt">PosT</span> <span class="p">{</span>
+<span class="cs">&gt;     </span><span class="nf">runPosT</span> <span class="ow">::</span> <span class="p">(</span><span class="kt">S</span><span class="o">.</span><span class="kt">StateT</span> <span class="kt">P</span><span class="o">.</span><span class="kt">SourcePos</span> <span class="n">m</span><span class="p">)</span> <span class="n">a</span>
+<span class="cs">&gt;     </span><span class="p">}</span> <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Monad</span><span class="p">,</span> <span class="kt">Functor</span><span class="p">,</span> <span class="kt">S</span><span class="o">.</span><span class="kt">MonadState</span> <span class="kt">P</span><span class="o">.</span><span class="kt">SourcePos</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">R</span><span class="o">.</span><span class="kt">MonadReader</span> <span class="n">r</span><span class="p">,</span> <span class="kt">W</span><span class="o">.</span><span class="kt">MonadWriter</span> <span class="n">w</span><span class="p">,</span> <span class="kt">E</span><span class="o">.</span><span class="kt">MonadError</span> <span class="n">e</span>
+<span class="cs">&gt;         </span><span class="p">,</span> <span class="kt">T</span><span class="o">.</span><span class="kt">MonadIO</span><span class="p">)</span>
+</pre></div>
+
+</div>
+<p>PosT is built using StateT SourcePos.
+PosT derives many classes so that it doesn't need to lift
+explicitly.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="kt">T</span><span class="o">.</span><span class="kt">MonadTrans</span> <span class="kt">PosT</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">lift</span> <span class="n">m</span> <span class="ow">=</span> <span class="kt">PosT</span> <span class="p">(</span><span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">m</span><span class="p">)</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">instance</span> <span class="p">(</span><span class="kt">Monad</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadPos</span> <span class="p">(</span><span class="kt">PosT</span> <span class="n">m</span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">setSourcePos</span> <span class="n">pos</span> <span class="ow">=</span> <span class="kt">S</span><span class="o">.</span><span class="n">put</span> <span class="n">pos</span>
+<span class="cs">&gt;     </span><span class="nf">getSourcePos</span> <span class="ow">=</span> <span class="kt">S</span><span class="o">.</span><span class="n">get</span>
+</pre></div>
+
+</div>
+<p>PosT m is an instance of MonadPos.
+And implementation of setSourcePos and getSourcePos
+is just delegation to State actions: put and get.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">instance</span> <span class="p">(</span><span class="kt">MonadTI</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadTI</span> <span class="p">(</span><span class="kt">PosT</span> <span class="n">m</span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getSubst</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getSubst</span>
+<span class="cs">&gt;     </span><span class="nf">putSubst</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putSubst</span>
+<span class="cs">&gt;     </span><span class="nf">extendSubst</span>  <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">extendSubst</span>
+<span class="cs">&gt;     </span><span class="nf">newId</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">newId</span>
+<span class="cs">&gt;     </span><span class="nf">getN</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getN</span>
+<span class="cs">&gt;     </span><span class="nf">putN</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putN</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">instance</span> <span class="p">(</span><span class="kt">MonadEval</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadEval</span> <span class="p">(</span><span class="kt">PosT</span> <span class="n">m</span><span class="p">)</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">getEnv</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getEnv</span>
+<span class="cs">&gt;     </span><span class="nf">getEnvs</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">getEnvs</span>
+<span class="cs">&gt;     </span><span class="nf">putEnvs</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">putEnvs</span>
+<span class="cs">&gt;     </span><span class="nf">pushEnv</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="o">.</span> <span class="n">pushEnv</span>
+<span class="cs">&gt;     </span><span class="nf">popEnv</span> <span class="ow">=</span> <span class="kt">T</span><span class="o">.</span><span class="n">lift</span> <span class="n">popEnv</span>
+</pre></div>
+
+</div>
+<p>Above instances enable magic lift.
+In PostT m monad, one can use setSourcePos, getSubst, getEnv...etc
+without explicit lift.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

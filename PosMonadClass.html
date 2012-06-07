@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>PosMonadClass.lhs -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="posmonadclass-lhs">
+<h1 class="title">PosMonadClass.lhs</h1>
+<p>PosMonadClass provides MonadPos class (interface):
+setSourcePos and getSourcePos.
+These actions can be used to store current source code position
+so that in case of error, the LIPL interpreter can print
+location of error.</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="kr">module</span> <span class="nn">PosMonadClass</span> <span class="kr">where</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Text.ParserCombinators.Parsec.Pos</span> <span class="k">as</span> <span class="n">P</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="k">qualified</span> <span class="nn">Control.Monad.Error</span> <span class="k">as</span> <span class="n">E</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">import</span> <span class="nn">Error</span>
+<span class="cs">&gt;</span>
+<span class="cs">&gt; </span><span class="kr">class</span> <span class="p">(</span><span class="kt">Monad</span> <span class="n">m</span><span class="p">)</span> <span class="ow">=&gt;</span> <span class="kt">MonadPos</span> <span class="n">m</span> <span class="kr">where</span>
+<span class="cs">&gt;     </span><span class="nf">setSourcePos</span> <span class="ow">::</span> <span class="kt">P</span><span class="o">.</span><span class="kt">SourcePos</span> <span class="ow">-&gt;</span> <span class="n">m</span> <span class="nb">()</span>
+<span class="cs">&gt;     </span><span class="nf">getSourcePos</span> <span class="ow">::</span> <span class="n">m</span> <span class="kt">P</span><span class="o">.</span><span class="kt">SourcePos</span>
+</pre></div>
+
+</div>
+<p>An instance of MonadPos supports setSourcePos and getSourcePos actions.
+setSourcePos stores SourcePos.
+getSourcePos retrieves stored SourcePos.</p>
+<p>This sounds a lot like State monad.
+It might be redundant to create this thin wrapper around
+State monad. However, one benefit would be an instance of MonadPos
+can use something other than State monad in the future.
+Then, existing code need not be changed (If existing codes
+used get and put action from State monad, those actions should
+be replaced with different actions when one refactors).</p>
+<div class="syntax lhs">
+<div class="highlight"><pre><span class="cs">&gt; </span><span class="nf">throwErr</span> <span class="n">msg</span> <span class="ow">=</span> <span class="kr">do</span>
+<span class="cs">&gt;     </span><span class="nf">pos</span> <span class="ow">&lt;-</span> <span class="n">getSourcePos</span>
+<span class="cs">&gt;     </span><span class="kt">E</span><span class="o">.</span><span class="n">throwError</span> <span class="o">$</span> <span class="kt">Err</span> <span class="n">pos</span> <span class="n">msg</span>
+</pre></div>
+
+</div>
+<p>throwErr takes a String and throws an Err with current SourcePos.</p>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>

@@ -1,0 +1,849 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>LIPL Language Reference -- LIPL</title>
+    <link href="style.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="print.css" rel="stylesheet" type="text/css" media="print"/>
+</head>
+<body>
+<div id="wrap">
+<div class="document" id="lipl-language-reference">
+<h1 class="title">LIPL Language Reference</h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="auto-toc simple">
+<li><a class="reference internal" href="#syntax" id="id4">1&nbsp;&nbsp;&nbsp;Syntax</a><ul class="auto-toc">
+<li><a class="reference internal" href="#ebnf" id="id5">1.1&nbsp;&nbsp;&nbsp;EBNF</a></li>
+<li><a class="reference internal" href="#basic-non-terminals" id="id6">1.2&nbsp;&nbsp;&nbsp;Basic Non-Terminals</a></li>
+<li><a class="reference internal" href="#meaningful-non-terminals" id="id7">1.3&nbsp;&nbsp;&nbsp;Meaningful Non-Terminals</a></li>
+<li><a class="reference internal" href="#special-expressions" id="id8">1.4&nbsp;&nbsp;&nbsp;Special Expressions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#semantics" id="id9">2&nbsp;&nbsp;&nbsp;Semantics</a><ul class="auto-toc">
+<li><a class="reference internal" href="#types" id="id10">2.1&nbsp;&nbsp;&nbsp;Types</a><ul class="auto-toc">
+<li><a class="reference internal" href="#base-types" id="id11">2.1.1&nbsp;&nbsp;&nbsp;Base Types</a></li>
+<li><a class="reference internal" href="#type-functions" id="id12">2.1.2&nbsp;&nbsp;&nbsp;Type Functions</a></li>
+<li><a class="reference internal" href="#type-expressions" id="id13">2.1.3&nbsp;&nbsp;&nbsp;Type Expressions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#notation" id="id14">2.2&nbsp;&nbsp;&nbsp;Notation</a></li>
+<li><a class="reference internal" href="#literals" id="id15">2.3&nbsp;&nbsp;&nbsp;Literals</a></li>
+<li><a class="reference internal" href="#identifiers" id="id16">2.4&nbsp;&nbsp;&nbsp;Identifiers</a></li>
+<li><a class="reference internal" href="#expressions" id="id17">2.5&nbsp;&nbsp;&nbsp;Expressions</a></li>
+<li><a class="reference internal" href="#id3" id="id18">2.6&nbsp;&nbsp;&nbsp;Special Expressions</a><ul class="auto-toc">
+<li><a class="reference internal" href="#function-definition" id="id19">2.6.1&nbsp;&nbsp;&nbsp;Function Definition</a></li>
+<li><a class="reference internal" href="#conditional" id="id20">2.6.2&nbsp;&nbsp;&nbsp;Conditional</a></li>
+<li><a class="reference internal" href="#let" id="id21">2.6.3&nbsp;&nbsp;&nbsp;Let</a></li>
+<li><a class="reference internal" href="#lambda" id="id22">2.6.4&nbsp;&nbsp;&nbsp;Lambda</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#builtin-functions" id="id23">3&nbsp;&nbsp;&nbsp;Builtin Functions</a><ul class="auto-toc">
+<li><a class="reference internal" href="#numeric-functions" id="id24">3.1&nbsp;&nbsp;&nbsp;Numeric Functions</a></li>
+<li><a class="reference internal" href="#boolean-functions" id="id25">3.2&nbsp;&nbsp;&nbsp;Boolean Functions</a></li>
+<li><a class="reference internal" href="#comparison-functions" id="id26">3.3&nbsp;&nbsp;&nbsp;Comparison Functions</a></li>
+<li><a class="reference internal" href="#list-functions" id="id27">3.4&nbsp;&nbsp;&nbsp;List Functions</a></li>
+<li><a class="reference internal" href="#miscellaneous-functions" id="id28">3.5&nbsp;&nbsp;&nbsp;Miscellaneous Functions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#examples" id="id29">4&nbsp;&nbsp;&nbsp;Examples</a></li>
+</ul>
+</div>
+<p>LIPL is a tiny functional programming language.
+It has following characteristics:</p>
+<ul class="simple">
+<li>follows eager evaluation order.</li>
+<li>expressions are typed.</li>
+<li>types of expressions are inferred using Hindley-Milner style
+type inference algorithm.</li>
+</ul>
+<div class="section" id="syntax">
+<h1><a class="toc-backref" href="#id4">1&nbsp;&nbsp;&nbsp;Syntax</a></h1>
+<div class="section" id="ebnf">
+<h2><a class="toc-backref" href="#id5">1.1&nbsp;&nbsp;&nbsp;EBNF</a></h2>
+<p>EBNF <a class="footnote-reference" href="#id2" id="id1">[1]</a> is used to describe syntax of LIPL.</p>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form">http://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form</a></td></tr>
+</tbody>
+</table>
+<p>Briefly, EBNF syntax is described here:</p>
+<ul class="simple">
+<li><tt class="docutils literal">{e}</tt> : zero or more occurrence of e.
+For example, <tt class="docutils literal">{&quot;42&quot;}</tt> accepts &quot;&quot;, &quot;42&quot;, &quot;4242&quot;, &quot;424242&quot;, ...</li>
+<li><tt class="docutils literal">[e]</tt> : zero or one occurrence of e.
+For example, <tt class="docutils literal">[&quot;42&quot;]</tt> accepts &quot;&quot; and &quot;42&quot;.</li>
+<li><tt class="docutils literal">(e1 | e2)</tt> : one occurrence of e1 or e2.
+For example, <tt class="docutils literal"><span class="pre">(&quot;1&quot;|&quot;2&quot;)</span></tt> accepts &quot;1&quot; and &quot;2&quot;.</li>
+<li><tt class="docutils literal">(* e *)</tt> : e is ignored. comments.</li>
+<li><tt class="docutils literal">'e'</tt> or <tt class="docutils literal">&quot;e&quot;</tt> : literal e.
+For example, <tt class="docutils literal"><span class="pre">(&quot;apple&quot;|&quot;orange&quot;)</span></tt> accepts &quot;apple&quot; and &quot;orange&quot;.</li>
+<li><tt class="docutils literal">t = e1 | e2 | ... | eN</tt> : defines t to be either e1, e2, ..., eN.
+For example, <tt class="docutils literal">{binary}</tt> accepts binary strings, &quot;&quot;, &quot;0&quot;, &quot;1&quot;,
+&quot;0101&quot;, &quot;101010101111&quot;, ..., when binary is
+defined to be: <tt class="docutils literal">binary = &quot;0&quot; | &quot;1&quot;</tt>.</li>
+</ul>
+</div>
+<div class="section" id="basic-non-terminals">
+<h2><a class="toc-backref" href="#id6">1.2&nbsp;&nbsp;&nbsp;Basic Non-Terminals</a></h2>
+<p>A non-terminal is something that appears at the left side of
+an EBNF definition.
+For example, binary is a non-terminal in <tt class="docutils literal">binary = &quot;0&quot; | &quot;1&quot;</tt>.</p>
+<p>Non-terminals defined here are used in the later sections.</p>
+<pre class="literal-block">
+letter   = 'a' | 'b' | ...
+(* alphabetic character *)
+
+digit    = '0' | '1' | ... | '9'
+(* numeric character *)
+
+space    = ' ' | '\t' | ...
+(* whitespace character *)
+
+spaces   = space { space }
+(* one or more mandatory spaces *)
+
+ws       = [ spaces ]
+(* optional spaces *)
+
+nat      = digit { digit }
+(* natural number. allowing leading zeros *)
+
+comment  = line-comment | block-comment
+line-comment =
+    (* any sequence of characters from # until new line
+       is a line-comment *)
+block-comment =
+    (* any sequence of characters enclosed in
+       '{-' and '-}' make a block-comment *)
+</pre>
+<p>Non-terminals line-comment and block-comment are not written in EBNF.
+But, their meaning is explained in English.
+An example of a line-comment is:</p>
+<pre class="literal-block">
+# Hello I am not part of LIPL program
+</pre>
+<p>An example of a block-comment is:</p>
+<pre class="literal-block">
+{- Hello, I am not
+   part of LIPL
+   program. {-
+     Neither am I
+   -} -}
+</pre>
+<p>block-comments can be nested.</p>
+</div>
+<div class="section" id="meaningful-non-terminals">
+<h2><a class="toc-backref" href="#id7">1.3&nbsp;&nbsp;&nbsp;Meaningful Non-Terminals</a></h2>
+<p>Non-terminals representing meaningful tokens
+in LIPL are defined here.</p>
+<pre class="literal-block">
+ident   = letter { ( letter | digit | '_' | '-' | &quot;'&quot; ) }
+(* identifier. starts with a letter. *)
+
+op      = '+' | '-' | '||' | '&amp;&amp;' | ...
+(* predefined operators or functions *)
+
+integer = [ '-' ] nat
+(* optional - *)
+
+float   = [ '-' ] nat '.' nat
+(* floating point number. . must present *)
+
+boolean = 'True' | 'False'
+
+number  = integer | float
+
+char    = &quot;'&quot; (* any single character that is not ' *) &quot;'&quot;
+(* ' should be escaped as in: '\'' *)
+
+string  = '&quot;' (* sequence of characters that are not &quot; *) '&quot;'
+(* &quot; should be escaped as in: &quot;\&quot;&quot; *)
+
+list    = '[' ws ']'
+        | '[' ws token { ',' ws token } ws ']'
+(* comma separated tokens. enclosed by [] *)
+
+pair    = '(' ws token ws ',' ws token ')'
+(* two tokens separated by a comma. enclosed in parens. *)
+
+token   = ident | op
+        | char | boolean | string | number
+        | list | pair | expr
+
+tokens  = token spaces token { spaces token }
+(* space separated tokens *)
+
+expr    = '(' ws tokens ws ')'
+(* space separated tokens enclosed in () *)
+</pre>
+<p>A token is either an identifier,
+an operator, a character, a boolean, a string, a number, a list, a pair
+, or an expression.</p>
+<p>A brief description and a few examples of each token is given below:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal">ident</tt></dt>
+<dd><p class="first">Each identifier starts with an alphabetic character, and can continue
+with alpha-numeric characters, <tt class="docutils literal">-</tt>, <tt class="docutils literal">'</tt>, or <tt class="docutils literal">_</tt>.
+Identifiers are case sensitive.</p>
+<ul class="last simple">
+<li>apple, Apple, foo1, bar-9, foo-bar'_9''', ...</li>
+<li>apple and Apple are different identifiers.</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">op</tt></dt>
+<dd><p class="first">An operator starts with one of special symbols (<tt class="docutils literal"><span class="pre">:!$%&amp;*+./&lt;=&gt;?&#64;\^|-~</span></tt>)
+and continues with one of special symbols.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">+</tt>, <tt class="docutils literal">-</tt>, <tt class="docutils literal">*</tt>, <tt class="docutils literal">&lt;=</tt>, <tt class="docutils literal">==</tt>, ...</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">char</tt></dt>
+<dd><p class="first">A character is a single character enclosed in <tt class="docutils literal">'</tt>.
+Escaped characters, such as newline, tab, ... etc, are supported.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">'a'</tt>, <tt class="docutils literal">'B'</tt>, <tt class="docutils literal">'\n'</tt>, <tt class="docutils literal">'\t'</tt>, ...</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">boolean</tt></dt>
+<dd><p class="first">A boolean is either True or False. Booleans start with a capital letter.</p>
+<ul class="last simple">
+<li>True, False</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">string</tt></dt>
+<dd><p class="first">A string is a sequence of characters enclosed in <tt class="docutils literal">&quot;</tt>.
+A string can continue after newline.
+<tt class="docutils literal">&quot;</tt> inside a string can be escaped as <tt class="docutils literal">\&quot;</tt>.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">&quot;hello world!&quot;</tt>, <tt class="docutils literal">&quot;double quote: \&quot;&quot;</tt>, ...</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">number</tt></dt>
+<dd><p class="first">A number is either an integer or a float.
+Integers don't have decimal point, <tt class="docutils literal">.</tt>, while
+floats must have a decimal point with a leading zero.
+For example, <tt class="docutils literal">0.1</tt> is a valid float while <tt class="docutils literal">.1</tt> is not.
+Both integers and floats can start with <tt class="docutils literal">-</tt> to make them negative.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">1</tt>, <tt class="docutils literal"><span class="pre">-0</span></tt>, <tt class="docutils literal">002</tt>, <tt class="docutils literal">0.353</tt>, <tt class="docutils literal"><span class="pre">-23.532</span></tt>, ...</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">list</tt></dt>
+<dd><p class="first">A list is enclosed in <tt class="docutils literal">[]</tt>.
+Elements in a list are separated by <tt class="docutils literal">,</tt>.
+Optional whitespaces around <tt class="docutils literal">[]</tt> and <tt class="docutils literal">,</tt> are allowed.
+Each element in a list is a token.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">[ 1,2,3]</tt>, <tt class="docutils literal">[1, &quot;hello&quot;, 3, 'a']</tt>, <tt class="docutils literal">[ True , (== 1 2), abc]</tt>, ...</li>
+<li>Note that <tt class="docutils literal">[True, == 1 2, abc]</tt>
+is not a valid list because <tt class="docutils literal">== 1 2</tt>
+is not an expression (hence a token) while <tt class="docutils literal">(== 1 2)</tt> is.</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">pair</tt></dt>
+<dd><p class="first">A pair is enclosed in <tt class="docutils literal">()</tt>. A pair has two tokens
+separated by <tt class="docutils literal">,</tt>. Optional whitespaces around <tt class="docutils literal">()</tt> and <tt class="docutils literal">,</tt>
+are allowed.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">(1,2)</tt>, <tt class="docutils literal">( ('a' , <span class="pre">(1,2)),</span> (&quot;hello&quot;, (== 1 <span class="pre">var1)))</span></tt></li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">expr</tt></dt>
+<dd><p class="first">An expression is a sequence of tokens enclosed in <tt class="docutils literal">()</tt>.
+Tokens in an expression are separated by whitespaces.
+So, expressions are very similar to lists except that they are
+enclosed in parenthesis (instead of brackets)
+and elements are separated by whitespaces (instead of commas).
+Optional whitespaces around <tt class="docutils literal">()</tt> are allowed.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">(+ 1 2)</tt>, <tt class="docutils literal">(== ( + 1 0.34) (- 1 (+ <span class="pre">-1</span> 3)&nbsp; ) )</tt>, ...</li>
+</ul>
+</dd>
+</dl>
+<p>Since an expression is a token, the term <em>token</em> is used
+sometimes to refer to <em>expression</em>. And the word <em>expression</em>
+is used to refer to <em>token</em>.</p>
+</div>
+<div class="section" id="special-expressions">
+<h2><a class="toc-backref" href="#id8">1.4&nbsp;&nbsp;&nbsp;Special Expressions</a></h2>
+<p>Some expressions are special.
+Syntax of those special expressions are given here.</p>
+<pre class="literal-block">
+fun-def    = '(' ws 'def' spaces
+                    ident spaces
+                    ident-list spaces token ws ')'
+ident-list = '(' idents ')'
+idents     = ident { spaces ident }
+
+if         = '(' ws 'if' spaces
+                    token spaces
+                    token spaces token ws ')'
+
+let        = '(' ws 'let' spaces dict spaces token ws ')'
+dict       = '{' ws key-vals ws '}'
+key-vals   = key-val { ws ',' ws key-val }
+key-val    = ident spaces '=' spaces token
+
+lambda     = '(' ws 'lambda' spaces
+                     ident-list spaces token ws ')'
+</pre>
+<p>Brief descriptions of each special expression are given below:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">fun-def</span></tt></dt>
+<dd><p class="first">Function definition expression starts with keyword <tt class="docutils literal">def</tt>
+followed by an identifier, parameters, and function body.
+Parameters are separated by whitespaces and enclosed in <tt class="docutils literal">()</tt>.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">(def id (x) x)</tt> is a function definition expression
+where the only parameter is x, and function body is x.</li>
+<li><tt class="docutils literal">(def add (x y) (+ x y))</tt> is a function definition expression
+whose parameters are x and y, and body is <tt class="docutils literal">(+ x y)</tt></li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">if</tt></dt>
+<dd><p class="first">If conditional expression
+starts with keyword <tt class="docutils literal">if</tt> followed by three tokens.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">(if (== 1 2) &quot;same&quot; False)</tt>
+(Note that this if-expression will fail to type check.
+Hence, its value is undefined.
+But it is syntactically valid).</li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">let</tt></dt>
+<dd><p class="first">Let expression starts with keyword <tt class="docutils literal">let</tt> followed by
+a dictionary and a token.
+A dictionary has the form <tt class="docutils literal">{x1 = v1, x2 = v2, <span class="pre">...,</span> xN = vN}</tt>,
+where <tt class="docutils literal">x</tt>'s are identifiers and <tt class="docutils literal">v</tt>'s are tokens.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">(let {a = 1, b = (+ a 2)} (+ a b))</tt></li>
+</ul>
+</dd>
+<dt><tt class="docutils literal">lambda</tt></dt>
+<dd><p class="first">Lambda expression starts with keyword <tt class="docutils literal">lambda</tt> followed
+by a list of identifiers
+and a token.
+The list of identifiers is enclosed in <tt class="docutils literal">( )</tt>
+and identifiers in the list are separated by whitespace.</p>
+<ul class="last simple">
+<li><tt class="docutils literal">(lambda (x y) (+ x y))</tt></li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="semantics">
+<h1><a class="toc-backref" href="#id9">2&nbsp;&nbsp;&nbsp;Semantics</a></h1>
+<div class="section" id="types">
+<h2><a class="toc-backref" href="#id10">2.1&nbsp;&nbsp;&nbsp;Types</a></h2>
+<p>Each LIPL token has an associated type.</p>
+<div class="section" id="base-types">
+<h3><a class="toc-backref" href="#id11">2.1.1&nbsp;&nbsp;&nbsp;Base Types</a></h3>
+<p>Predefined base types are given below:</p>
+<dl class="docutils">
+<dt>Int</dt>
+<dd>Unbound integer. Can be positive or negative.</dd>
+<dt>Float</dt>
+<dd>Floating point number. IEEE-754 double precision number.</dd>
+<dt>Char</dt>
+<dd>ASCII character.</dd>
+<dt>Bool</dt>
+<dd>Boolean. True or False.</dd>
+<dt>Str</dt>
+<dd>List of Chars.</dd>
+<dt><tt class="docutils literal">()</tt></dt>
+<dd>Unit type.</dd>
+</dl>
+</div>
+<div class="section" id="type-functions">
+<h3><a class="toc-backref" href="#id12">2.1.2&nbsp;&nbsp;&nbsp;Type Functions</a></h3>
+<p>Type functions can be used to build complex types.</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">-&gt;</span></tt></dt>
+<dd>Arrow function takes 2 types and builds a function type.
+For example <tt class="docutils literal">Int <span class="pre">-&gt;</span> Char</tt> is type of a function whose domain is
+Int and range is Char.</dd>
+<dt><tt class="docutils literal">[]</tt></dt>
+<dd>List function takes a type and builds a list type.
+For example, <tt class="docutils literal">[Char]</tt> is a list of Chars and <tt class="docutils literal">[(Int <span class="pre">-&gt;</span> Str)]</tt>
+is a list of functions of type <tt class="docutils literal">Int <span class="pre">-&gt;</span> Str</tt>.
+Str and <tt class="docutils literal">[Char]</tt> refer to the same type. They are interchangeable.</dd>
+<dt><tt class="docutils literal">(,)</tt></dt>
+<dd>Pair function takes 2 types and builds a pair type.
+For example, <tt class="docutils literal">(Int, Str)</tt> is a pair of Int and Str.</dd>
+</dl>
+</div>
+<div class="section" id="type-expressions">
+<h3><a class="toc-backref" href="#id13">2.1.3&nbsp;&nbsp;&nbsp;Type Expressions</a></h3>
+<p>A LIPL expression does not contain type expressions.
+However, type expressions are used to tell users type of
+a LIPL token (their purpose is to communicate with users).
+So, user would never write type expressions. But he/she understands
+meaning of various type expressions.
+For example, in LIPL REPL:</p>
+<pre class="literal-block">
+shell&gt; lipl
+LIPL&gt; 1
+type: Int
+</pre>
+<p>user understands type of 1 is Int.</p>
+<pre class="literal-block">
+LIPL&gt; (def f (x) (cons (lambda (y) x) []))
+type: t0 -&gt; [t1 -&gt; t0]
+</pre>
+<p>user understands type of f is a function that takes any type t0
+and returns a list of functions that take values of
+type t1 and returns values of type t0.</p>
+</div>
+</div>
+<div class="section" id="notation">
+<h2><a class="toc-backref" href="#id14">2.2&nbsp;&nbsp;&nbsp;Notation</a></h2>
+<p>The following expression is used to describe semantics of LIPL tokens.</p>
+<pre class="literal-block">
+Eval[[e1 :: t1]] {x1 = v1, x2 = v2} = e2
+</pre>
+<p>e1 is a syntactically valid LIPL token.
+e2 is the meaning that e1 denotes.
+For example, <tt class="docutils literal"><span class="pre">Eval[[(+</span> 1 <span class="pre">2)]]</span> = 1 + 2</tt> can be interpreted as:
+the LIPL expression <tt class="docutils literal">(+ 1 2)</tt> means addition of two integers 1 and 2.</p>
+<p><tt class="docutils literal">{x1 = v1, x2 = v2}</tt> is optional.
+It is an environment where identifiers x1 and x2 are bound to
+values v1 and v2. For example, <tt class="docutils literal"><span class="pre">Eval[[a]]</span> {a = 1} = 1</tt>
+means evaluation of <tt class="docutils literal">a</tt> denotes 1 when it is evaluated in
+an environment where <tt class="docutils literal">a</tt> is bound to 1.</p>
+<p><tt class="docutils literal">:: t1</tt> is optional. It denotes type of preceding expression.
+For example, <tt class="docutils literal"><span class="pre">Eval[[(+</span> 1 2) :: Int]] = 1 + 2</tt>
+tells that <tt class="docutils literal">(+ 1 2)</tt> has type Int.
+<tt class="docutils literal">::</tt> can also be used inside an environment.
+For example, <tt class="docutils literal"><span class="pre">Eval[[a]]</span> {a = 1 :: Int} = 1</tt>
+specifically writes the value <tt class="docutils literal">a</tt> is bound to, 1, has type Int.</p>
+<p><tt class="docutils literal">_|_</tt> (bottom) is used to denote an undefined value.
+For example, <tt class="docutils literal"><span class="pre">Eval[[(+</span> 'a' <span class="pre">'b')]]</span> = _|_</tt> says that
+the value <tt class="docutils literal">(+ 'a' 'b')</tt> denotes is undefined.</p>
+</div>
+<div class="section" id="literals">
+<h2><a class="toc-backref" href="#id15">2.3&nbsp;&nbsp;&nbsp;Literals</a></h2>
+<p>Simple literal tokens (characters, strings, numbers, and booleans)
+evaluate to themselves.
+For example, a character <tt class="docutils literal">'a'</tt> and a string <tt class="docutils literal">&quot;hello&quot;</tt>
+evaluate to the character <tt class="docutils literal">'a'</tt> and the string <tt class="docutils literal">&quot;hello&quot;</tt>
+respectively:</p>
+<pre class="literal-block">
+Eval[['a']] = 'a'
+Eval[[&quot;hello&quot;]] = &quot;hello&quot;
+</pre>
+<p>Numbers evaluate to base 10 integers or floating point numbers:</p>
+<pre class="literal-block">
+Eval[[-192]] = -192
+Eval[[0.03]] = 0.03
+</pre>
+<p>The boolean <tt class="docutils literal">True</tt> evaluates to a value that denotes true
+and <tt class="docutils literal">False</tt> evaluates to false:</p>
+<pre class="literal-block">
+Eval[[True]] = true
+Eval[[False]] = not true, false.
+</pre>
+<p>A list is an ordered collection (sequence) of tokens of same type
+(homogeneous):</p>
+<pre class="literal-block">
+Eval[[ [1,2] ]] = list of integers 1 and 2.
+Eval[[ [&quot;hello&quot;, &quot;world&quot;] :: [[Char]] ]] = list of
+    strings, which are in turn list of characters,
+    &quot;hello&quot; and &quot;world&quot;.
+Eval[[ [1, 1.0] ]] = _|_ because 1 has type Int
+                             and 1.0 has type Float
+</pre>
+<p>In general, <tt class="docutils literal">Eval[[ <span class="pre">[v1,v2,...,vN]</span> :: [t1] ]]</tt> =
+list of values, v1, v2, ..., vN, of type t1.</p>
+<p>A pair is a pair of two tokens:</p>
+<pre class="literal-block">
+Eval[[(1,&quot;hey&quot;)]] = a pair of integer 1 and string &quot;hey&quot;
+Eval[[((1,2), True)]] = a pair of a pair (1,2) and
+    boolean True.
+</pre>
+<p>In general, <tt class="docutils literal"><span class="pre">Eval[[(v1</span> :: t1, v2 :: <span class="pre">t2)]]</span></tt> =
+a pair of a value of type t1 and a value of type t2.</p>
+</div>
+<div class="section" id="identifiers">
+<h2><a class="toc-backref" href="#id16">2.4&nbsp;&nbsp;&nbsp;Identifiers</a></h2>
+<p>Identifiers or operators evaluate to the value bound to them.
+If an identifier or an operator does not have a bound value,
+its value is undefined:</p>
+<pre class="literal-block">
+Eval[[foo]] {foo = True} = true.
+Eval[[foo]] {} = _|_
+</pre>
+</div>
+<div class="section" id="expressions">
+<h2><a class="toc-backref" href="#id17">2.5&nbsp;&nbsp;&nbsp;Expressions</a></h2>
+<p>An expression <tt class="docutils literal">(f p1 p2 ... pN)</tt> denotes an application of function
+<tt class="docutils literal">f</tt> to parameters <tt class="docutils literal">p1 p2 ... pN</tt>,
+unless the expression is a special expression (if, let, def, lambda, ...).
+The first token in a normal expression should evaluate to a function.
+Otherwise, value of the expression is undefined:</p>
+<pre class="literal-block">
+Eval[[(f p1 p2)]] {f = +} = p1 + p2
+Eval[[(1 2 3)]] = _|_
+</pre>
+<p>Function application (normal expressions) is curried.
+So, <tt class="docutils literal">(f p1 p2 ... pN)</tt> is same as <tt class="docutils literal"><span class="pre">(...((f</span> p1) p2) ... pN)</tt>
+where <tt class="docutils literal">(f p1)</tt>, <tt class="docutils literal">((f p1) p2)</tt>, ..., <tt class="docutils literal"><span class="pre">(...((f</span> p1) p2) ... pi)</tt>
+are functions taking <tt class="docutils literal">N - 1</tt>, <tt class="docutils literal">N - 2</tt>, and <tt class="docutils literal">N - i</tt> parameters
+respectively:</p>
+<pre class="literal-block">
+Eval[[(f a b c)]] = Eval[[((f a) b c)]]
+                  = Eval[[(((f a) b) c)]]
+</pre>
+</div>
+<div class="section" id="id3">
+<h2><a class="toc-backref" href="#id18">2.6&nbsp;&nbsp;&nbsp;Special Expressions</a></h2>
+<div class="section" id="function-definition">
+<h3><a class="toc-backref" href="#id19">2.6.1&nbsp;&nbsp;&nbsp;Function Definition</a></h3>
+<p><tt class="docutils literal">(def <span class="pre">fun-name</span> (p1 p2 ... pN) body)</tt>
+expands current environment with fun-name, where
+fun-name is bound to a function that
+takes p1 p2 ... pN as arguments and evaluates body.
+The function bound to <tt class="docutils literal"><span class="pre">fun-name</span></tt> evaluates <tt class="docutils literal">body</tt> in an environment
+where <tt class="docutils literal">p1 p2 ... pN</tt> are bound to actual parameters passed.</p>
+</div>
+<div class="section" id="conditional">
+<h3><a class="toc-backref" href="#id20">2.6.2&nbsp;&nbsp;&nbsp;Conditional</a></h3>
+<p><tt class="docutils literal">(if <span class="pre">bool-expr</span> <span class="pre">when-true</span> <span class="pre">when-false)</span></tt>
+evaluates <tt class="docutils literal"><span class="pre">bool-expr</span></tt> first. If the evaluation results in <tt class="docutils literal">False</tt>,
+<tt class="docutils literal"><span class="pre">when-false</span></tt> is evaluated. Otherwise, <tt class="docutils literal"><span class="pre">when-true</span></tt> is evaluated:</p>
+<pre class="literal-block">
+Eval[[(if True e1 e2)]] = Eval[[e1]]
+Eval[[(if False e1 e2)]] = Eval[[e2]]
+</pre>
+</div>
+<div class="section" id="let">
+<h3><a class="toc-backref" href="#id21">2.6.3&nbsp;&nbsp;&nbsp;Let</a></h3>
+<p><tt class="docutils literal">(let {v1 = b1, v2 = b2, <span class="pre">...,</span> vN = bN} body)</tt>
+evaluates <tt class="docutils literal">body</tt> in an environment where
+<tt class="docutils literal">v1 v2 ... vN</tt> are bound to <tt class="docutils literal">b1 b2 ... bN</tt> respectively:</p>
+<pre class="literal-block">
+Eval[[(let {x = a} e)]] = Eval[[e]] {x = a}
+</pre>
+<p>vj can't appear in bi for <tt class="docutils literal">i &lt;= j</tt>.
+For example, behavior of <tt class="docutils literal">(let {v1 = (+ v2 1), v2 = 1} (+ v1 v2))</tt>
+is undefined because <tt class="docutils literal">v1</tt> is bound to an expression that uses
+<tt class="docutils literal">v2</tt>, which appears after <tt class="docutils literal">v1</tt>:</p>
+<pre class="literal-block">
+Eval[[(let {x = y, y = a} e)]] = _|_
+</pre>
+<p>Also, behavior of recursive definition (both mutual and self recursion)
+is undefined.
+For example, <tt class="docutils literal">(let {f = (g 1), g = (f 1)} (f (g <span class="pre">1)))</span></tt>
+is undefined:</p>
+<pre class="literal-block">
+Eval[[(let {x = x} e)]] = _|_
+</pre>
+</div>
+<div class="section" id="lambda">
+<h3><a class="toc-backref" href="#id22">2.6.4&nbsp;&nbsp;&nbsp;Lambda</a></h3>
+<p><tt class="docutils literal">(lambda (v1 v2 ... vN) body)</tt>
+evaluates to a function that takes parameters <tt class="docutils literal">v1 v2 ... vN</tt>
+and evaluates <tt class="docutils literal">body</tt> in the environment where the parameters
+are bound to actual parameters taken:</p>
+<pre class="literal-block">
+Eval[[((lambda (x) e) a)]] = Eval[[e]] {x = a}
+</pre>
+</div>
+</div>
+</div>
+<div class="section" id="builtin-functions">
+<h1><a class="toc-backref" href="#id23">3&nbsp;&nbsp;&nbsp;Builtin Functions</a></h1>
+<p>Some functions are predefined and ready to be used.</p>
+<div class="section" id="numeric-functions">
+<h2><a class="toc-backref" href="#id24">3.1&nbsp;&nbsp;&nbsp;Numeric Functions</a></h2>
+<p><tt class="docutils literal">+</tt>, <tt class="docutils literal">-</tt>, <tt class="docutils literal">*</tt>, <tt class="docutils literal">div</tt> calculates addition, subtraction,
+multiplication, and division of two integers, respectively.
+Their type is <tt class="docutils literal">Int <span class="pre">-&gt;</span> Int <span class="pre">-&gt;</span> Int</tt> (taking 2 integers
+and returning an integer):</p>
+<pre class="literal-block">
+Eval[[(+ (* 1 (div 1 2)) (- 2 3))]]
+    = 1 * (1 / 2) + 2 - 3 = -1
+</pre>
+<p><tt class="docutils literal">+.</tt>, <tt class="docutils literal"><span class="pre">-.</span></tt>, <tt class="docutils literal">*.</tt>, <tt class="docutils literal">/</tt> calculates addition, subtraction,
+multiplication, and division of two floats, respectively.
+Their type is <tt class="docutils literal">Float <span class="pre">-&gt;</span> Float <span class="pre">-&gt;</span> Float</tt>:</p>
+<pre class="literal-block">
+Eval[[(+. (*. 1.0 (/ 1.0 2.0)) (-. 2.0 3.0))]]
+    = 1.0 * (1.0 / 2.0) + 2.0 - 3.0
+    = -0.5
+</pre>
+<p><tt class="docutils literal">toInt</tt> converts a Float to an Int by taking floor of the Float:</p>
+<pre class="literal-block">
+Eval[[(toInt -0.1)]] = -1
+</pre>
+<p><tt class="docutils literal">toFloat</tt> converts an Int to the closest Float:</p>
+<pre class="literal-block">
+Eval[[(toFloat 1)]] = 1.0
+</pre>
+</div>
+<div class="section" id="boolean-functions">
+<h2><a class="toc-backref" href="#id25">3.2&nbsp;&nbsp;&nbsp;Boolean Functions</a></h2>
+<p><tt class="docutils literal">&amp;&amp;</tt> and <tt class="docutils literal">||</tt> are AND and OR operator in boolean logic, respectively:</p>
+<pre class="literal-block">
+Eval[[(&amp;&amp; True (|| False True))]] = True
+</pre>
+<p><tt class="docutils literal">not</tt> negates a boolean:</p>
+<pre class="literal-block">
+Eval[[(not (not True))]] = True
+</pre>
+</div>
+<div class="section" id="comparison-functions">
+<h2><a class="toc-backref" href="#id26">3.3&nbsp;&nbsp;&nbsp;Comparison Functions</a></h2>
+<p><tt class="docutils literal">==</tt>, <tt class="docutils literal">!=</tt>, <tt class="docutils literal">&lt;</tt>, <tt class="docutils literal">&lt;=</tt>, <tt class="docutils literal">&gt;</tt>, <tt class="docutils literal">&gt;=</tt> take two values of
+same type and tells if they are same, not same, one is less than the other,
+one is less than or equal to the other, one is greater than the other,
+one is greater than or equal to the other, respectively.
+If these functions are applied to values of different type,
+or complicated values (such as functions),
+result is undefined:</p>
+<pre class="literal-block">
+Eval[[(== 1 'a')]] = _|_
+Eval[[(== 1 2)]] = False
+Eval[[(!= True (== 1 2)]] = True
+Eval[[(&lt;= 1 1.0)]] = _|_
+Eval[[(&gt; (toInt -0.1) -1)]] = False
+Eval[[(== (lambda (x) x) (lambda (x) x))]] = _|_
+</pre>
+</div>
+<div class="section" id="list-functions">
+<h2><a class="toc-backref" href="#id27">3.4&nbsp;&nbsp;&nbsp;List Functions</a></h2>
+<p>These functions only work for lists or strings (list of characters).</p>
+<dl class="docutils">
+<dt>length</dt>
+<dd><tt class="docutils literal">(length [v1, v2, <span class="pre">...,</span> vN])</tt> is N.</dd>
+<dt>head</dt>
+<dd><p class="first">is first element of the list. Value is undefined when applied to
+an empty list:</p>
+<pre class="last literal-block">
+Eval[[(head [])]] = _|_
+Eval[[(head &quot;a&quot;)]] = 'a'
+Eval[[(head ['a'])]] = 'a'
+</pre>
+</dd>
+<dt>tail</dt>
+<dd><p class="first">is a list without the first element. Value is undefined when
+applied to an empty list:</p>
+<pre class="last literal-block">
+Eval[[(tail [])]] = _|_
+Eval[[(tail ['a'])]] = []
+Eval[[(tail [1,2])]] = [2]
+</pre>
+</dd>
+<dt>cons</dt>
+<dd><p class="first"><tt class="docutils literal">(cons x [x1, x2, <span class="pre">...,</span> xN])</tt> is <tt class="docutils literal">[x, x1, x2, <span class="pre">...,</span> xN]</tt>.
+It constructs a list by adding the first parameter to the front
+of the given list. Type of the element to be added
+should match type of elements of the list:</p>
+<pre class="last literal-block">
+Eval[[(cons 'a' &quot;bc&quot;)]] = &quot;abc&quot;
+Eval[[(cons 'a' [1])]] = _|_
+</pre>
+</dd>
+<dt>isEmpty</dt>
+<dd><p class="first"><tt class="docutils literal">(isEmpty l)</tt> is True if <tt class="docutils literal">l</tt> is <tt class="docutils literal">[]</tt> or <tt class="docutils literal">&quot;&quot;</tt>.
+When <tt class="docutils literal">l</tt> is not a list nor a string, it is undefined:</p>
+<pre class="last literal-block">
+Eval[[(isEmpty [])]] = true
+Eval[[(isEmpty &quot;&quot;)]] = true
+Eval[[(isEmpty [1])]] = false
+Eval[[(isEmpty 'a')]] = _|_
+</pre>
+</dd>
+</dl>
+</div>
+<div class="section" id="miscellaneous-functions">
+<h2><a class="toc-backref" href="#id28">3.5&nbsp;&nbsp;&nbsp;Miscellaneous Functions</a></h2>
+<dl class="docutils">
+<dt>show</dt>
+<dd><p class="first"><tt class="docutils literal">(show x)</tt> is string representation of x:</p>
+<pre class="last literal-block">
+Eval[[(show 1)]] = &quot;1&quot;
+Eval[[(show [1,2])]] = &quot;[1,2]&quot;
+</pre>
+</dd>
+<dt>println</dt>
+<dd><p class="first"><tt class="docutils literal">(println s)</tt> prints string <tt class="docutils literal">s</tt> and newline to stdout.
+When <tt class="docutils literal">s</tt> is not a string, it is undefined:</p>
+<pre class="last literal-block">
+Eval[[(println (show s))]] = string representation of s
+                             is printed to stdout
+Eval[[(println [])]] = empty line printed because
+                       [] is same as &quot;&quot;
+Eval[[(println 1]] = _|_
+</pre>
+</dd>
+<dt>print</dt>
+<dd><tt class="docutils literal">(print s)</tt> prints the string <tt class="docutils literal">s</tt> to stdout.
+When <tt class="docutils literal">s</tt> is not a string, it is undefined.</dd>
+<dt>getLine</dt>
+<dd><p class="first"><tt class="docutils literal">getLine</tt> reads a line from stdin:</p>
+<pre class="last literal-block">
+Eval[[(let {x = getLine} (println x))]] =
+    reads a line from stdin
+    and prints it to stdout.
+</pre>
+</dd>
+<dt>readInt</dt>
+<dd><p class="first">converts a string to integer. If the string does not represent
+an integer, it is undefined:</p>
+<pre class="last literal-block">
+Eval[[(readInt &quot;1&quot;)]] = 1
+Eval[[(readInt &quot;a&quot;)]] = _|_
+</pre>
+</dd>
+<dt>readFloat</dt>
+<dd><p class="first">converts a string to float:</p>
+<pre class="last literal-block">
+Eval[[(readFloat &quot;1&quot;)]] = _|_
+Eval[[(readFloat &quot;1.0&quot;)]] = 1.0
+</pre>
+</dd>
+<dt>readBool</dt>
+<dd><p class="first">converts a string to boolean:</p>
+<pre class="last literal-block">
+Eval[[(readBool &quot;true&quot;)]] = _|_
+Eval[[(readBool &quot;True&quot;)]] = True
+</pre>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="examples">
+<h1><a class="toc-backref" href="#id29">4&nbsp;&nbsp;&nbsp;Examples</a></h1>
+<p>A few examples are given below.
+Some of the functions are from core library (<tt class="docutils literal">core.lipl</tt>), which is
+a collection of useful functions written in LIPL.</p>
+<pre class="literal-block">
+(def compose (f g x) (f (g x)))
+  |     |       |       +------- function body
+  |     |       +--------------- function arguments
+  |     +----------------------- function name
+  +----------------------------- keyword def
+</pre>
+<p>defines a function called <tt class="docutils literal">compose</tt>
+that takes two unary functions, f and g, and a value.
+<tt class="docutils literal">compose</tt> function will make a composition of functions f and g.
+For example, <tt class="docutils literal">(compose (lambda (x) (+ x 1)) (lambda (x) (- x <span class="pre">1)))</span></tt>
+is integer identity function that takes an integer and returns it
+(x - 1 + 1 == x).</p>
+<pre class="literal-block">
+LIPL&gt; ((compose (lambda (x) (+ x 1)) (lambda (x) (- x 1))) 42)
+42
+</pre>
+<p>Type the above in the interpreter and you'll see the result.</p>
+<pre class="literal-block">
+(def map (f l) (if (isEmpty l)
+                   []
+                   (let {x = (head l), xs = (tail l)}
+                        (cons (f x) (map f xs)))))
+</pre>
+<p>defines a function <tt class="docutils literal">map</tt> that takes
+a unary function, f, and a list. <tt class="docutils literal">(map f [v1,v2, <span class="pre">...,vN])</span></tt>
+applies f on each element in the list:
+<tt class="docutils literal">[(f v1), (f v2), <span class="pre">...,</span> (f vN)]</tt>.
+It is defined recursively.
+First, when l is an empty list, it just returns empty list.
+Otherwise, it constructs a list whose first element is
+result of application of f to the first element of l.
+And the rest of the elements are evaluated by recursively
+applying <tt class="docutils literal">map</tt> to the rest of l.</p>
+<pre class="literal-block">
+(def concat (l1 l2) (if (isEmpty l1)
+                        l2
+                        (let {x = (head l1), xs = (tail l1)}
+                             (cons x (concat xs l2)))))
+</pre>
+<p>defines a function <tt class="docutils literal">concat</tt> that takes two lists and concatenates
+them.</p>
+<pre class="literal-block">
+(def filter (f l)
+     (if (isEmpty l)
+         []
+         (let {
+                x  = (head l)
+              , xs = (filter f (tail l))
+              }
+              (if (f x)
+                  (cons x xs)
+                  xs))))
+</pre>
+<p>defines a function <tt class="docutils literal">filter</tt> that takes a unary function, f, and a list.
+It applies the unary function to each element
+in the list. When the result is <tt class="docutils literal">False</tt>, the element is omitted.
+Otherwise, the element becomes part of the result list.
+For example <tt class="docutils literal">(filter (lambda (a) (&lt;= a 2)) [1,2,3])</tt> is
+<tt class="docutils literal">[1,2]</tt> because 1 and 2 are less than equal to 2.</p>
+<pre class="literal-block">
+(def quick-sort (l) (if (isEmpty l)
+    []
+    (let {     x       = (head l)
+             , xs      = (tail l)
+             , lesser  = (filter (lambda (a) (&lt; a x))  xs)
+             , greater = (filter (lambda (a) (&gt;= a x)) xs)
+         }
+         (concat (concat (quick-sort lesser)
+                         (cons x []))
+                 (quick-sort greater)))))
+</pre>
+<p>defines a function <tt class="docutils literal"><span class="pre">quick-sort</span></tt> that takes a list
+and returns the sorted list.
+The list is partitioned along the pivot point, which is always
+the first element of the list.
+The <tt class="docutils literal">lesser</tt> list has elements less than the pivot point
+while <tt class="docutils literal">greater</tt> list has elements greater than or equal to the pivot
+point.
+Then, recursively those lists are sorted and concatenated to form
+a sorted list.</p>
+<pre class="literal-block">
+(def succ (x) (+ x 1))
+(def twice (f x) (f (f x)))
+</pre>
+<p>defines <tt class="docutils literal">succ</tt> functon that adds 1 to the parameter.
+Also, <tt class="docutils literal">twice</tt> function is defined such that the first parameter,
+a unary function, is applied twice (composed to itself).
+Evaluation of <tt class="docutils literal">(twice twice succ 0)</tt> is:</p>
+<pre class="literal-block">
+twice twice succ 0           # parenthesis obmitted
+==&gt; (twice twice) succ 0     # currying
+    # twice f == f . f where . is composition (not LIPL)
+    # so, twice twice == twice . twice
+==&gt; (twice . twice) succ 0
+    # (twice . twice) f == twice (twice f)
+==&gt; (twice (twice succ)) 0
+    # twice succ == succ . succ
+==&gt; (twice (succ . succ)) 0
+==&gt; ((succ . succ) . (succ . succ)) 0
+    # composition is associative
+==&gt; (succ . succ . succ . succ) 0
+==&gt; (succ (succ (succ (succ 0))))
+==&gt; (succ (succ (succ 1)))
+==&gt; (succ (succ 2))
+==&gt; (succ 3)
+==&gt; 4
+</pre>
+<p>For more examples, look at <a class="reference external" href="tutorial.html">LIPL Tutorial</a> .</p>
+</div>
+</div>
+
+</div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-2157648-2");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
+</body>
+</html>
