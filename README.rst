@@ -23,7 +23,7 @@ Install
     shell> runhaskell Setup.lhs install
     shell> mkdir ~/.lipl && cp lib/core.lipl ~/.lipl
 
-Or,
+Or,::
 
     shell> cd src
     shell> ghc --make -O Main.lhs -o lipl
