@@ -99,7 +99,8 @@ TEMPLATE = u'''<?xml version="1.0" encoding="%(encoding)s" ?>
 </html>
 '''
 
-GOOGLE = {'google': '''<script type="text/javascript">
+GOOGLE = {'google': '''
+<script type="text/javascript">
 var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
 document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
 </script>
@@ -107,7 +108,8 @@ document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.
 var pageTracker = _gat._getTracker("UA-2157648-2");
 pageTracker._initData();
 pageTracker._trackPageview();
-</script>'''}
+</script>
+'''}
 
 def render_str(s, fn, dst):
     name = os.path.join(dst, fn)
